@@ -5,12 +5,122 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Test your reaction time in milliseconds. A free, accurate reaction time test for gamers. Measure your reflexes and track your progress."
+      content="Test your reaction time in milliseconds. A free, accurate reaction time test for gamers, athletes, and anyone looking to measure and improve their reflexes."
     />
-    <title>Reaction Time Test | ReflexLab</title>
+    <title>Reaction Time Test - Free Online Reflex Test</title>
+    <link rel="canonical" href="https://reflexlab.co/" />
+    <link rel="icon" type="image/png" href="/assets/reflex-favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/reflex-webclip.png" />
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://reflexlab.co/" />
+    <meta property="og:title" content="Reaction Time Test - Free Online Reflex Test" />
+    <meta property="og:description" content="Test your reaction time in milliseconds. A free, accurate reaction time test for gamers, athletes, and anyone looking to measure and improve their reflexes." />
+    <meta property="og:image" content="https://reflexlab.co/assets/reflex-og.png" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Reaction Time Test - Free Online Reflex Test" />
+    <meta name="twitter:description" content="Test your reaction time in milliseconds. A free, accurate reaction time test for gamers, athletes, and anyone looking to measure and improve their reflexes." />
+    <meta name="twitter:image" content="https://reflexlab.co/assets/reflex-og.png" />
     <link rel="stylesheet" href="styles.css" />
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What's the average reaction time?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The average visual reaction time for adults is approximately 250 milliseconds. However, this varies based on age, alertness, and other factors. Young adults in optimal conditions typically score between 200-230ms. Professional gamers and athletes often achieve times under 180ms through practice and optimal setups."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is this test accurate on mobile devices?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Mobile devices generally have higher touch latency than desktop setups with gaming mice. You can expect your mobile scores to be 20-50ms slower than on a proper desktop setup. The test is still useful for tracking your personal progress on mobile, but don't directly compare mobile and desktop results."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why did I get a \"Too soon!\" message?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "You clicked or pressed a key before the green \"GO\" signal appeared. This is considered a false start. The test uses random delays specifically to prevent anticipation. You need to react to the actual stimulus, not guess when it will appear. Take a breath and wait for the green screen."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does monitor refresh rate affect my score?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, significantly. A 60Hz monitor only updates 60 times per second, adding up to 16.7ms of latency before you even see the stimulus. A 144Hz monitor reduces this to ~7ms, and 240Hz to ~4ms. For the most accurate results, use the highest refresh rate monitor available to you."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is keyboard or mouse input faster?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In general, the difference is minimal and depends on your personal preference and hardware. Some studies suggest keyboard can be marginally faster due to shorter key travel, but a quality gaming mouse with a high polling rate can match or beat keyboard input. Use whichever feels more natural to you."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How can I test my reaction time consistently?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "For consistent results: test at the same time of day, use the same device and setup, ensure you're well-rested, do a few warm-up rounds first, and use the same delay settings. Run multiple rounds (5-10) and focus on your average rather than single attempts. Environmental factors like lighting and noise should also be consistent."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I improve my reaction time with practice?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, to a degree. While your baseline reaction time is partly genetic, regular practice can improve your scores by 10-20%. Check out our guide to improving reaction time for proven techniques. More importantly, you can train game-specific reactions that combine prediction, pattern recognition, and motor skills, which is often more valuable than raw reaction speed."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is my data stored?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "All your data (personal best, session history, achieved ranks, and settings) is stored locally in your browser using localStorage. Nothing is sent to any server, so your results stay completely private on your device. This also means your data won't sync across different browsers or devices."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I reset my progress?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Click the Reset button in the toolbar above the test area. This will open a confirmation dialog. Confirming will clear your personal best, session history, trend graph data, and achieved ranks. Your settings (test count, delay range, input method, sound) will be preserved."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What's the difference between mouse and spacebar input?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "You can choose your preferred input method in the settings. Mouse click mode requires clicking inside the test area, while spacebar mode lets you react by pressing the spacebar. Spacebar can be slightly faster for some users since there's no mouse movement involved. The test instructions will adapt to show which input to use."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What do the different delay ranges mean?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The delay range determines how long you wait before the green signal appears. Shorter ranges (1-3s) keep you more alert but are more predictable. Longer ranges (3-8s) test your sustained focus and prevent timing-based anticipation. Choose based on whether you want quick practice or a more challenging test of concentration."
+            }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <!-- Skip link for accessibility -->
@@ -20,7 +130,7 @@
     <header class="site-header">
       <nav class="nav-container">
         <a href="/" class="brand">
-          <svg class="brand-logo" width="24" height="24" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg class="brand-logo" aria-label="ReflexLab logo" width="24" height="24" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M17.204 10.2645L11.2123 8.88191C10.9138 8.81327 10.6027 8.82161 10.3084 8.90616C10.014 8.99071 9.74591 9.14869 9.52933 9.36527C9.31276 9.58184 9.15478 9.84991 9.07023 10.1443C8.98567 10.4387 8.97733 10.7497 9.04597 11.0482L10.429 17.0395C10.5013 17.3537 10.6565 17.6428 10.8784 17.8768C11.1002 18.1108 11.3806 18.2811 11.6906 18.3701C12.0005 18.459 12.3286 18.4634 12.6407 18.3828C12.9529 18.3021 13.2378 18.1394 13.4658 17.9114L18.0754 13.3023C18.3033 13.0742 18.4661 12.7892 18.5467 12.477C18.6274 12.1648 18.623 11.8367 18.5341 11.5268C18.4452 11.2169 18.275 10.9363 18.0411 10.7144C17.8072 10.4924 17.5182 10.3371 17.204 10.2645Z" fill="#22C55E"/>
             <path d="M19.0006 20.2496C18.8322 20.2501 18.6655 20.2164 18.5105 20.1505C18.3556 20.0846 18.2157 19.9879 18.0992 19.8663L13.8609 15.4606C13.6311 15.2216 13.5055 14.9012 13.512 14.5697C13.5184 14.2382 13.6562 13.9228 13.8951 13.693C14.134 13.4631 14.4545 13.3376 14.786 13.344C15.1175 13.3504 15.4328 13.4882 15.6627 13.7272L19.901 18.1329C20.071 18.3096 20.1852 18.5323 20.2296 18.7734C20.274 19.0145 20.2465 19.2633 20.1505 19.4889C20.0545 19.7145 19.8944 19.9069 19.6899 20.0421C19.4855 20.1774 19.2457 20.2495 19.0006 20.2496Z" fill="#22C55E"/>
             <path d="M5.38873 17.9303C5.2207 17.9304 5.05537 17.8879 4.90826 17.8067C3.42119 16.9886 2.18115 15.7861 1.31774 14.3249C0.45433 12.8636 -0.000749256 11.1973 6.05942e-05 9.50007C-0.00511047 8.0683 0.320756 6.65472 0.952211 5.3697C1.88368 3.43731 3.44383 1.87855 5.37706 0.948804C6.65992 0.31906 8.07098 -0.00563394 9.50006 7.39723e-05C11.1973 -0.0008523 12.8636 0.454242 14.3247 1.31777C15.7858 2.18129 16.988 3.42152 17.8057 4.90876C17.9334 5.14109 17.9636 5.41463 17.8896 5.6692C17.8156 5.92377 17.6435 6.13852 17.4112 6.26621C17.1788 6.3939 16.9053 6.42406 16.6507 6.35007C16.3962 6.27607 16.1814 6.10398 16.0537 5.87165C15.4083 4.69846 14.4595 3.7202 13.3066 3.03913C12.1538 2.35807 10.8391 1.99921 9.50006 2.00007C8.37391 1.99541 7.26193 2.25126 6.25106 2.74763C4.72182 3.48208 3.48764 4.71454 2.75106 6.24275C2.25269 7.25602 1.99565 8.37089 2.00006 9.50007C1.99919 10.839 2.35799 12.1537 3.03896 13.3066C3.71994 14.4594 4.69808 15.4082 5.87115 16.0538C6.06564 16.1608 6.21901 16.3294 6.30711 16.5332C6.39521 16.7369 6.41303 16.9642 6.35776 17.1791C6.30249 17.3941 6.17727 17.5846 6.00184 17.7206C5.8264 17.8566 5.6107 17.9303 5.38873 17.9303Z" fill="white"/>
@@ -324,7 +434,8 @@
             Beyond gaming, reaction time tests are used in sports science,
             driving assessments, cognitive research, and general fitness
             evaluations. They provide insight into your neural processing speed
-            and hand-eye coordination.
+            and hand-eye coordination. With regular practice, most people can
+            <a href="guides/how-to-improve-reaction-time.html">improve their reaction time</a> significantly.
           </p>
         </div>
       </section>
@@ -441,7 +552,7 @@
       <!-- Tracking your progress -->
       <section id="tracking" class="info-section alt-bg">
         <div class="container">
-          <h2>Tracking your progress</h2>
+          <h2>Track your reaction time progress</h2>
           <p>
             ReflexLab includes comprehensive progress tracking to help you
             monitor your improvement over time. All data is stored locally in
@@ -572,7 +683,7 @@
               <h3>Fatigue &amp; stress</h3>
               <p>
                 Mental and physical exhaustion dramatically impact reaction
-                speed. Stress hormones can help in short bursts but chronic
+                speed. Even <a href="guides/how-sleep-affects-reaction-time.html">poor sleep</a> can add 20-30ms to your reaction time. Stress hormones can help in short bursts but chronic
                 stress degrades performance.
               </p>
             </div>
@@ -588,7 +699,7 @@
             <div class="factor">
               <h3>Substances</h3>
               <p>
-                Caffeine in moderate doses can improve reaction time. Alcohol,
+                <a href="guides/how-caffeine-affects-reaction-time.html">Caffeine in moderate doses</a> can improve reaction time. Alcohol,
                 sedatives, and most recreational substances significantly impair
                 it. Even antihistamines can slow you down.
               </p>
@@ -616,7 +727,7 @@
       <!-- FAQ Section -->
       <section id="faq" class="info-section">
         <div class="container">
-          <h2>Frequently Asked Questions</h2>
+          <h2>Reaction time test FAQ</h2>
           <div class="faq-list section-content">
             <details class="faq-item">
               <summary>What's the average reaction time?</summary>
@@ -684,6 +795,7 @@
               <p>
                 Yes, to a degree. While your baseline reaction time is partly
                 genetic, regular practice can improve your scores by 10-20%.
+                Check out our <a href="guides/how-to-improve-reaction-time.html">guide to improving reaction time</a> for proven techniques.
                 More importantly, you can train game-specific reactions that
                 combine prediction, pattern recognition, and motor skills, which
                 is often more valuable than raw reaction speed.
@@ -755,12 +867,11 @@
     <footer class="site-footer">
       <div class="container">
         <div class="footer-content">
-          <p class="copyright">&copy; 2025 ReflexLab. All rights reserved.</p>
+          <p class="copyright">&copy; 2026 ReflexLab. All rights reserved.</p>
           <nav class="footer-links">
             <a href="/guides/">Guides</a>
             <a href="/about.html">About</a>
-            <a href="#privacy">Privacy</a>
-            <a href="#contact">Contact</a>
+            <a href="/privacy.html">Privacy</a>
           </nav>
           <p class="footer-note">More tools coming soon.</p>
         </div>
