@@ -22,7 +22,7 @@
     ranks: [
       { name: 'Elite', minCps: 10, class: 'elite' },
       { name: 'Pro', minCps: 8, class: 'pro' },
-      { name: 'Advanced', minCps: 6, class: 'advanced' },
+      { name: 'Advanced', minCps: 7, class: 'advanced' },
       { name: 'Intermediate', minCps: 4, class: 'intermediate' },
       { name: 'Beginner', minCps: 0, class: 'beginner' }
     ],
@@ -404,7 +404,7 @@
   }
 
   function getMotivationalMessage(rank, isBest) {
-    if (isBest) return 'New personal best - keep that momentum going!';
+    if (isBest) return 'New personal best. Keep that momentum going!';
     const msgs = {
       elite: 'Elite speed. Your hands are flying.',
       pro: 'Pro-level clicking. Seriously fast.',
