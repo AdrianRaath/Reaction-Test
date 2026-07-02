@@ -239,7 +239,7 @@ Every interactive element resolves to the same vocabulary: a dark neutral fill, 
 - **Style:** Sticky top bar, `Chassis Black` at 85% opacity with a 12px backdrop-blur, hairline bottom border. 64px tall, content capped at 960px.
 - **Brand:** Wordmark + green logo glyph; hovering the brand shifts it to Signal Green.
 - **Controls:** Ghost `btn-nav` buttons (sound toggle, reset) — Ink-Secondary, `Panel 01` fill, hover brightens.
-- **Mobile:** Controls stay inline; the bar does not collapse to a hamburger (only two controls).
+- **Mobile:** Sound and reset stay inline, with reset dropping its label to icon-only. Tool links collapse into a tools menu behind a Phosphor list button: a Panel-02 dropdown with a hairline border, lifted shadow, and 44px items. The current tool is marked by a green icon (an active state, sanctioned by the One Signal Rule).
 
 ### Iconography
 - **Telemetry & content icons — native emoji.** Widget titles (🏆 📊 🎯 📈 📋) and tip/info cards use native color emoji as their icon vocabulary on every test page. This is a deliberate, sanctioned choice: the emoji give the telemetry and guidance sections a human, score-keeping warmth without adding UI color. As pre-rendered glyphs they sit outside the One Signal Rule and the Rank-Only Color Rule — an emoji is never "using" green or red.

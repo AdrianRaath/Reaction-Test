@@ -125,17 +125,38 @@
           ReflexLab
         </a>
         <div class="nav-controls">
-          <a href="/" class="btn-nav btn-nav-link">
+          <a href="/" class="btn-nav nav-tool-link">
             <i class="ph ph-lightning"></i>
             <span>Reaction Test</span>
           </a>
           <button class="btn-nav" id="sound-toggle" aria-label="Toggle sound">
             <i class="ph ph-speaker-high" id="sound-icon"></i>
           </button>
-          <button class="btn-nav" id="reset-btn">
+          <button class="btn-nav" id="reset-btn" aria-label="Reset all data">
             <i class="ph ph-trash"></i>
             <span>Reset</span>
           </button>
+          <div class="nav-menu-wrap">
+            <button
+              class="btn-nav"
+              id="nav-menu-btn"
+              aria-label="Tools menu"
+              aria-expanded="false"
+              aria-controls="nav-menu"
+            >
+              <i class="ph ph-list"></i>
+            </button>
+            <div class="nav-menu" id="nav-menu" hidden>
+              <a href="/" class="nav-menu-item">
+                <i class="ph ph-lightning" aria-hidden="true"></i>
+                Reaction Test
+              </a>
+              <a href="/cps" class="nav-menu-item active" aria-current="page">
+                <i class="ph ph-cursor-click" aria-hidden="true"></i>
+                CPS Test
+              </a>
+            </div>
+          </div>
         </div>
       </nav>
     </header>
@@ -817,6 +838,7 @@
       </div>
     </footer>
 
+    <script src="nav.js"></script>
     <script src="cps.js"></script>
   </body>
 </html>

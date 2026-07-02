@@ -1280,6 +1280,14 @@
         // Only allow spacebar input if spacebar method is selected
         if (state.settings.inputMethod !== 'spacebar') return;
 
+        // Don't hijack keys meant to activate a focused control (buttons, links).
+        const active = document.activeElement;
+        const onControl =
+            active &&
+            active !== DOM.testArea &&
+            ['BUTTON', 'A', 'SUMMARY', 'INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName);
+        if (onControl) return;
+
         if (isSpaceKey) {
             e.preventDefault();
             handleResponse();
