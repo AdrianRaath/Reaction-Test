@@ -21,7 +21,10 @@
       "Bash(echo \"EXIT_NOCONFIG=$?\")",
       "Bash(node \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/detect.mjs\" --json styles.css)",
       "Bash(echo \"EXIT_CSS=$?\")",
-      "Bash(node --check app.js)"
+      "Bash(node --check app.js)",
+      "Bash(node --check cps.js)",
+      "Bash(node \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/detect.mjs\" --json cps.html)",
+      "Bash(xargs echo \"matches:\")"
     ],
     "additionalDirectories": [
       "\\tmp"

@@ -275,6 +275,7 @@ strong {
   align-items: center;
   justify-content: center;
   gap: var(--space-xs);
+  text-decoration: none;
   height: 36px;
   padding: 0 var(--space-md);
   font-family: var(--font-family);
