@@ -1,0 +1,14 @@
+# OS metadata
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# Local tool state
+.claude/settings.local.json
+.impeccable/
+
+# Vercel
+.vercel/
+
+# Dependencies
+node_modules/
