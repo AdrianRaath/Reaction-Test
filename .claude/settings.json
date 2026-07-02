@@ -15,7 +15,8 @@
       "PowerShell(New-Item -ItemType Directory -Force \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\\\\references\" | Out-Null; $base = \"https://raw.githubusercontent.com/hardikpandya/stop-slop/main/references\"; foreach \\($f in @\\(\"phrases.md\", \"structures.md\", \"examples.md\"\\)\\) { Invoke-WebRequest -Uri \"$base/$f\" -OutFile \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\\\\references\\\\$f\" }; Get-ChildItem \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\" -Recurse | Select-Object FullName, Length)",
       "PowerShell(Get-Content \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\\\\references\\\\phrases.md\" -TotalCount 5; Write-Output \"---\"; Get-Content \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\\\\references\\\\structures.md\" -TotalCount 3; Write-Output \"---\"; Get-Content \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\\\\references\\\\examples.md\" -TotalCount 3)",
       "Read(//c/Users/user/.claude/skills/stop-slop/references/**)",
-      "Bash(node --check nav.js)"
+      "Bash(node --check nav.js)",
+      "Bash(echo \"exit: $?\")"
     ]
   },
   "enabledPlugins": {

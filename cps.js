@@ -44,10 +44,7 @@
       type: 'sine'
     },
 
-    maxHistory: 20, // trend graph + run history cap
-    // Autocheat heuristic
-    maxHumanCps: 25, // above this = almost certainly automated
-    evenIntervalCv: 0.05 // coefficient of variation below this = bot-like
+    maxHistory: 20 // trend graph + run history cap
   };
 
   // ==========================================
@@ -57,7 +54,6 @@
   const state = {
     status: 'idle', // 'idle' | 'counting' | 'complete'
     clicks: 0,
-    clickTimes: [],
     startTime: 0,
     duration: 5,
     rafId: null,
@@ -248,7 +244,6 @@
   function registerClick(e) {
     if (state.status !== 'counting') return;
     state.clicks++;
-    state.clickTimes.push(performance.now());
     DOM.cpsCount.textContent = state.clicks;
     spawnRipple(e);
   }
@@ -261,7 +256,6 @@
     initAudio();
     state.status = 'counting';
     state.clicks = 0;
-    state.clickTimes = [];
     state.duration = state.settings.duration;
     state.startTime = performance.now();
 
@@ -305,7 +299,6 @@
 
     const cps = Math.round((state.clicks / state.duration) * 10) / 10;
     const rank = getRank(cps);
-    const flagged = isAutomated(cps, state.clickTimes);
 
     DOM.live.hidden = true;
     DOM.cpsFinal.textContent = cps.toFixed(1);
@@ -317,16 +310,6 @@
     DOM.area.classList.add('rank-' + rank.class);
     DOM.results.hidden = false;
     playBeep(CONFIG.sound.endFreq);
-
-    if (flagged) {
-      DOM.bestFlag.hidden = true;
-      DOM.message.textContent =
-        'That looks automated - this run was not saved to your records.';
-      announce(
-        `Time. ${cps.toFixed(1)} clicks per second. This run looks automated and was not saved.`
-      );
-      return; // keep records honest: no persistence
-    }
 
     const isBest = state.best === null || cps > state.best;
     DOM.bestFlag.hidden = !isBest;
@@ -352,7 +335,6 @@
     cancelAnimationFrame(state.rafId);
     state.status = 'idle';
     state.clicks = 0;
-    state.clickTimes = [];
 
     DOM.live.hidden = true;
     DOM.results.hidden = true;
@@ -386,21 +368,6 @@
       if (cps >= rank.minCps) return rank;
     }
     return CONFIG.ranks[CONFIG.ranks.length - 1];
-  }
-
-  function isAutomated(cps, times) {
-    if (cps > CONFIG.maxHumanCps) return true;
-    if (times.length >= 15) {
-      const intervals = [];
-      for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i - 1]);
-      const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-      if (mean <= 0) return true;
-      const variance =
-        intervals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / intervals.length;
-      const cv = Math.sqrt(variance) / mean;
-      if (cv < CONFIG.evenIntervalCv) return true;
-    }
-    return false;
   }
 
   function getMotivationalMessage(rank, isBest) {

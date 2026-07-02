@@ -119,6 +119,11 @@
   padding: 0;
 }
 
+/* The hidden attribute always wins, even over classes that set display. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--nav-height) + var(--space-lg));
@@ -820,6 +825,11 @@ strong {
   justify-content: center;
   gap: var(--space-sm);
   flex-wrap: wrap;
+}
+
+/* Center the badge on the number instead of hanging it off the baseline */
+.result-time-row .rank-badge {
+  align-self: center;
 }
 
 .result-time {
