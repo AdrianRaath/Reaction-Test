@@ -17,7 +17,7 @@
   /* Text Colors */
   --color-text-primary: #fafafa;
   --color-text-secondary: #a1a1aa;
-  --color-text-muted: #71717a;
+  --color-text-muted: #909099; /* raised from #71717a for WCAG AA: >=4.5:1 on dark card/test surfaces */
   --color-text-disabled: #52525b;
 
   /* Accent Colors */
@@ -43,7 +43,7 @@
   --color-rank-pro: #22c55e;
   --color-rank-advanced: #3b82f6;
   --color-rank-intermediate: #f59e0b;
-  --color-rank-beginner: #71717a;
+  --color-rank-beginner: #909099; /* raised from #71717a so the beginner badge clears 4.5:1 on its tint */
 
   /* Spacing */
   --space-xs: 0.25rem;
@@ -528,7 +528,8 @@ strong {
 }
 
 .test-area:focus-visible {
-  outline: none;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
 .test-area-content {
@@ -588,7 +589,7 @@ strong {
 }
 
 .test-area.state-idle:hover {
-  border-color: var(--color-text-muted);
+  border-color: var(--color-text-secondary);
   background: var(--color-bg-hover);
 }
 
@@ -1670,7 +1671,7 @@ strong {
 
 .footer-note {
   font-size: var(--font-size-xs);
-  color: var(--color-text-disabled);
+  color: var(--color-text-muted);
   margin-bottom: 0;
 }
 

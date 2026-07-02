@@ -986,9 +986,9 @@
         state.inputLocked = false;
         updateTestAreaState('waiting');
 
-        DOM.testStatus.textContent = 'Wait for green...';
+        DOM.testStatus.textContent = 'Wait for it…';
         DOM.testResult.textContent = '';
-        DOM.testInstruction.textContent = 'Get ready!';
+        DOM.testInstruction.textContent = 'Hold steady…';
 
         // Random delay within selected range
         const [minDelay, maxDelay] = CONFIG.delayPresets[state.settings.delay];
@@ -1053,9 +1053,9 @@
 
         updateTestAreaState('false-start');
 
-        DOM.testStatus.textContent = 'Too soon!';
+        DOM.testStatus.textContent = 'Not yet!';
         DOM.testResult.textContent = '';
-        DOM.testInstruction.textContent = `${getInputActionText()} to try again`;
+        DOM.testInstruction.textContent = `Jumped the gun — wait for the flash. ${getInputActionText()} to try again.`;
 
         // Unlock after a brief delay to prevent accidental double-click
         setTimeout(() => {
@@ -1249,7 +1249,7 @@
      */
     function updateInputMethodText() {
         const actionVerb = getInputActionVerb();
-        DOM.testHint.innerHTML = `When the <span class="hint-box hint-box-red"></span> Red box turns <span class="hint-box hint-box-green"></span> Green, ${actionVerb} as quickly as you can.`;
+        DOM.testHint.innerHTML = `Wait for the <span class="hint-box hint-box-red"></span> red hold, then ${actionVerb} the instant it flashes <span class="hint-box hint-box-green"></span> <strong>${getInputGoText()}</strong>.`;
 
         // Update status text if in idle state
         if (state.status === 'idle') {
