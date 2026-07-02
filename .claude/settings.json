@@ -1,33 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node \"C:\\\\Users\\\\user\\\\.claude\\\\plugins\\\\cache\\\\impeccable\\\\impeccable\\\\3.9.0\\\\skills\\\\impeccable\\\\scripts\\\\context.mjs\")",
-      "Read(//c/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/reference/**)",
-      "Bash(node \"C:\\\\Users\\\\user\\\\.claude\\\\plugins\\\\cache\\\\impeccable\\\\impeccable\\\\3.9.0\\\\skills\\\\impeccable\\\\scripts\\\\detect-csp.mjs\")",
-      "Bash(grep -n -A 40 \"First-time setup\" \"C:\\\\Users\\\\user\\\\.claude\\\\plugins\\\\cache\\\\impeccable\\\\impeccable\\\\3.9.0\\\\skills\\\\impeccable\\\\reference\\\\live.md\" 2>&1 | head -80)",
-      "Bash(node \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/detect.mjs\" --json index.html)",
-      "Bash(echo \"EXIT_CODE=$?\")",
-      "Bash(ls \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/\" 2>&1; echo \"---\"; ls \"c:/Users/user/Desktop/Reaction Test/\" 2>&1)",
-      "Read(//c/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/**)",
-      "Bash(python3 -)",
-      "Bash(node \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/detect.mjs\" index.html)",
-      "Bash(node \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/detect.mjs\" --help)",
-      "Bash(node \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/detect.mjs\" --json about.html)",
-      "Bash(echo \"EXIT_ABOUT=$?\")",
-      "Bash(node \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/detect.mjs\" --json privacy.html)",
-      "Bash(echo \"EXIT_PRIVACY=$?\")",
-      "Bash(node \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/detect.mjs\" --json 404.html)",
-      "Bash(node \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/detect.mjs\" --json --no-config --no-design-system index.html)",
-      "Bash(echo \"EXIT_NOCONFIG=$?\")",
-      "Bash(node \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/detect.mjs\" --json styles.css)",
-      "Bash(echo \"EXIT_CSS=$?\")",
       "Bash(node --check app.js)",
       "Bash(node --check cps.js)",
-      "Bash(node \"C:/Users/user/.claude/plugins/cache/impeccable/impeccable/3.9.0/skills/impeccable/scripts/detect.mjs\" --json cps.html)",
-      "Bash(xargs echo \"matches:\")"
-    ],
-    "additionalDirectories": [
-      "\\tmp"
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "PowerShell(try { Get-Content \"c:\\\\Users\\\\user\\\\Desktop\\\\Reaction Test\\\\.claude\\\\settings.json\" -Raw | ConvertFrom-Json | Out-Null; Write-Output \"JSON valid\" } catch { Write-Output \"JSON INVALID: $_\" }; git rm -r -q \".impeccable\"; git status -s)",
+      "PowerShell(Remove-Item -Recurse -Force -Confirm:$false \"c:\\\\Users\\\\user\\\\Desktop\\\\Reaction Test\\\\.impeccable\")",
+      "Read(//c/Users/user/.claude/**)",
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.claude\\\\skills\" -ErrorAction SilentlyContinue | Select-Object Name; Write-Output \"---plugins-cache---\"; Get-ChildItem \"$env:USERPROFILE\\\\.claude\\\\plugins\\\\cache\" -ErrorAction SilentlyContinue | Select-Object Name; Write-Output \"---project-skills---\"; Get-ChildItem \"c:\\\\Users\\\\user\\\\Desktop\\\\Reaction Test\\\\.claude\\\\skills\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\" -Recurse | Select-Object FullName; Write-Output \"---\"; Get-Content \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\\\\SKILL.md\" -TotalCount 15 -ErrorAction SilentlyContinue)",
+      "Read(//c/Users/user/.claude/skills/stop-slop/**)",
+      "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Temp\\\\tmp.hfmncmPYN2\\\\stop-slop\" -Recurse -ErrorAction SilentlyContinue | Select-Object FullName; Write-Output \"---\"; Get-ChildItem \"C:\\\\tmp\\\\tmp.hfmncmPYN2\\\\stop-slop\" -Recurse -ErrorAction SilentlyContinue | Select-Object FullName)",
+      "PowerShell(New-Item -ItemType Directory -Force \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\\\\references\" | Out-Null; $base = \"https://raw.githubusercontent.com/hardikpandya/stop-slop/main/references\"; foreach \\($f in @\\(\"phrases.md\", \"structures.md\", \"examples.md\"\\)\\) { Invoke-WebRequest -Uri \"$base/$f\" -OutFile \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\\\\references\\\\$f\" }; Get-ChildItem \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\" -Recurse | Select-Object FullName, Length)",
+      "PowerShell(Get-Content \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\\\\references\\\\phrases.md\" -TotalCount 5; Write-Output \"---\"; Get-Content \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\\\\references\\\\structures.md\" -TotalCount 3; Write-Output \"---\"; Get-Content \"$env:USERPROFILE\\\\.claude\\\\skills\\\\stop-slop\\\\references\\\\examples.md\" -TotalCount 3)"
     ]
+  },
+  "enabledPlugins": {
+    "impeccable@impeccable": false
   }
 }
