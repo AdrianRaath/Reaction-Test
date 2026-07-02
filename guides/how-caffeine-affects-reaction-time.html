@@ -33,6 +33,7 @@
     <meta name="twitter:image" content="https://reflexlab.co/assets/reflex-og.png" />
     <link rel="stylesheet" href="../styles.css" />
     <link rel="stylesheet" href="../article.css" />
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
   </head>
   <body>
     <!-- Skip link for accessibility -->
@@ -70,7 +71,37 @@
           </svg>
           ReflexLab
         </a>
-        <a href="/" class="btn btn-primary btn-sm">Test Reaction Time</a>
+        <div class="nav-controls">
+          <a href="/" class="btn-nav nav-tool-link">
+            <i class="ph ph-lightning"></i>
+            <span>Reaction Test</span>
+          </a>
+          <a href="/cps" class="btn-nav nav-tool-link">
+            <i class="ph ph-cursor-click"></i>
+            <span>CPS Test</span>
+          </a>
+          <div class="nav-menu-wrap">
+            <button
+              class="btn-nav"
+              id="nav-menu-btn"
+              aria-label="Tools menu"
+              aria-expanded="false"
+              aria-controls="nav-menu"
+            >
+              <i class="ph ph-list"></i>
+            </button>
+            <div class="nav-menu" id="nav-menu" hidden>
+              <a href="/" class="nav-menu-item">
+                <i class="ph ph-lightning" aria-hidden="true"></i>
+                Reaction Test
+              </a>
+              <a href="/cps" class="nav-menu-item">
+                <i class="ph ph-cursor-click" aria-hidden="true"></i>
+                CPS Test
+              </a>
+            </div>
+          </div>
+        </div>
       </nav>
     </header>
 
@@ -432,13 +463,16 @@
         <div class="footer-content">
           <p class="copyright">&copy; 2026 ReflexLab. All rights reserved.</p>
           <nav class="footer-links">
+            <a href="/">Reaction Test</a>
+            <a href="/cps">CPS Test</a>
             <a href="/guides/">Guides</a>
             <a href="/about">About</a>
             <a href="/privacy">Privacy</a>
           </nav>
-          <p class="footer-note">More tools coming soon.</p>
+          <p class="footer-note">Free reaction time and click speed tests. Your results stay in your browser.</p>
         </div>
       </div>
     </footer>
+    <script src="/nav.js"></script>
   </body>
 </html>
