@@ -27,16 +27,12 @@
 }
 
 /* ------------------------------------------
-   Decorative icons: keep green rationed.
-   Section/tip/widget icons are neutral, not accent.
+   Widget-title emoji — same iconography as the
+   homepage telemetry widgets (tip cards inherit
+   .tip-card-icon from styles.css unchanged)
    ------------------------------------------ */
-.tip-card-icon {
-  color: var(--color-text-secondary);
-}
-
 .widget-icon {
   font-size: var(--font-size-lg);
-  color: var(--color-text-secondary);
   flex-shrink: 0;
 }
 
@@ -155,7 +151,7 @@
   animation: cpsBestPop 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.cps-best-flag i {
+.cps-best-flag span {
   font-size: var(--font-size-base);
 }
 

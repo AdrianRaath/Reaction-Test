@@ -241,6 +241,12 @@ Every interactive element resolves to the same vocabulary: a dark neutral fill, 
 - **Controls:** Ghost `btn-nav` buttons (sound toggle, reset) — Ink-Secondary, `Panel 01` fill, hover brightens.
 - **Mobile:** Controls stay inline; the bar does not collapse to a hamburger (only two controls).
 
+### Iconography
+- **Telemetry & content icons — native emoji.** Widget titles (🏆 📊 🎯 📈 📋) and tip/info cards use native color emoji as their icon vocabulary on every test page. This is a deliberate, sanctioned choice: the emoji give the telemetry and guidance sections a human, score-keeping warmth without adding UI color. As pre-rendered glyphs they sit outside the One Signal Rule and the Rank-Only Color Rule — an emoji is never "using" green or red.
+- **Shared vocabulary.** The same concept always gets the same emoji across pages: 🏆 best, 📊 average, 🎯 ranks/focus, 📈 trend, 📋 history. Page-specific tip cards may introduce topical emoji (😴 🔥 🖥️ 🖱️ ⌨️ ☕ …), but reuse an existing one wherever the concept overlaps.
+- **Always decorative.** Emoji never carry meaning alone — each accompanies a text title, and the emoji `<span>` is marked `aria-hidden="true"` so screen readers skip it.
+- **Functional controls — Phosphor icons.** Nav controls (sound toggle, reset, cross-page links) and other functional glyphs use the monochrome Phosphor set in ink colors. The two vocabularies never mix within a slot: widget/tip iconography is emoji; interactive chrome is Phosphor.
+
 ### Rank Badge
 - **Style:** A capsule (`rounded.sm`) using its rank hue at three intensities — text at full hue, a 20%-alpha fill, a 30%-alpha border. Label typography, `0.05em` tracking, capitalized. The one place the palette is licensed to bloom.
 
@@ -263,6 +269,7 @@ Every interactive element resolves to the same vocabulary: a dark neutral fill, 
 - **Do** pair every red/green state with a **non-color cue** — a text label ("Wait…", "GO!", "Too soon!") and a motion (pulse, scale-snap, shake) — so red-green color-blind players can play. Ship a `prefers-reduced-motion` alternative for every one, and keep GO a clean state change, not a strobe.
 - **Do** hold body text at ≥4.5:1 against its panel. When copy matters, use `Ink Secondary` (`#a1a1aa`) or brighter — not `Ink Muted` — on card surfaces.
 - **Do** give every interactive element the shared vocabulary: dark neutral fill, 1px hairline, scale radius, 150 ms transition, green `:focus-visible` ring.
+- **Do** icon widget titles and tip cards with the shared emoji vocabulary (🏆 📊 🎯 📈 📋 …) — `aria-hidden`, always beside a text label — and keep functional nav controls on monochrome Phosphor. One icon vocabulary per slot, consistent across pages.
 
 ### Don't:
 - **Don't** drift toward the **cheesy, ad-cluttered reaction-test look** — no ad slots, interstitials, popups, or CTAs crowding the measurement. The screen the user came for stays clean.
