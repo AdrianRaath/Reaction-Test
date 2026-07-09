@@ -21,7 +21,9 @@
       "Bash(sed -n '/<footer/,/<\\\\/footer>/p' about.html)",
       "Bash(sed -n '/<header/,/<\\\\/header>/p' guides/how-to-improve-reaction-time.html)",
       "Bash(sed -n '/<footer/,/<\\\\/footer>/p' guides/how-to-improve-reaction-time.html)",
-      "PowerShell(powershell -NoProfile -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-user-Desktop-Reaction-Test\\\\040933dd-6934-4471-bca2-580c974c583d\\\\scratchpad\\\\update-secondary-nav.ps1\")"
+      "PowerShell(powershell -NoProfile -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-user-Desktop-Reaction-Test\\\\040933dd-6934-4471-bca2-580c974c583d\\\\scratchpad\\\\update-secondary-nav.ps1\")",
+      "Bash(openssl rand *)",
+      "Bash(node scripts/submit-indexnow.mjs --dry-run)"
     ]
   },
   "enabledPlugins": {
