@@ -407,9 +407,9 @@ the tool that differs most from the one we would naturally design around.
 
 ### Phase order
 
-- [ ] **0 — Scaffold.** Astro project, Vercel adapter, `public/` fallback for
+- [x] **0 — Scaffold.** Astro project, Vercel adapter, `public/` fallback for
       unported pages. Confirm the existing site still renders end to end.
-- [ ] **1 — Shell and tokens.** Generate `tokens.css` from `DESIGN.md`, then
+- [x] **1 — Shell and tokens.** Generate `tokens.css` from `DESIGN.md`, then
       build the new sidebar shell (§3.5) — desktop and mobile — rather than
       porting the existing top nav. A conventional sidebar derived from the
       existing visual language, not a redesign: same panel ramp, hairlines,
@@ -474,6 +474,13 @@ production and the preview deployment, then compare status code, canonical,
 title, description, and H1 for every URL. Every difference should be either
 intentional or a bug. Write it as a script rather than a manual pass — it needs
 re-running at each future cutover.
+
+**Temporary artifacts that must not reach `main`:**
+
+- `src/pages/shell-preview.astro` — built in phase 1 so the shell could be
+  reviewed before any real page uses it. Noindexed and absent from the sitemap,
+  but it is still a public URL on the preview deployment. Delete it once the
+  CPS port (phase 3) gives the shell a real page.
 
 **After merge:** IndexNow fires automatically on push to `main`. Resubmit the
 sitemap in Search Console and watch coverage and Core Web Vitals for a few

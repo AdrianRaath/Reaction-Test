@@ -1,0 +1,91 @@
+---
+import { Icon } from 'astro-icon/components';
+
+// The top bar is a SLOT, not a fixed set of buttons (§3.5). Sound and reset
+// generalise across today's two tools, but an aim trainer wants sensitivity
+// and a typing test wants a word-list picker — so each page passes its own
+// controls in rather than the shell hardcoding them.
+
+interface Props {
+  /** Short label for the current page, shown beside the menu button. */
+  label?: string;
+}
+
+const { label } = Astro.props;
+---
+
+<header class="topbar">
+  <button
+    type="button"
+    class="menu-btn"
+    data-drawer-toggle
+    aria-controls="sidebar"
+    aria-expanded="false"
+  >
+    <Icon name="ph:list" width={20} height={20} aria-hidden="true" />
+    <span class="visually-hidden">Open menu</span>
+  </button>
+
+  {label && <p class="topbar-label">{label}</p>}
+
+  <div class="topbar-controls">
+    <slot />
+  </div>
+</header>
+
+<style>
+  .topbar {
+    display: flex;
+    height: var(--topbar-height);
+    align-items: center;
+    gap: var(--space-sm);
+    padding-inline: var(--space-md);
+    border-block-end: 1px solid var(--line);
+    background-color: var(--chassis-black);
+  }
+
+  .topbar-label {
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--ink-secondary);
+  }
+
+  .topbar-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-inline-start: auto;
+  }
+
+  .menu-btn {
+    display: none;
+    padding: var(--space-xs);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--ink-secondary);
+  }
+
+  .menu-btn:hover {
+    background-color: var(--panel-hover);
+    color: var(--ink-primary);
+  }
+
+  /* Desktop: the bar stays put while the main column scrolls (§3.5). */
+  @media (min-width: 901px) {
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+  }
+
+  /* Mobile: deliberately NOT sticky. A pinned bar would permanently consume
+     ~56px of vertical space, and nothing may compete with the test area on a
+     small screen (§3.5). It scrolls away instead. */
+  @media (max-width: 900px) {
+    .menu-btn {
+      display: block;
+    }
+  }
+</style>

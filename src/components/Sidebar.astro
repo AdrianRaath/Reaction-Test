@@ -1,0 +1,258 @@
+---
+import { Icon } from 'astro-icon/components';
+import BrandMark from './BrandMark.astro';
+import { tools, secondaryLinks } from '../data/tools';
+
+// The sidebar is the site's only catalogue — there is no /tools page (§3.4) —
+// so it has to stay scannable as tools accumulate. Flat list, no grouping.
+
+// Normalise so '/cps' and '/cps/' both match a registry href.
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+const isCurrent = (href: string) => path === href.replace(/\/+$/, '') || (href === '/' && path === '/');
+---
+
+<nav id="sidebar" class="sidebar" aria-label="Tools and site sections" data-sidebar>
+  <div class="sidebar-head">
+    <a href="/" class="brand">
+      <BrandMark size={24} />
+      <span>ReflexLab</span>
+    </a>
+    <button type="button" class="drawer-close" data-drawer-close aria-label="Close menu">
+      <Icon name="ph:x" width={20} height={20} aria-hidden="true" />
+    </button>
+  </div>
+
+  <div class="sidebar-scroll">
+    <p class="nav-heading" id="nav-tools-heading">Tools</p>
+    <ul class="nav-list" aria-labelledby="nav-tools-heading">
+      {
+        tools.map((tool) => (
+          <li>
+            <a
+              href={tool.href}
+              class="nav-item"
+              aria-current={isCurrent(tool.href) ? 'page' : undefined}
+            >
+              <Icon name={tool.icon} width={18} height={18} aria-hidden="true" />
+              <span>{tool.navLabel}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="nav-heading" id="nav-more-heading">More</p>
+    <ul class="nav-list" aria-labelledby="nav-more-heading">
+      {
+        secondaryLinks.map((link) => (
+          <li>
+            <a
+              href={link.href}
+              class="nav-item"
+              aria-current={isCurrent(link.href) ? 'page' : undefined}
+            >
+              <Icon name={link.icon} width={18} height={18} aria-hidden="true" />
+              <span>{link.label}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</nav>
+
+<div class="scrim" data-drawer-scrim hidden></div>
+
+<style>
+  .sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 40;
+    display: flex;
+    width: var(--sidebar-width);
+    flex-direction: column;
+    border-inline-end: 1px solid var(--line);
+    background-color: var(--panel-01);
+  }
+
+  .sidebar-head {
+    display: flex;
+    height: var(--topbar-height);
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding-inline: var(--space-md);
+    border-block-end: 1px solid var(--line-subtle);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-title-size);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+  }
+
+  /* Only rendered on mobile, where the sidebar becomes a drawer. */
+  .drawer-close {
+    display: none;
+    padding: var(--space-xs);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--ink-secondary);
+  }
+
+  .drawer-close:hover {
+    background-color: var(--panel-hover);
+    color: var(--ink-primary);
+  }
+
+  .sidebar-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-md) var(--space-sm) var(--space-xl);
+  }
+
+  .nav-heading {
+    padding: var(--space-md) var(--space-sm) var(--space-xs);
+    color: var(--ink-muted);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: 0.5rem var(--space-sm);
+    border-radius: var(--radius-md);
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    text-decoration: none;
+    transition: background-color var(--duration-fast) var(--ease);
+  }
+
+  .nav-item:hover {
+    background-color: var(--panel-hover);
+    color: var(--ink-primary);
+  }
+
+  /* Signal Green as the current-page marker is a sanctioned use — it means
+     "active". Kept to a 2px indicator rather than a filled block, so the
+     accent stays rationed. */
+  .nav-item[aria-current='page'] {
+    background-color: var(--panel-03);
+    color: var(--ink-primary);
+  }
+
+  .nav-item[aria-current='page']::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block: 25%;
+    width: 2px;
+    border-radius: var(--radius-full);
+    background-color: var(--signal-green);
+  }
+
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background-color: rgb(0 0 0 / 60%);
+  }
+
+  .scrim[hidden] {
+    display: none;
+  }
+
+  /* --- Mobile: off-canvas drawer -------------------------------------
+     Chosen over a bottom bar because it costs no vertical space — the test
+     area needs the full screen and nothing may compete with it (§3.5). */
+  @media (max-width: 900px) {
+    .sidebar {
+      transform: translateX(-100%);
+      transition: transform var(--duration-base) var(--ease);
+      width: min(280px, 85vw);
+    }
+
+    .sidebar[data-open] {
+      transform: translateX(0);
+    }
+
+    .drawer-close {
+      display: block;
+    }
+  }
+
+  @media (min-width: 901px) {
+    .scrim {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  // Drawer control. Desktop never calls any of this — the sidebar is static
+  // there — so the listeners are cheap and idempotent.
+  const sidebar = document.querySelector<HTMLElement>('[data-sidebar]');
+  const scrim = document.querySelector<HTMLElement>('[data-drawer-scrim]');
+  const closeBtn = document.querySelector<HTMLElement>('[data-drawer-close]');
+
+  if (sidebar && scrim) {
+    let lastFocused: HTMLElement | null = null;
+
+    const setOpen = (open: boolean) => {
+      sidebar.toggleAttribute('data-open', open);
+      scrim.hidden = !open;
+      document.body.style.overflow = open ? 'hidden' : '';
+
+      document.querySelectorAll<HTMLElement>('[data-drawer-toggle]').forEach((btn) => {
+        btn.setAttribute('aria-expanded', String(open));
+      });
+
+      if (open) {
+        lastFocused = document.activeElement as HTMLElement;
+        sidebar.querySelector<HTMLElement>('a, button')?.focus();
+      } else {
+        lastFocused?.focus();
+        lastFocused = null;
+      }
+    };
+
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-drawer-toggle]')) setOpen(!sidebar.hasAttribute('data-open'));
+    });
+
+    closeBtn?.addEventListener('click', () => setOpen(false));
+    scrim.addEventListener('click', () => setOpen(false));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && sidebar.hasAttribute('data-open')) setOpen(false);
+    });
+
+    // Navigating within the drawer should not leave it open behind the new page.
+    sidebar.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('a')) setOpen(false);
+    });
+  }
+</script>

@@ -1,0 +1,164 @@
+---
+import Sidebar from '../components/Sidebar.astro';
+import TopBar from '../components/TopBar.astro';
+import '../styles/tokens.css';
+import '../styles/base.css';
+
+const GA_ID = 'G-XWQNL6HFLK';
+
+interface Props {
+  /**
+   * The complete <title>. Authored per page, never derived.
+   *
+   * Deliberately NOT suffixed with "| ReflexLab" by this layout. The live
+   * titles are inconsistent on purpose — '/' and '/cps' omit the site name
+   * because they target the money keywords, while about/privacy/guides carry
+   * it. Auto-appending here would rewrite the two most valuable title tags on
+   * the site. See REVAMP.md §7.
+   */
+  title: string;
+  description: string;
+  /** Root-relative path, e.g. '/cps'. Resolved against `site` for canonical + og:url. */
+  path: string;
+  ogType?: 'website' | 'article';
+  /** Root-relative. Must stay an unhashed public/ path — see REVAMP.md §7. */
+  ogImage?: string;
+  noindex?: boolean;
+  /** Short label shown in the top bar. */
+  topbarLabel?: string;
+}
+
+const {
+  title,
+  description,
+  path,
+  ogType = 'website',
+  ogImage = '/assets/reflex-og.png',
+  noindex = false,
+  topbarLabel,
+} = Astro.props;
+
+const site = Astro.site ?? new URL('https://reflexlab.co');
+const canonical = new URL(path, site).href;
+const ogImageUrl = new URL(ogImage, site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <link rel="icon" type="image/png" href="/assets/reflex-favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/reflex-webclip.png" />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImageUrl} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+
+    <slot name="head" />
+
+    <!-- Google tag (gtag.js). Hoisted here from all nine legacy pages, and
+         placed after <meta charset> — the legacy files load it above the
+         charset declaration, which must land in the first 1024 bytes. -->
+    <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
+    <script is:inline define:vars={{ GA_ID }}>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag('js', new Date());
+      gtag('config', GA_ID);
+    </script>
+  </head>
+
+  <body>
+    <!-- First focusable element on the page. With a sidebar of tools ahead of
+         the main content, this stops being a nicety: without it, reaching a
+         Space/Enter-driven test costs one tab per tool. See REVAMP.md §3.5. -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <div class="app-shell">
+      <Sidebar />
+
+      <div class="app-main">
+        <TopBar label={topbarLabel}>
+          <slot name="controls" />
+        </TopBar>
+
+        <main id="main-content" tabindex="-1">
+          <slot />
+        </main>
+      </div>
+
+      <!-- Reserved right rail. Renders nothing today. It exists so that ads
+           (§4.2) can be added without re-laying-out the shell — do not
+           collapse this to a two-column grid. Width is --rail-width (0px). -->
+      <div class="app-rail" aria-hidden="true"></div>
+    </div>
+  </body>
+</html>
+
+<style>
+  .app-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--rail-width);
+    min-height: 100vh;
+  }
+
+  .app-main {
+    min-width: 0;
+  }
+
+  main {
+    /* The tool occupies roughly the first screen; long-form content follows
+       below the fold. The shell reads as an app without becoming a
+       single-screen app that has nowhere to put prose (§3.5 / §5). */
+    padding: var(--space-xl) var(--space-lg) var(--space-3xl);
+  }
+
+  main:focus {
+    outline: none;
+  }
+
+  .skip-link {
+    position: absolute;
+    inset-inline-start: var(--space-md);
+    inset-block-start: -100%;
+    z-index: 60;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--signal-green);
+    color: var(--chassis-black);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .skip-link:focus {
+    inset-block-start: var(--space-md);
+  }
+
+  @media (max-width: 900px) {
+    .app-shell {
+      /* Sidebar becomes an overlay drawer, so it no longer reserves a track. */
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    main {
+      padding: var(--space-lg) var(--space-md) var(--space-2xl);
+    }
+  }
+</style>

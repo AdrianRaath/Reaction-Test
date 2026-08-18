@@ -1,0 +1,121 @@
+/* ==========================================================================
+   ReflexLab design tokens
+
+   Transcribed from DESIGN.md. That document is the contract (REVAMP.md §8) —
+   change values there first, then mirror them here. Nothing in the codebase
+   should hardcode a hex value or a type size that exists below.
+   ========================================================================== */
+
+:root {
+  /* --- Colour: signal ---------------------------------------------------
+     Signal Green and Hold Red are the game's language — go and wait. The One
+     Signal Rule: they may only ever mean that. Never a decorative fill. */
+  --signal-green: #22c55e;
+  --signal-green-deep: #16a34a;
+  --hold-red: #ef4444;
+  --caution-amber: #f59e0b;
+
+  /* --- Colour: chassis --------------------------------------------------
+     Depth is built by tonal step, not shadow. */
+  --chassis-black: #0a0a0b;
+  --panel-01: #111113;
+  --panel-02: #141416;
+  --panel-03: #18181b;
+  --panel-hover: #1f1f23;
+
+  /* --- Colour: ink ------------------------------------------------------ */
+  --ink-primary: #fafafa;
+  --ink-secondary: #a1a1aa;
+  --ink-muted: #71717a;
+  --ink-disabled: #52525b;
+
+  /* --- Colour: lines ---------------------------------------------------- */
+  --line: #27272a;
+  --line-subtle: #1f1f23;
+
+  /* --- Colour: rank palette --------------------------------------------
+     The Rank-Only Colour Rule: licensed for rank badges and the results-border
+     glow, nowhere else. Colour is telemetry, not upholstery. */
+  --rank-elite: #a855f7;
+  --rank-pro: #22c55e;
+  --rank-advanced: #3b82f6;
+  --rank-intermediate: #f59e0b;
+  --rank-beginner: #71717a;
+
+  /* --- Typography: families --------------------------------------------
+     One sans carries the interface; monospace is reserved for measured
+     values. The Monospace-Numerals Rule: every measured value uses --font-mono,
+     and prose never does. */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:
+    ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* --- Typography: scale ------------------------------------------------ */
+  --text-display-size: 3.5rem;
+  --text-display-weight: 700;
+  --text-display-lh: 1.2;
+  --text-display-ls: -0.03em;
+
+  --text-readout-size: 4rem;
+  --text-readout-weight: 700;
+  --text-readout-lh: 1;
+
+  --text-headline-size: 1.5rem;
+  --text-headline-weight: 700;
+  --text-headline-lh: 1.2;
+
+  --text-title-size: 1rem;
+  --text-title-weight: 600;
+  --text-title-lh: 1.5;
+
+  --text-body-size: 1rem;
+  --text-body-weight: 400;
+  --text-body-lh: 1.5;
+
+  --text-label-size: 0.875rem;
+  --text-label-weight: 500;
+  --text-label-lh: 1.5;
+
+  /* --- Radius ----------------------------------------------------------- */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* --- Spacing ---------------------------------------------------------- */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+
+  /* --- Shell ------------------------------------------------------------
+     New in the revamp; not in the original DESIGN.md. See REVAMP.md §3.5.
+
+     --rail-width reserves the optional right-hand column. It is 0 today and
+     renders nothing, but the shell is a three-track grid so that ads (§4.2)
+     can be added later without re-laying-out the page. Do not collapse the
+     shell to two columns. */
+  --sidebar-width: 260px;
+  --topbar-height: 56px;
+  --rail-width: 0px;
+  --content-max: 72ch; /* prose cap, per DESIGN.md's 65–75ch guidance */
+
+  /* --- Motion -----------------------------------------------------------
+     Motion is functional only — state feedback, never ambient decoration. */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}

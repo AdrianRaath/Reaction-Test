@@ -71,6 +71,12 @@ spacing:
   xl: "2rem"
   2xl: "3rem"
   3xl: "4rem"
+shell:
+  sidebar-width: "260px"
+  topbar-height: "56px"
+  rail-width: "0px"
+  content-max: "72ch"
+  drawer-breakpoint: "900px"
 components:
   button-primary:
     backgroundColor: "{colors.signal-green}"
@@ -235,11 +241,22 @@ Every interactive element resolves to the same vocabulary: a dark neutral fill, 
 - **Border:** 1px `Line`. Internal dividers use `Line Subtle`.
 - **Internal Padding:** `1.5rem` (`spacing.lg`).
 
-### Navigation
-- **Style:** Sticky top bar, `Chassis Black` at 85% opacity with a 12px backdrop-blur, hairline bottom border. 64px tall, content capped at 960px.
-- **Brand:** Wordmark + green logo glyph; hovering the brand shifts it to Signal Green.
-- **Controls:** Ghost `btn-nav` buttons (sound toggle, reset) — Ink-Secondary, `Panel 01` fill, hover brightens.
-- **Mobile:** Sound and reset stay inline, with reset dropping its label to icon-only. Tool links collapse into a tools menu behind a Phosphor list button: a Panel-02 dropdown with a hairline border, lifted shadow, and 44px items. The current tool is marked by a green icon (an active state, sanctioned by the One Signal Rule).
+### Navigation — Sidebar Shell
+
+> **Superseded.** ReflexLab moved from a top nav to a sidebar app shell during the revamp. The previous top-bar navigation is described at the end of this section for reference only; it no longer ships. See `REVAMP.md` §3.5.
+
+The site is a hub for many tools, so navigation is a persistent catalogue rather than a bar. There is no separate hub or catalogue page — **the sidebar is the only catalogue the site has**, which makes staying scannable a requirement rather than a nicety.
+
+- **Sidebar:** Fixed, full viewport height, `Panel 01` fill with a hairline `Line` border on the inside edge. 260px wide (`--sidebar-width`). Brand sits in a 56px head block matching the top bar's height so the two align across the seam.
+- **Nav items:** 14px/500 `Ink Secondary`, 18px Phosphor icon, `Radius md`, hover lifts to `Panel Hover` and `Ink Primary`. Grouped under uppercase 11px `Ink Muted` headings ("Tools", "More") — these are labels, not categories; the tool list itself is deliberately flat.
+- **Current page:** `Panel 03` fill plus a 2px Signal Green indicator bar on the leading edge. Marking the active page is a sanctioned use of green ("active"), and it is held to a 2px rule rather than a filled block so the accent stays rationed.
+- **Top bar:** 56px (`--topbar-height`), `Chassis Black`, hairline bottom border, sticky on desktop. It is a **slot, not a fixed set of buttons** — each tool supplies its own controls (sound, reset, and whatever a future tool needs) rather than the shell hardcoding them.
+- **Main column:** Scrolls normally beneath the fixed chrome. The tool occupies roughly the first screen and long-form content follows below the fold — the shell reads as an app without becoming a single-screen app with nowhere to put prose. Prose is capped at `--content-max` (72ch).
+- **Reserved rail:** The shell is a three-track grid (sidebar / main / rail) with the rail at 0px. It renders nothing and exists so a right-hand column can be added without re-laying-out the page. Do not collapse the shell to two columns.
+- **Mobile (≤900px):** The sidebar becomes an off-canvas drawer behind a Phosphor list button, with a 60% black scrim, Escape-to-close, and close-on-navigate. A drawer is chosen over a bottom bar specifically because it costs no vertical space. The top bar is deliberately **not** sticky here — a pinned bar would permanently consume ~56px, and nothing may compete with the test area on a small screen.
+- **Skip link:** First focusable element on every page, Signal Green on `Chassis Black`, revealed on focus. With a catalogue of tools preceding the main content, this is an accessibility requirement, not a courtesy — without it, reaching a Space/Enter-driven test costs one tab press per tool.
+
+*Previous (retired) top nav: sticky 64px bar, `Chassis Black` at 85% opacity with 12px backdrop-blur, content capped at 960px; brand wordmark shifting to Signal Green on hover; ghost `btn-nav` controls; tool links collapsing into a Panel-02 dropdown on mobile.*
 
 ### Iconography
 - **Telemetry & content icons — native emoji.** Widget titles (🏆 📊 🎯 📈 📋) and tip/info cards use native color emoji as their icon vocabulary on every test page. This is a deliberate, sanctioned choice: the emoji give the telemetry and guidance sections a human, score-keeping warmth without adding UI color. As pre-rendered glyphs they sit outside the One Signal Rule and the Rank-Only Color Rule — an emoji is never "using" green or red.

@@ -1,5 +1,6 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import icon from 'astro-icon';
 
 // URL shape is a contract — see REVAMP.md §7 (Cutover: preserving SEO).
 //
@@ -14,4 +15,9 @@ export default defineConfig({
   build: {
     format: 'file',
   },
+  integrations: [
+    // Phosphor icons inlined as SVG at build time, replacing the unpinned
+    // unpkg <script> the legacy pages load (REVAMP.md §6.2).
+    icon({ include: { ph: ['*'] } }),
+  ],
 });
