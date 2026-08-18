@@ -1,0 +1,127 @@
+---
+// Reset confirmation dialog. Wired by the telemetry rig (src/engine/rig.ts):
+// open via #reset-btn, Escape/backdrop/Cancel to close, Confirm clears the
+// tool's progress (settings survive). The ids are the rig's DOM contract.
+
+interface Props {
+  /** What gets erased, e.g. "your best CPS, session history, and achieved ranks". */
+  message: string;
+}
+
+const { message } = Astro.props;
+---
+
+<div
+  class="modal-overlay"
+  id="reset-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="reset-modal-title"
+  hidden
+>
+  <div class="modal">
+    <h3 class="modal-title" id="reset-modal-title">Reset All Data?</h3>
+    <p class="modal-message">
+      This will clear {message}. This action cannot be undone.
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="modal-cancel-btn" type="button">Cancel</button>
+      <button class="btn btn-danger" id="modal-confirm-btn" type="button">Reset All Data</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+    background-color: rgb(0 0 0 / 70%);
+    backdrop-filter: blur(4px);
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 400px;
+    padding: var(--space-xl);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-02);
+    /* The modal genuinely floats — the one sanctioned resting shadow. */
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 40%),
+      0 4px 6px -4px rgb(0 0 0 / 30%);
+    text-align: center;
+    animation: modal-fade-in var(--duration-base) var(--ease);
+  }
+
+  @keyframes modal-fade-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .modal-title {
+    margin-block-end: var(--space-md);
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .modal-message {
+    margin-block-end: var(--space-xl);
+    font-size: var(--text-label-size);
+    line-height: 1.7;
+    color: var(--ink-secondary);
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  .btn-secondary {
+    border-color: var(--line);
+    background: transparent;
+    color: var(--ink-primary);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-muted);
+  }
+
+  .btn-danger {
+    /* Hold Red on a destructive action — its sanctioned non-game use. */
+    border-color: var(--hold-red);
+    background-color: var(--hold-red);
+    color: var(--ink-primary);
+  }
+
+  .btn-danger:hover {
+    background-color: #dc2626;
+    border-color: #dc2626;
+  }
+</style>

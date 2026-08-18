@@ -40,6 +40,8 @@ export interface MetricDef {
 export interface RankDef {
   id: RankId;
   name: string;
+  /** Human-readable range shown in the checklist and rank table, e.g. '8–9.9 CPS'. */
+  rangeLabel?: string;
   /**
    * Threshold on the primary metric, expressed as "at least this good".
    *
@@ -100,6 +102,12 @@ export interface LegacyKeys {
   historyLog: string;
   /** e.g. 'reactionlab_achieved_ranks' — a JSON array of rank ids. */
   achievedRanks: string;
+  /**
+   * e.g. 'reactionlab_session_history' — the legacy trend chart's bare number
+   * array. Never imported (redundant with historyLog — see migrate.ts), but
+   * listed so Reset can erase it along with the other legacy data.
+   */
+  sessionHistory?: string;
 }
 
 export const DEFAULT_MAX_HISTORY = 50;

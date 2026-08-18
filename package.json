@@ -28,5 +28,8 @@
     "prettier-plugin-astro": "^0.14.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1"
   }
 }

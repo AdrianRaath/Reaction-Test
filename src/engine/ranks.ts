@@ -76,8 +76,13 @@ export function ranksUpTo(tool: ToolDefinition, value: number): RankDef[] {
   return tool.ranks.slice(index);
 }
 
+/** Format a metric value without its unit — for UIs that render the unit separately. */
+export function formatValue(metric: MetricDef, value: number): string {
+  return metric.format ? metric.format(value) : String(Math.round(value));
+}
+
 /** Format a metric value for display, honouring the metric's own formatter. */
 export function formatMetric(metric: MetricDef, value: number): string {
-  const formatted = metric.format ? metric.format(value) : String(Math.round(value));
+  const formatted = formatValue(metric, value);
   return metric.unit ? `${formatted}${metric.unit}` : formatted;
 }

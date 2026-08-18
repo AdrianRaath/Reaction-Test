@@ -1,0 +1,395 @@
+---
+import type { RankDef } from '../../engine/types';
+
+// Static skeleton for the telemetry rig (src/engine/rig.ts). The rig owns all
+// dynamic content; this component owns structure, ids, and empty states. The
+// element ids are the rig's DOM contract — rename them in both places or not
+// at all.
+
+interface Props {
+  /** Unit label rendered beside the readouts, e.g. 'CPS' or 'ms'. */
+  unit: string;
+  bestTitle: string;
+  bestSubtitle: string;
+  bestEmpty: string;
+  avgTitle: string;
+  /** Noun for the average subtitle: "Across N {avgNoun}". */
+  avgNoun: string;
+  avgEmpty: string;
+  chartDescription: string;
+  chartEmpty: string;
+  historyEmpty: string;
+  /** Worst-first, matching the climb the checklist depicts. */
+  ranks: RankDef[];
+}
+
+const {
+  unit,
+  bestTitle,
+  bestSubtitle,
+  bestEmpty,
+  avgTitle,
+  avgNoun,
+  avgEmpty,
+  chartDescription,
+  chartEmpty,
+  historyEmpty,
+  ranks,
+} = Astro.props;
+---
+
+<!-- Row 1: best + average, rank checklist -->
+<div class="progress-widgets">
+  <div class="widget widget-personal-best">
+    <div class="pb-section">
+      <h3 class="widget-title">
+        {bestTitle}
+        <span class="widget-icon" aria-hidden="true">🏆</span>
+      </h3>
+      <div class="pb-score-display">
+        <span class="pb-time readout" id="widget-pb-time">—</span>
+        <span class="pb-unit">{unit}</span>
+        <span class="pb-rank-badge" id="widget-pb-rank">—</span>
+      </div>
+      <p class="pb-subtitle">{bestSubtitle}</p>
+      <p class="pb-description" id="widget-pb-description" data-empty={bestEmpty}>
+        {bestEmpty}
+      </p>
+    </div>
+    <div class="pb-section">
+      <h3 class="widget-title">
+        {avgTitle}
+        <span class="widget-icon" aria-hidden="true">📊</span>
+      </h3>
+      <div class="pb-score-display">
+        <span class="pb-time readout" id="widget-avg-time">—</span>
+        <span class="pb-unit">{unit}</span>
+        <span class="pb-rank-badge" id="widget-avg-rank">—</span>
+      </div>
+      <p class="pb-subtitle">Across <span id="widget-avg-sessions">0</span> {avgNoun}</p>
+      <p class="pb-description" id="widget-avg-description" data-empty={avgEmpty}>
+        {avgEmpty}
+      </p>
+    </div>
+  </div>
+
+  <div class="widget widget-rank-checklist">
+    <h3 class="widget-title">
+      Ranks Achieved <span class="widget-icon" aria-hidden="true">🎯</span>
+    </h3>
+    <ul class="rank-checklist" id="rank-checklist">
+      {
+        ranks.map((rank) => (
+          <li class={`rank-item ${rank.id}`} data-rank={rank.id}>
+            <span class="rank-check">✗</span>
+            <div class="rank-info">
+              <span class="rank-name">{rank.name}:</span>
+              <span class="rank-range readout">{rank.rangeLabel}</span>
+            </div>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</div>
+
+<!-- Row 2: trend chart, history log -->
+<div class="progress-widgets">
+  <div class="widget widget-trend">
+    <h3 class="widget-title">
+      Trend <span class="widget-icon" aria-hidden="true">📈</span>
+    </h3>
+    <p class="chart-description" id="chart-description" hidden>{chartDescription}</p>
+    <p class="chart-empty-message" id="chart-empty-message">{chartEmpty}</p>
+    <div class="chart-container">
+      <canvas id="session-chart"></canvas>
+    </div>
+  </div>
+
+  <div class="widget widget-history">
+    <h3 class="widget-title">
+      History <span class="widget-icon" aria-hidden="true">📋</span>
+    </h3>
+    <div class="history-list" id="history-list">
+      <p class="history-empty-message" id="history-empty-message">{historyEmpty}</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .progress-widgets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    width: 100%;
+    max-width: 960px;
+  }
+
+  .widget {
+    min-width: 0;
+    overflow: hidden;
+    padding: var(--space-lg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-02);
+  }
+
+  .widget-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-block-end: var(--space-md);
+    font-size: var(--text-title-size);
+    font-weight: var(--text-title-weight);
+  }
+
+  .widget-icon {
+    flex-shrink: 0;
+    font-size: 1.125rem;
+  }
+
+  /* --- Best / average ---------------------------------------------------- */
+
+  .widget-personal-best {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pb-section {
+    padding-block-end: var(--space-md);
+    margin-block-end: var(--space-md);
+    border-block-end: 1px solid var(--line-subtle);
+  }
+
+  .pb-section:last-of-type {
+    padding-block-end: 0;
+    margin-block-end: var(--space-sm);
+    border-block-end: none;
+  }
+
+  .pb-score-display {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+    margin-block-end: var(--space-xs);
+    flex-wrap: wrap;
+  }
+
+  .pb-time {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .pb-unit {
+    font-size: 1.125rem;
+    color: var(--ink-secondary);
+  }
+
+  .pb-rank-badge {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: capitalize;
+  }
+
+  .pb-subtitle {
+    margin-block-end: var(--space-xs);
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  .pb-description {
+    margin-block-start: var(--space-sm);
+    font-size: var(--text-label-size);
+    line-height: 1.7;
+    color: var(--ink-secondary);
+  }
+
+  /* --- Rank badge tints (Rank-Only Colour Rule: badges only) ------------- */
+
+  .pb-rank-badge.elite {
+    background-color: rgb(168 85 247 / 20%);
+    color: var(--rank-elite);
+  }
+  .pb-rank-badge.pro {
+    background-color: rgb(34 197 94 / 20%);
+    color: var(--rank-pro);
+  }
+  .pb-rank-badge.advanced {
+    background-color: rgb(59 130 246 / 20%);
+    color: var(--rank-advanced);
+  }
+  .pb-rank-badge.intermediate {
+    background-color: rgb(245 158 11 / 20%);
+    color: var(--rank-intermediate);
+  }
+  .pb-rank-badge.beginner {
+    background-color: rgb(144 144 153 / 20%);
+    color: var(--rank-beginner);
+  }
+
+  /* --- Rank checklist ----------------------------------------------------- */
+
+  .rank-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: 0;
+    list-style: none;
+  }
+
+  .rank-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+  }
+
+  .rank-check {
+    min-width: 20px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  .rank-item.achieved .rank-check {
+    /* Signal Green = "achieved / active" — a sanctioned use. */
+    color: var(--signal-green);
+  }
+
+  .rank-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .rank-name {
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--ink-muted);
+    transition: color var(--duration-fast) var(--ease);
+  }
+
+  .rank-item.achieved .rank-name {
+    color: var(--ink-primary);
+  }
+
+  .rank-range {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  /* --- Trend --------------------------------------------------------------- */
+
+  .widget-trend {
+    display: flex;
+    flex-direction: column;
+    height: 402px;
+  }
+
+  .chart-description,
+  .chart-empty-message {
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+  }
+
+  .chart-empty-message {
+    font-style: italic;
+  }
+
+  .chart-container {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    margin-block-start: auto;
+  }
+
+  /* --- History --------------------------------------------------------------- */
+
+  .widget-history {
+    display: flex;
+    flex-direction: column;
+    height: 402px;
+  }
+
+  .history-list {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    gap: var(--space-sm);
+    overflow-y: auto;
+  }
+
+  .history-list :global(.history-item) {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+  }
+
+  .history-list :global(.history-score) {
+    min-width: 70px;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  .history-list :global(.history-rank) {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .history-list :global(.history-rank.elite) {
+    background-color: rgb(168 85 247 / 20%);
+    color: var(--rank-elite);
+  }
+  .history-list :global(.history-rank.pro) {
+    background-color: rgb(34 197 94 / 20%);
+    color: var(--rank-pro);
+  }
+  .history-list :global(.history-rank.advanced) {
+    background-color: rgb(59 130 246 / 20%);
+    color: var(--rank-advanced);
+  }
+  .history-list :global(.history-rank.intermediate) {
+    background-color: rgb(245 158 11 / 20%);
+    color: var(--rank-intermediate);
+  }
+  .history-list :global(.history-rank.beginner) {
+    background-color: rgb(144 144 153 / 20%);
+    color: var(--rank-beginner);
+  }
+
+  .history-list :global(.history-time) {
+    margin-inline-start: auto;
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+  }
+
+  .history-empty-message {
+    padding: var(--space-lg);
+    font-size: var(--text-label-size);
+    font-style: italic;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  @media (max-width: 992px) {
+    .progress-widgets {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

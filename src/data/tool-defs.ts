@@ -40,6 +40,7 @@ export const reactionTool = defineTool({
     settings: 'reactionlab_settings',
     historyLog: 'reactionlab_history_log',
     achievedRanks: 'reactionlab_achieved_ranks',
+    sessionHistory: 'reactionlab_session_history',
   },
 });
 
@@ -63,11 +64,11 @@ export const cpsTool = defineTool({
     },
   },
   ranks: [
-    { id: 'elite', name: 'Elite', threshold: 10 },
-    { id: 'pro', name: 'Pro', threshold: 8 },
-    { id: 'advanced', name: 'Advanced', threshold: 7 },
-    { id: 'intermediate', name: 'Intermediate', threshold: 4 },
-    { id: 'beginner', name: 'Beginner', threshold: 0 },
+    { id: 'elite', name: 'Elite', threshold: 10, rangeLabel: '10+ CPS' },
+    { id: 'pro', name: 'Pro', threshold: 8, rangeLabel: '8–9.9 CPS' },
+    { id: 'advanced', name: 'Advanced', threshold: 7, rangeLabel: '7–7.9 CPS' },
+    { id: 'intermediate', name: 'Intermediate', threshold: 4, rangeLabel: '4–6.9 CPS' },
+    { id: 'beginner', name: 'Beginner', threshold: 0, rangeLabel: 'Under 4 CPS' },
   ],
   maxHistory: 20,
   legacy: {
@@ -75,5 +76,6 @@ export const cpsTool = defineTool({
     settings: 'cpslab_settings',
     historyLog: 'cpslab_history_log',
     achievedRanks: 'cpslab_achieved_ranks',
+    sessionHistory: 'cpslab_session_history',
   },
 });

@@ -56,5 +56,5 @@ export function defineTool(tool: ToolDefinition): ToolDefinition {
 export function openTool(tool: ToolDefinition, adapter: StorageAdapter = defaultAdapter()) {
   const store = createToolStore(tool, adapter);
   const migration = migrateLegacyData(tool, store, adapter);
-  return { store, migration };
+  return { store, migration, adapter };
 }

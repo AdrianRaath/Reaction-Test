@@ -1,0 +1,63 @@
+---
+import { tools } from '../data/tools';
+
+// Footer links are registry-driven like the sidebar, plus the content pages.
+// Keeps the legacy footer's internal links (tools, guides, about, privacy)
+// intact for crawlers after the cutover.
+
+const links = [
+  ...tools.map((t) => ({ href: t.href, label: t.name.replace(' Time Test', ' Test') })),
+  { href: '/guides', label: 'Guides' },
+  { href: '/about', label: 'About' },
+  { href: '/privacy', label: 'Privacy' },
+];
+---
+
+<footer class="site-footer">
+  <p class="copyright">&copy; 2026 ReflexLab. All rights reserved.</p>
+  <nav class="footer-links" aria-label="Footer">
+    {links.map((link) => <a href={link.href}>{link.label}</a>)}
+  </nav>
+  <p class="footer-note">
+    Free reaction time and click speed tests. Your results stay in your browser.
+  </p>
+</footer>
+
+<style>
+  .site-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-xl) var(--space-lg);
+    border-block-start: 1px solid var(--line-subtle);
+    background-color: var(--panel-01);
+    text-align: center;
+  }
+
+  .copyright,
+  .footer-links a {
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+  }
+
+  .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-lg);
+  }
+
+  .footer-links a {
+    text-decoration: none;
+  }
+
+  .footer-links a:hover {
+    color: var(--ink-secondary);
+  }
+
+  .footer-note {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+</style>

@@ -1,0 +1,307 @@
+/* ==========================================================================
+   Long-form content sections on tool pages.
+
+   Global (not scoped) on purpose: this markup comes verbatim from the legacy
+   pages today and from MDX content collections in phase 5 — both need the
+   same class vocabulary. Values are translated from the legacy styles.css
+   onto the token system; class names are kept identical to the legacy markup
+   so the content port stays mechanical (REVAMP.md §5).
+
+   The 960px .container matches the legacy measure for now; the 65–75ch
+   typography pass is phase 5's, deliberately not smuggled in here.
+   ========================================================================== */
+
+.container {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.info-section {
+  padding: var(--space-2xl) 0;
+}
+
+.info-section h2 {
+  margin-block-end: var(--space-md);
+  font-size: var(--text-headline-size);
+}
+
+.info-section p {
+  margin-block-end: var(--space-md);
+  line-height: 1.7;
+  color: var(--ink-secondary);
+}
+
+.info-section p:last-child {
+  margin-block-end: 0;
+}
+
+.info-section a {
+  color: var(--ink-primary);
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 40%);
+  text-underline-offset: 2px;
+}
+
+.info-section a:hover {
+  text-decoration-color: rgb(255 255 255 / 70%);
+}
+
+.info-section strong {
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+/* Utility: adds space between section intro text and content blocks */
+.section-content {
+  margin-block-start: var(--space-xl);
+}
+
+/* --- Numbered steps -------------------------------------------------------- */
+
+.steps-list {
+  margin-block-end: var(--space-xl);
+  padding: 0;
+  list-style: none;
+  counter-reset: steps;
+}
+
+.steps-list li {
+  counter-increment: steps;
+  position: relative;
+  padding-inline-start: var(--space-2xl);
+  margin-block-end: var(--space-lg);
+}
+
+.steps-list li::before {
+  content: counter(steps);
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  /* Green as the step marker is the legacy page's one decorative use of the
+     accent; kept for visual parity with the unported pages until phase 5. */
+  background-color: var(--signal-green);
+  color: var(--chassis-black);
+  font-size: var(--text-label-size);
+  font-weight: 700;
+}
+
+.steps-list li strong {
+  display: block;
+  margin-block-end: var(--space-xs);
+  color: var(--ink-primary);
+}
+
+.steps-list li p {
+  margin-block-end: 0;
+}
+
+.note {
+  margin-block-start: var(--space-xl);
+  padding: var(--space-md);
+  border-inline-start: 3px solid var(--caution-amber);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background-color: var(--panel-03);
+}
+
+/* --- Rank table ------------------------------------------------------------ */
+
+.rank-table {
+  margin-block: var(--space-xl);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.rank-row {
+  display: grid;
+  grid-template-columns: 120px 120px 1fr;
+  gap: var(--space-md);
+  align-items: center;
+  padding: var(--space-md);
+  border-block-end: 1px solid var(--line-subtle);
+}
+
+.rank-row:last-child {
+  border-block-end: none;
+}
+
+.rank-row .rank-name {
+  font-weight: 700;
+}
+
+/* Rank-Only Colour Rule: the table names ranks, so the hues are licensed. */
+.rank-row.elite .rank-name {
+  color: var(--rank-elite);
+}
+.rank-row.pro .rank-name {
+  color: var(--rank-pro);
+}
+.rank-row.advanced .rank-name {
+  color: var(--rank-advanced);
+}
+.rank-row.intermediate .rank-name {
+  color: var(--rank-intermediate);
+}
+.rank-row.beginner .rank-name {
+  color: var(--rank-beginner);
+}
+
+.rank-row .rank-range {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-label-size);
+  color: var(--ink-secondary);
+}
+
+.rank-row .rank-desc {
+  font-size: var(--text-label-size);
+  color: var(--ink-muted);
+}
+
+/* --- Tip cards --------------------------------------------------------------- */
+
+.tips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-lg);
+}
+
+.tips-grid.grid-2x2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.tip-card {
+  padding: var(--space-lg);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-lg);
+  background-color: var(--panel-03);
+  transition: border-color var(--duration-fast) var(--ease);
+}
+
+.tip-card:hover {
+  border-color: var(--line);
+}
+
+.tip-card-icon {
+  display: block;
+  margin-block-end: var(--space-sm);
+  font-size: 1.5rem;
+}
+
+.tip-card h3 {
+  margin-block-end: var(--space-sm);
+  font-size: 1.125rem;
+}
+
+.tip-card p {
+  margin-block-end: 0;
+  font-size: var(--text-label-size);
+}
+
+/* --- Factors --------------------------------------------------------------- */
+
+.factor {
+  margin-block-end: var(--space-xl);
+  padding-block-end: var(--space-xl);
+  border-block-end: 1px solid var(--line-subtle);
+}
+
+.factor:last-child {
+  margin-block-end: 0;
+  padding-block-end: 0;
+  border-block-end: none;
+}
+
+.factor h3 {
+  margin-block-end: var(--space-sm);
+  font-size: 1.125rem;
+}
+
+.factor p {
+  margin-block-end: 0;
+}
+
+/* --- FAQ --------------------------------------------------------------------- */
+
+.faq-item {
+  margin-block-end: var(--space-sm);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md);
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--ink-primary);
+  list-style: none;
+  transition: background-color var(--duration-fast) var(--ease);
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary::after {
+  content: '+';
+  font-size: 1.125rem;
+  color: var(--ink-muted);
+}
+
+.faq-item[open] summary::after {
+  content: '−';
+}
+
+.faq-item summary:hover {
+  background-color: var(--panel-hover);
+}
+
+.faq-item p {
+  padding: 0 var(--space-md) var(--space-md);
+  margin-block-end: 0;
+}
+
+/* --- Disclaimer --------------------------------------------------------------- */
+
+.disclaimer-section {
+  padding: var(--space-xl) 0 0;
+  border-block-start: 1px solid var(--line-subtle);
+}
+
+.disclaimer {
+  max-width: 720px;
+  margin-inline: auto;
+  font-size: var(--text-label-size);
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+/* --- Responsive --------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  .rank-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-xs);
+    text-align: center;
+  }
+
+  .rank-row .rank-desc {
+    display: none;
+  }
+
+  .tips-grid,
+  .tips-grid.grid-2x2 {
+    grid-template-columns: 1fr;
+  }
+}

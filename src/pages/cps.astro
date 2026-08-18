@@ -1,0 +1,1142 @@
+---
+import { Icon } from 'astro-icon/components';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProgressWidgets from '../components/tool/ProgressWidgets.astro';
+import ResetModal from '../components/tool/ResetModal.astro';
+import { cpsTool } from '../data/tool-defs';
+import '../styles/content.css';
+
+// SEO values are the live page's, byte for byte — the URL contract (REVAMP.md
+// §7). The title deliberately carries no "| ReflexLab" suffix: it targets the
+// money keyword. Do not "fix" it.
+const TITLE = 'Clicks Per Second Test (CPS Test) - Free Online Click Speed Test';
+const DESCRIPTION =
+  'Free clicks per second test (CPS test). Most people average 6-7 CPS in a 5-second burst. Test your click speed, earn a rank, and track your best CPS.';
+
+// FAQPage JSON-LD, transcribed exactly from the live cps.html.
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'What is a good clicks per second (CPS) score?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "For a standard mouse click, most people average around 6 to 7 clicks per second over a 5-second test. Anything above 8 CPS is fast, and sustained scores of 10 or more put you in elite territory. Specialized techniques like jitter clicking or butterfly clicking can push scores well past 10, but they take practice and aren't necessary for normal use.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'What is the average CPS?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'The average clicks per second for an adult using normal single-finger clicking is roughly 6 to 7 CPS in a short 5-second burst. Averages drop over longer durations as your hand fatigues, so a 60-second test will usually show a lower CPS than a 5-second one.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'What is jitter clicking and butterfly clicking?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Jitter clicking is tensing your arm and hand to create a rapid vibration that clicks the mouse very fast, often 10 to 14 CPS. Butterfly clicking alternates two fingers on one mouse button to roughly double your click rate, sometimes 15 to 25 CPS. Both can strain your hand, and some games consider them cheating, so use them with care.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Does my mouse affect my clicks per second?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. A mouse with light, responsive switches and a high polling rate registers rapid clicks more reliably than an old or heavy-switch mouse. Debounce time (a delay some mice add to filter accidental double-clicks) can also cap very fast clicking. Hardware matters, but technique and practice matter more.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Can I use the spacebar instead of the mouse?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. Switch the input method to Spacebar and every press counts toward your score. Spacebar clicking uses different muscles than mouse clicking and can be easier to sustain for some people. Because the two methods feel different, compare spacebar scores to your other spacebar scores rather than to mouse scores.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'How can I click faster?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Relax your hand, rest your wrist on the desk, and use short, controlled finger movements rather than pressing hard. Warm up first, keep a steady rhythm instead of a frantic burst, and use a lighter mouse. Consistent practice raises your baseline more than any single trick.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Are autoclickers detected?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "No. This test is for measuring your own click speed, so there's no autoclicker detection or anti-cheat. Your results live only in your browser, so an autoclicker only cheats your own records.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'How is my data stored?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "Your browser stores everything (best CPS, run history, trend, achieved ranks, and settings) locally using localStorage. Nothing reaches any server, so your results stay private on your device and won't sync across browsers.",
+      },
+    },
+  ],
+};
+
+// Checklist shows the climb worst-first, as the legacy page did.
+const checklistRanks = [...cpsTool.ranks].reverse();
+---
+
+<BaseLayout title={TITLE} description={DESCRIPTION} path="/cps" topbarLabel="CPS Test">
+  <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+
+  <button slot="controls" type="button" class="ctl" id="sound-toggle" aria-label="Toggle sound">
+    <span class="ctl-icon" id="sound-icon-on">
+      <Icon name="ph:speaker-high" width={18} height={18} aria-hidden="true" />
+    </span>
+    <span class="ctl-icon" id="sound-icon-off" hidden>
+      <Icon name="ph:speaker-slash" width={18} height={18} aria-hidden="true" />
+    </span>
+  </button>
+  <button slot="controls" type="button" class="ctl" id="reset-btn" aria-label="Reset all data">
+    <Icon name="ph:trash" width={18} height={18} aria-hidden="true" />
+    <span>Reset</span>
+  </button>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Clicks Per Second Test</h1>
+      <p class="hero-subtitle">
+        Test your click speed over 5, 10, 30, or 60 seconds. Most people average 6-7 CPS. See where
+        you rank.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== TEST ========== -->
+  <section id="test-section" class="test-section">
+    <div class="test-card">
+      <div class="settings-panel">
+        <div class="setting-group">
+          <span class="setting-label" id="duration-label">Duration</span>
+          <div class="btn-group" id="duration-group" role="group" aria-labelledby="duration-label">
+            <button type="button" class="btn-option active" data-value="5">5s</button>
+            <button type="button" class="btn-option" data-value="10">10s</button>
+            <button type="button" class="btn-option" data-value="30">30s</button>
+            <button type="button" class="btn-option" data-value="60">60s</button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <span class="setting-label" id="input-label">Input Method</span>
+          <div class="btn-group" id="input-group" role="group" aria-labelledby="input-label">
+            <button type="button" class="btn-option active" data-value="mouse">Mouse Click</button>
+            <button type="button" class="btn-option" data-value="spacebar">Spacebar</button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="cps-area"
+        class="test-area state-idle"
+        tabindex="0"
+        role="button"
+        aria-label="Click speed test area. Press Enter or Space to begin, then click or press Space as fast as you can until the timer runs out."
+      >
+        <!-- Default content (idle) -->
+        <div class="test-area-content" id="cps-content-default">
+          <p class="test-hint" id="cps-hint">
+            Click as fast as you can until the timer runs out. Your score is your clicks per second.
+          </p>
+          <p class="test-status" id="cps-status" aria-live="polite">Click to start</p>
+          <p class="test-instruction" id="cps-instruction">5-second test</p>
+        </div>
+
+        <!-- Live counting content -->
+        <div class="cps-live" id="cps-live" hidden aria-hidden="true">
+          <div class="cps-readout">
+            <span class="cps-value readout" id="cps-value">0.0</span>
+            <span class="cps-unit-inline">CPS</span>
+          </div>
+          <div class="cps-live-meta">
+            <span><strong id="cps-count" class="readout">0</strong> clicks</span>
+            <span class="cps-meta-sep">·</span>
+            <span><strong id="cps-timeleft" class="readout">5.0</strong>s left</span>
+          </div>
+        </div>
+
+        <!-- Results content (session complete) -->
+        <div class="test-area-results" id="cps-results" hidden>
+          <div class="main-result-card">
+            <p class="result-heading">Your click speed</p>
+            <div class="result-time-row">
+              <span class="result-time readout" id="cps-final">0.0</span>
+              <span class="result-unit">CPS</span>
+              <span class="rank-badge" id="cps-rank-label">Advanced</span>
+            </div>
+            <p class="cps-result-meta" id="cps-result-meta">0 clicks in 5s</p>
+            <p class="cps-best-flag" id="cps-best-flag" hidden>
+              <span aria-hidden="true">🏆</span> New best!
+            </p>
+          </div>
+
+          <p class="result-message" id="cps-message">
+            Nice pace. Keep practicing to climb the ranks.
+          </p>
+
+          <button class="btn btn-try-again" id="cps-try-again" type="button">Try Again</button>
+        </div>
+
+        <!-- Screen-reader live announcements (start + final result only) -->
+        <p class="visually-hidden" id="cps-announce" aria-live="assertive"></p>
+      </div>
+
+      <!-- Countdown timer bar -->
+      <div class="cps-timer-track" role="presentation">
+        <div class="cps-timer-fill" id="cps-timer-fill"></div>
+      </div>
+    </div>
+
+    <ResetModal message="your best CPS, session history, and achieved ranks" />
+
+    <ProgressWidgets
+      unit="CPS"
+      bestTitle="Best CPS"
+      bestSubtitle="Your fastest recorded run"
+      bestEmpty="Complete a run to set your best CPS."
+      avgTitle="Average CPS"
+      avgNoun="runs"
+      avgEmpty="Complete a run to see your average."
+      chartDescription="Clicks per second across your last runs"
+      chartEmpty="Complete a run to see your trend graph"
+      historyEmpty="Complete a run to see your history"
+      ranks={checklistRanks}
+    />
+  </section>
+
+  <!-- ========== INFORMATIONAL SECTIONS ========== -->
+
+  <!-- What is a CPS test? -->
+  <section id="what-is" class="info-section">
+    <div class="container">
+      <h2>What is a clicks per second test?</h2>
+      <p>
+        A clicks per second test, or CPS test, measures how many times you can click your mouse or
+        press the spacebar in a fixed window of time. Your score is total clicks divided by the test
+        duration: your clicks per second.
+      </p>
+      <p>
+        Click speed matters in games that reward rapid inputs, from Minecraft PvP bridging and
+        combos to idle and clicker games. It's also a fun, low-stakes way to benchmark your hand
+        speed and endurance, and to see whether a new mouse or technique makes a difference.
+      </p>
+      <p>
+        This test pairs well with a <a href="/">reaction time test</a>: one measures how fast you
+        respond, the other how fast you sustain inputs.
+      </p>
+    </div>
+  </section>
+
+  <!-- How this test works -->
+  <section id="how-it-works" class="info-section alt-bg">
+    <div class="container">
+      <h2>How this click speed test works</h2>
+      <ol class="steps-list section-content">
+        <li>
+          <strong>Choose your settings</strong>
+          <p>
+            Pick a duration (5, 10, 30, or 60 seconds) and an input method (mouse click or
+            spacebar). Your preferences are saved automatically.
+          </p>
+        </li>
+        <li>
+          <strong>Start clicking</strong>
+          <p>
+            Your first click (or first spacebar press) starts the timer, and it counts as click
+            number one. There's no countdown to wait for; the clock begins the instant you go.
+          </p>
+        </li>
+        <li>
+          <strong>Click as fast as you can</strong>
+          <p>
+            Keep clicking inside the test area until the timer runs out. Your live CPS and click
+            count update in real time, and the bar below the area shows how much time is left.
+          </p>
+        </li>
+        <li>
+          <strong>Read your score</strong>
+          <p>
+            When time's up, the test locks and shows your final CPS, total clicks, and a rank from
+            Beginner to Elite. Beat your best to see the "New best!" flag.
+          </p>
+        </li>
+        <li>
+          <strong>Track your progress</strong>
+          <p>
+            Your best CPS, average, trend graph, achieved ranks, and run history are saved locally
+            so you can watch yourself improve.
+          </p>
+        </li>
+      </ol>
+      <p class="note">
+        <strong>Note:</strong> Longer durations reward endurance. Your CPS will usually be lower over
+        60 seconds than over 5 as your hand tires, so compare like with like.
+      </p>
+    </div>
+  </section>
+
+  <!-- What is a good CPS? -->
+  <section id="good-score" class="info-section">
+    <div class="container">
+      <h2>What is a good CPS score?</h2>
+      <p>
+        A good CPS score is anything above 7 clicks per second. Most people average 6-7 CPS in a
+        5-second test with normal single-finger clicking, 8+ is fast, and 10+ takes trained
+        technique. Scores fall into five tiers:
+      </p>
+      <div class="rank-table">
+        <div class="rank-row elite">
+          <span class="rank-name">Elite</span>
+          <span class="rank-range">10+ CPS</span>
+          <span class="rank-desc">Exceptional. Often requires trained technique.</span>
+        </div>
+        <div class="rank-row pro">
+          <span class="rank-name">Pro</span>
+          <span class="rank-range">8–9.9 CPS</span>
+          <span class="rank-desc">Very fast. Competitive click-speed territory.</span>
+        </div>
+        <div class="rank-row advanced">
+          <span class="rank-name">Advanced</span>
+          <span class="rank-range">7–7.9 CPS</span>
+          <span class="rank-desc">Above average. Quick, consistent clicking.</span>
+        </div>
+        <div class="rank-row intermediate">
+          <span class="rank-name">Intermediate</span>
+          <span class="rank-range">4–6.9 CPS</span>
+          <span class="rank-desc">The average range for most people.</span>
+        </div>
+        <div class="rank-row beginner">
+          <span class="rank-name">Beginner</span>
+          <span class="rank-range">Under 4 CPS</span>
+          <span class="rank-desc">Room to grow. Technique and warm-up help a lot.</span>
+        </div>
+      </div>
+      <p>
+        ReflexLab's tiers come from widely reported click-speed averages and apply to your achieved
+        CPS regardless of duration. Sustained runs are harder, so reaching a tier over 60 seconds is
+        a bigger feat than over 5.
+      </p>
+      <p>
+        This test isn't a scientific measurement, but it gives you a reliable benchmark for your
+        click speed and a way to track improvement.
+      </p>
+    </div>
+  </section>
+
+  <!-- Tracking your progress -->
+  <section id="tracking" class="info-section alt-bg">
+    <div class="container">
+      <h2>Track your click speed progress</h2>
+      <p>
+        ReflexLab tracks your best CPS, run history, trend graph, and rank badges. Your browser
+        stores all of it; we never see your results.
+      </p>
+      <div class="tips-grid grid-2x2 section-content">
+        <div class="tip-card">
+          <span class="tip-card-icon" aria-hidden="true">🏆</span>
+          <h3>Best CPS</h3>
+          <p>
+            ReflexLab saves your fastest run and shows it beside every new result. Beat it and the
+            number updates on the spot.
+          </p>
+        </div>
+        <div class="tip-card">
+          <span class="tip-card-icon" aria-hidden="true">📈</span>
+          <h3>Trend Graph</h3>
+          <p>
+            View a graph of your clicks per second across your last 20 runs. See at a glance whether
+            you're improving or having an off day.
+          </p>
+        </div>
+        <div class="tip-card">
+          <span class="tip-card-icon" aria-hidden="true">📋</span>
+          <h3>Run History</h3>
+          <p>
+            A log of recent runs shows your CPS, the rank you hit, and when each run happened, so
+            you can review your sessions.
+          </p>
+        </div>
+        <div class="tip-card">
+          <span class="tip-card-icon" aria-hidden="true">🎯</span>
+          <h3>Ranks Achieved</h3>
+          <p>
+            Track which tiers you've reached. Once you hit a rank it stays checked off until you
+            reset. Aim to unlock all five.
+          </p>
+        </div>
+      </div>
+      <p class="note">
+        <strong>Privacy note:</strong> All your data is stored locally in your browser using localStorage.
+        We don't collect, transmit, or store your results. Use the Reset button in the toolbar to clear
+        everything.
+      </p>
+    </div>
+  </section>
+
+  <!-- Ways to click faster -->
+  <section id="tips" class="info-section">
+    <div class="container">
+      <h2>How to click faster</h2>
+      <div class="tips-grid section-content">
+        <div class="tip-card">
+          <span class="tip-card-icon" aria-hidden="true">✋</span>
+          <h3>Relax your hand</h3>
+          <p>
+            Tension slows you down and tires you out fast. Rest your wrist on the desk and use
+            light, quick finger taps rather than pressing hard.
+          </p>
+        </div>
+        <div class="tip-card">
+          <span class="tip-card-icon" aria-hidden="true">🎵</span>
+          <h3>Find a rhythm</h3>
+          <p>
+            A steady, sustainable cadence usually beats a frantic burst, especially on longer
+            durations.
+          </p>
+        </div>
+        <div class="tip-card">
+          <span class="tip-card-icon" aria-hidden="true">🖱️</span>
+          <h3>Use a lighter mouse</h3>
+          <p>
+            Light, responsive switches and a high polling rate register rapid clicks better. Heavy
+            switches and high debounce times cap your speed.
+          </p>
+        </div>
+        <div class="tip-card">
+          <span class="tip-card-icon" aria-hidden="true">🔥</span>
+          <h3>Warm up first</h3>
+          <p>
+            Do a couple of throwaway runs before your real attempt. A short warm-up lifts your
+            score.
+          </p>
+        </div>
+        <div class="tip-card">
+          <span class="tip-card-icon" aria-hidden="true">✌️</span>
+          <h3>Try two fingers</h3>
+          <p>
+            Alternating two fingers on one button (butterfly clicking) can roughly double your rate,
+            but it strains the hand and some games ban it. Use with care.
+          </p>
+        </div>
+        <div class="tip-card">
+          <span class="tip-card-icon" aria-hidden="true">⌨️</span>
+          <h3>Test the spacebar</h3>
+          <p>
+            Spacebar clicking uses different muscles and is easier to sustain for some people.
+            Switch the input mode and see which is faster for you.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Factors that affect CPS -->
+  <section id="factors" class="info-section alt-bg">
+    <div class="container">
+      <h2>Factors that affect your clicks per second</h2>
+      <div class="factors-list section-content">
+        <div class="factor">
+          <h3>Technique</h3>
+          <p>
+            Normal clicking tops out around 6–8 CPS for most people. Jitter clicking (a controlled
+            arm vibration) reaches 10–14, and butterfly clicking (two alternating fingers) can hit
+            15–25. Technique is the single biggest factor.
+          </p>
+        </div>
+        <div class="factor">
+          <h3>Mouse hardware</h3>
+          <p>
+            Switch weight, polling rate, and debounce time all shape how fast clicks register. A
+            gaming mouse with light switches and low debounce will out-click an old office mouse.
+          </p>
+        </div>
+        <div class="factor">
+          <h3>Duration &amp; fatigue</h3>
+          <p>
+            A 5-second burst flatters your peak speed. Over 30 or 60 seconds your muscles fatigue
+            and your CPS drops, which is why endurance runs are ranked as a bigger achievement.
+          </p>
+        </div>
+        <div class="factor">
+          <h3>Hand and arm position</h3>
+          <p>
+            A supported wrist, a relaxed grip, and a comfortable desk height let you click faster
+            for longer. Cramped or tense positions cost you clicks and invite strain.
+          </p>
+        </div>
+        <div class="factor">
+          <h3>Warm-up &amp; focus</h3>
+          <p>
+            Cold starts run slow. A short warm-up and a distraction-free environment can add a full
+            click per second or more to your score.
+          </p>
+        </div>
+        <div class="factor">
+          <h3>Input method</h3>
+          <p>
+            Mouse and spacebar recruit different muscles and register differently. Neither is faster
+            for everyone; it depends on your hands. Compare scores within the same method.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="info-section">
+    <div class="container">
+      <h2>Clicks per second test FAQ</h2>
+      <div class="faq-list section-content">
+        <details class="faq-item">
+          <summary>What is a good clicks per second score?</summary>
+          <p>
+            For a standard mouse click, most people average around 6 to 7 CPS over a 5-second test.
+            Above 8 CPS is fast, and sustained scores of 10 or more are elite. Techniques like
+            jitter and butterfly clicking can push past 10 but take practice and aren't necessary
+            for normal use.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>What is the average CPS?</summary>
+          <p>
+            The average for normal single-finger clicking is roughly 6 to 7 CPS in a short 5-second
+            burst. Averages fall over longer durations as your hand fatigues, so a 60-second test
+            will usually show a lower CPS than a 5-second one.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>What is jitter clicking and butterfly clicking?</summary>
+          <p>
+            Jitter clicking tenses the arm to create a rapid vibration on the mouse, often 10 to 14
+            CPS. Butterfly clicking alternates two fingers on one button to roughly double the rate,
+            sometimes 15 to 25 CPS. Both can strain your hand, and some games consider them
+            cheating, so use them with care.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>Does my mouse affect my clicks per second?</summary>
+          <p>
+            Yes. A mouse with light, responsive switches and a high polling rate registers rapid
+            clicks more reliably. Debounce time (a delay some mice add to filter accidental
+            double-clicks) can cap very fast clicking. Hardware matters, but technique and practice
+            matter more.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>Can I use the spacebar instead of the mouse?</summary>
+          <p>
+            Yes. Switch the input method to Spacebar and every press counts. Spacebar clicking uses
+            different muscles and can be easier to sustain for some people. Because the methods feel
+            different, compare spacebar scores to your other spacebar scores.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>How can I click faster?</summary>
+          <p>
+            Relax your hand, rest your wrist on the desk, and use short, controlled finger movements
+            rather than pressing hard. Warm up first, keep a steady rhythm instead of a frantic
+            burst, and use a lighter mouse. Consistent practice raises your baseline more than any
+            single trick.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>Are autoclickers detected?</summary>
+          <p>
+            No. This test is for measuring your own click speed, so there's no autoclicker detection
+            or anti-cheat. Your results live only in your browser, so an autoclicker only cheats
+            your own records.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>How is my data stored?</summary>
+          <p>
+            Your browser stores everything (best CPS, run history, trend, achieved ranks, and
+            settings) locally using localStorage. Nothing reaches any server, so your results stay
+            private on your device and won't sync across browsers.
+          </p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Disclaimer -->
+  <section class="disclaimer-section">
+    <div class="container">
+      <p class="disclaimer">
+        <strong>Disclaimer:</strong> This clicks per second test is for entertainment and personal tracking.
+        Results are affected by your mouse, browser performance, and technique. Avoid straining your hand;
+        if clicking hurts, stop and rest.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import '../scripts/cps';
+</script>
+
+<style>
+  /* --- Top-bar controls (slot content, styled by the page) ---------------- */
+
+  .ctl {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+  }
+
+  .ctl:hover {
+    background-color: var(--panel-hover);
+    color: var(--ink-primary);
+  }
+
+  .ctl.muted {
+    color: var(--ink-muted);
+  }
+
+  .ctl-icon {
+    display: inline-flex;
+  }
+
+  /* --- Hero ----------------------------------------------------------------- */
+
+  .hero-section {
+    padding: var(--space-xl) 0 var(--space-md);
+    text-align: center;
+  }
+
+  .hero-content {
+    max-width: 600px;
+    margin-inline: auto;
+  }
+
+  .hero-title {
+    margin-block-end: var(--space-md);
+    font-size: var(--text-display-size);
+    font-weight: var(--text-display-weight);
+    line-height: var(--text-display-lh);
+    letter-spacing: var(--text-display-ls);
+  }
+
+  .hero-subtitle {
+    font-size: 1.125rem;
+    color: var(--ink-secondary);
+  }
+
+  /* --- Test card --------------------------------------------------------------- */
+
+  .test-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-block: var(--space-md) var(--space-2xl);
+  }
+
+  .test-card {
+    display: flex;
+    width: 100%;
+    max-width: 960px;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-2xl);
+    background-color: var(--panel-02);
+  }
+
+  .settings-panel {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-xl);
+    padding-block-end: var(--space-lg);
+    border-block-end: 1px solid var(--line-subtle);
+  }
+
+  .setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .setting-label {
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    color: var(--ink-secondary);
+  }
+
+  .btn-group {
+    display: flex;
+    gap: var(--space-sm);
+  }
+
+  .btn-option {
+    min-width: 44px;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    text-align: center;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  .btn-option:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-muted);
+    color: var(--ink-primary);
+  }
+
+  /* Active option reads as a recessed, illuminated key — green border is the
+     sanctioned "active" use. */
+  .btn-option.active {
+    background-color: var(--chassis-black);
+    border-color: var(--signal-green);
+    color: var(--ink-primary);
+  }
+
+  .btn-option.active:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--signal-green);
+  }
+
+  /* --- Test area (instrument face) --------------------------------------------- */
+
+  .test-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 340px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: all var(--duration-base) var(--ease);
+  }
+
+  .test-area:focus-visible {
+    outline: 2px solid var(--signal-green);
+    outline-offset: 3px;
+  }
+
+  .test-area:active:not(.state-session-complete) {
+    transform: scale(0.98);
+  }
+
+  .test-area.state-idle {
+    background-color: var(--panel-03);
+    border: 2px solid var(--line);
+  }
+
+  .test-area.state-idle:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-secondary);
+  }
+
+  /* Counting: green means "active" — the sanctioned signal, paired with the
+     live readout so state is never colour alone. */
+  .test-area.state-cps-counting {
+    background-color: rgb(34 197 94 / 10%);
+    border: 2px solid var(--signal-green);
+    box-shadow:
+      0 0 20px rgb(34 197 94 / 20%),
+      0 0 40px rgb(34 197 94 / 20%);
+  }
+
+  .test-area.state-session-complete {
+    background-color: var(--panel-03);
+    border: 2px solid var(--line);
+    min-height: 320px;
+    cursor: default;
+  }
+
+  /* Session complete: border + glow adopt the achieved rank — the trophy
+     frame, the Rank-Only Colour Rule's licensed surface. */
+  .test-area.state-session-complete.rank-elite {
+    border-color: var(--rank-elite);
+    box-shadow:
+      0 0 20px rgb(168 85 247 / 20%),
+      0 0 40px rgb(168 85 247 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-pro {
+    border-color: var(--rank-pro);
+    box-shadow:
+      0 0 20px rgb(34 197 94 / 20%),
+      0 0 40px rgb(34 197 94 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-advanced {
+    border-color: var(--rank-advanced);
+    box-shadow:
+      0 0 20px rgb(59 130 246 / 20%),
+      0 0 40px rgb(59 130 246 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-intermediate {
+    border-color: var(--rank-intermediate);
+    box-shadow:
+      0 0 20px rgb(245 158 11 / 20%),
+      0 0 40px rgb(245 158 11 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-beginner {
+    border-color: var(--rank-beginner);
+    box-shadow:
+      0 0 20px rgb(144 144 153 / 20%),
+      0 0 40px rgb(144 144 153 / 10%);
+  }
+
+  .test-area-content {
+    z-index: 1;
+    padding: 0 var(--space-lg);
+    text-align: center;
+  }
+
+  .test-hint {
+    margin-block-end: var(--space-lg);
+    font-size: var(--text-label-size);
+    font-style: italic;
+    color: var(--ink-muted);
+  }
+
+  .test-status {
+    margin-block-end: var(--space-xs);
+    font-size: var(--text-headline-size);
+    font-weight: var(--text-headline-weight);
+  }
+
+  .test-instruction {
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+  }
+
+  /* --- Live counting readout -------------------------------------------------- */
+
+  .cps-live {
+    z-index: 1;
+    padding: 0 var(--space-lg);
+    text-align: center;
+  }
+
+  .cps-readout {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-sm);
+    line-height: 1;
+  }
+
+  .cps-value {
+    font-size: clamp(3rem, 11vw, 5rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--signal-green); /* live measurement = "active" */
+  }
+
+  .cps-unit-inline {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--ink-secondary);
+  }
+
+  .cps-live-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-md);
+    color: var(--ink-secondary);
+  }
+
+  .cps-live-meta strong {
+    font-weight: 700;
+    color: var(--ink-primary);
+  }
+
+  .cps-meta-sep {
+    color: var(--ink-muted);
+  }
+
+  /* --- Results ------------------------------------------------------------------ */
+
+  .test-area-results {
+    z-index: 1;
+    width: 100%;
+    padding: var(--space-lg);
+    text-align: center;
+  }
+
+  .main-result-card {
+    margin-block-end: var(--space-lg);
+    padding: var(--space-xl) var(--space-2xl);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-01);
+  }
+
+  .result-heading {
+    margin-block-end: var(--space-sm);
+    color: var(--ink-secondary);
+  }
+
+  .result-time-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  .result-time-row .rank-badge {
+    align-self: center;
+  }
+
+  .result-time {
+    font-size: var(--text-readout-size);
+    font-weight: var(--text-readout-weight);
+    line-height: var(--text-readout-lh);
+  }
+
+  .result-unit {
+    font-size: var(--text-headline-size);
+    font-weight: 500;
+    color: var(--ink-secondary);
+  }
+
+  .rank-badge {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: capitalize;
+  }
+
+  .rank-badge.elite {
+    background-color: rgb(168 85 247 / 20%);
+    border: 1px solid rgb(168 85 247 / 30%);
+    color: var(--rank-elite);
+  }
+
+  .rank-badge.pro {
+    background-color: rgb(34 197 94 / 20%);
+    border: 1px solid rgb(34 197 94 / 30%);
+    color: var(--rank-pro);
+  }
+
+  .rank-badge.advanced {
+    background-color: rgb(59 130 246 / 20%);
+    border: 1px solid rgb(59 130 246 / 30%);
+    color: var(--rank-advanced);
+  }
+
+  .rank-badge.intermediate {
+    background-color: rgb(245 158 11 / 20%);
+    border: 1px solid rgb(245 158 11 / 30%);
+    color: var(--rank-intermediate);
+  }
+
+  .rank-badge.beginner {
+    background-color: rgb(144 144 153 / 20%);
+    border: 1px solid rgb(144 144 153 / 30%);
+    color: var(--rank-beginner);
+  }
+
+  .cps-result-meta {
+    margin-block-start: var(--space-sm);
+    font-size: var(--text-label-size);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-secondary);
+  }
+
+  .cps-best-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-block-start: var(--space-md);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-full);
+    background-color: rgb(34 197 94 / 10%);
+    color: var(--signal-green); /* "your best" — sanctioned */
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    animation: best-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes best-pop {
+    0% {
+      opacity: 0;
+      transform: translateY(6px) scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .result-message {
+    margin-block-end: var(--space-lg);
+    color: var(--ink-secondary);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  /* Try-Again is the white "reset the loop" invert, distinct from the green
+     go-signal (DESIGN.md §5 Buttons). */
+  .btn-try-again {
+    min-width: 160px;
+    background-color: var(--ink-primary);
+    border-color: var(--ink-primary);
+    color: var(--chassis-black);
+  }
+
+  .btn-try-again:hover {
+    background-color: var(--ink-secondary);
+    border-color: var(--ink-secondary);
+  }
+
+  /* --- Click ripple (JS-created, so :global) ------------------------------------ */
+
+  .test-area :global(.cps-ripple) {
+    position: absolute;
+    z-index: 0;
+    width: 120px;
+    height: 120px;
+    border-radius: var(--radius-full);
+    background: radial-gradient(circle, rgb(34 197 94 / 35%) 0%, rgb(34 197 94 / 0%) 70%);
+    pointer-events: none;
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.2);
+    animation: cps-ripple 0.5s ease-out forwards;
+  }
+
+  @keyframes cps-ripple {
+    100% {
+      transform: translate(-50%, -50%) scale(1.4);
+      opacity: 0;
+    }
+  }
+
+  /* --- Countdown timer bar --------------------------------------------------------- */
+
+  .cps-timer-track {
+    width: 100%;
+    height: 6px;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-full);
+    background-color: var(--panel-03);
+    overflow: hidden;
+  }
+
+  .cps-timer-fill {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background-color: var(--signal-green);
+    transform: scaleX(0);
+    transform-origin: left center;
+    will-change: transform;
+  }
+
+  /* --- Responsive --------------------------------------------------------------------- */
+
+  @media (max-width: 992px) {
+    /* Settings drop below the test area so the surface leads on smaller screens,
+       matching the legacy layout's reorder. */
+    .settings-panel {
+      order: 3;
+      padding-block: var(--space-lg) 0;
+      border-block-end: none;
+      border-block-start: 1px solid var(--line-subtle);
+      flex-wrap: wrap;
+      gap: var(--space-md) var(--space-xl);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero-title {
+      font-size: 2rem;
+    }
+
+    .hero-subtitle {
+      font-size: var(--text-body-size);
+    }
+
+    .test-card {
+      padding: var(--space-md);
+    }
+
+    .settings-panel {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-md);
+    }
+
+    .btn-group {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .btn-option {
+      flex: 1;
+      min-height: 44px;
+      padding: var(--space-sm);
+    }
+
+    .main-result-card {
+      padding: var(--space-lg);
+    }
+
+    .result-time {
+      font-size: 3rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cps-best-flag {
+      animation: none;
+    }
+
+    .test-area :global(.cps-ripple) {
+      display: none;
+    }
+  }
+</style>

@@ -11,7 +11,7 @@ colors:
   panel-hover: "#1f1f23"
   ink-primary: "#fafafa"
   ink-secondary: "#a1a1aa"
-  ink-muted: "#71717a"
+  ink-muted: "#909099"
   ink-disabled: "#52525b"
   line: "#27272a"
   line-subtle: "#1f1f23"
@@ -19,6 +19,7 @@ colors:
   caution-amber: "#f59e0b"
   rank-elite: "#a855f7"
   rank-advanced: "#3b82f6"
+  rank-beginner: "#909099"
 typography:
   display:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
@@ -166,7 +167,7 @@ A closed set of five telemetry colors, used **only** on rank badges and the matc
 - **Pro** — Signal Green (`#22c55e`)
 - **Advanced** — Blue (`#3b82f6`)
 - **Intermediate** — Caution Amber (`#f59e0b`)
-- **Beginner** — Muted Gray (`#71717a`)
+- **Beginner** — Muted Gray (`#909099` — raised from `#71717a` so the badge text clears 4.5:1 on its 20%-alpha tint; the pre-revamp stylesheet made the same correction)
 
 ### Neutral
 - **Chassis Black** (`#0a0a0b`): The body/background. The instrument's housing; everything sits on it.
@@ -175,7 +176,7 @@ A closed set of five telemetry colors, used **only** on rank badges and the matc
 - **Line** (`#27272a`) / **Line Subtle** (`#1f1f23`): Hairline borders and section dividers. Always 1px.
 - **Ink Primary** (`#fafafa`): Numbers, headings, primary text.
 - **Ink Secondary** (`#a1a1aa`): Supporting copy, labels, units.
-- **Ink Muted** (`#71717a`): De-emphasized hints and meta. Floor for text — must not carry essential body copy at small sizes on card surfaces (contrast falls near the AA line).
+- **Ink Muted** (`#909099`): De-emphasized hints and meta. Floor for text — must not carry essential body copy at small sizes on card surfaces. Raised from `#71717a`, which fell under 4.5:1 on the panel surfaces it was used on; the pre-revamp stylesheet made the same correction for WCAG AA.
 - **Ink Disabled** (`#52525b`): Disabled controls only.
 
 ### Named Rules
