@@ -415,7 +415,7 @@ the tool that differs most from the one we would naturally design around.
       existing visual language, not a redesign: same panel ramp, hairlines,
       rationed green, and type scale. No separate design pass; amend
       `DESIGN.md` afterwards to document what got built.
-- [ ] **2 — Engine.** Extract the shared telemetry rig plus the storage
+- [x] **2 — Engine.** Extract the shared telemetry rig plus the storage
       migration shim, built multi-metric per §3.1. Cover it with Vitest.
 - [ ] **3 — CPS.** Port as the first tool on the new engine. Validate.
 - [ ] **4 — Reaction test.** Port, with extra care around timing integrity.
