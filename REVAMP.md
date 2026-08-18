@@ -3,8 +3,9 @@
 Rebuilding ReflexLab from a two-tool static site into a hub for browser-based
 performance tests (reaction, clicking, aiming, typing, and more).
 
-**Branch:** `revamp` — all work happens here. `main` stays live and untouched
-until we deliberately cut over.
+**Branch:** `revamp` — all work happens here. `main` stays live and untouched.
+Merge timing is the maintainer's call; §7 covers what has to be true before it
+happens, not when.
 
 ---
 
@@ -15,8 +16,8 @@ category is much larger than that, and a hub covering 30+ tools is a stronger
 position than a single test. The current stack does not scale to that:
 
 - **Duplicated shell.** `index.html` (920 lines) and `cps.html` (843) carry
-  near-identical head, nav, and footer blocks. A nav change today touches six
-  files; at 30 tools it touches thirty-five.
+  near-identical head, nav, and footer blocks. A nav change today touches all nine
+  HTML files; at 30 tools it touches thirty-five.
 - **Duplicated engine.** `app.js` (1347 lines) and `cps.js` (869) are roughly
   60–70% the same code: localStorage persistence, rank resolution, Chart.js
   trend graph, Web Audio beeps, timestamped history log, reset modal, settings
@@ -84,7 +85,7 @@ createTool({
 Rules:
 
 - **Exactly one metric is primary.** It drives the rank, the personal best, the
-  trend chart, and anything the sidebar or hub surfaces. Everything downstream
+  trend chart, and anything the sidebar surfaces. Everything downstream
   has one unambiguous number to sort and compare on.
 - **Secondary metrics are stored and displayed**, and can be charted later, but
   never drive ranking. Keeps the rank system comprehensible as tools multiply.
@@ -137,12 +138,13 @@ away without reading §3.1 and §4.1 first.
 ### 3.3 Tool registry
 
 One `tools.ts` as the single source of truth per tool: slug, name, blurb, icon,
-metric definitions, rank table, related tools. It drives the hub grid, the
-sidebar, cross-links, the sitemap, JSON-LD, and each tool page's SEO block.
+metric definitions, rank table, related tools. It drives the sidebar,
+cross-links, the sitemap, JSON-LD, and each tool page's SEO block.
 
 Adding a tool becomes: one registry entry, one content file, one measurement
-loop. The registry is also what makes cross-linking scale, which is most of the
-SEO value of a hub.
+loop. The registry is also what makes cross-linking scale, which — with no
+catalogue page (§3.4) — is where the internal-linking value of a hub site now
+comes from.
 
 **No categories.** Tools are standalone and the list stays flat — no taxonomy
 field, no nesting. Worth revisiting only when the flat sidebar list stops being
@@ -162,10 +164,13 @@ shape for the category.
 
 Implications:
 
-- The hub is a **secondary surface** (`/tools` or similar), not the root.
+- **There is no catalogue page.** No `/tools`, no hub grid. The sidebar (§3.5)
+  lists every tool on every page, which makes a dedicated browse page redundant
+  at this scale. Revisit only if the tool count outgrows what a sidebar can
+  comfortably list — the same trigger as the grouping question in §3.3.
 - `/` does double duty: it has to work as the reaction test *and* route people
-  into the wider catalogue. Discovery therefore runs through nav, related-tool
-  cross-links, and the hub entry point — not through the homepage being a grid.
+  into the wider catalogue. With no hub page, discovery rests entirely on the
+  sidebar and related-tool cross-links.
 - Flat, keyword-clean slugs throughout: `/cps`, `/typing-test`, `/aim-trainer`,
   consistent with what `/cps` already established.
 - Revisit only if another tool ever outgrows the reaction test in traffic.
@@ -200,11 +205,11 @@ Resolution: sidebar and top bar stay fixed, the main column scrolls normally —
 tool occupying roughly the first screen, content below the fold. It reads as an
 app without becoming a single-screen app.
 
-**The sidebar absorbs most of the hub's job.** §3.4 puts a catalogue at
-`/tools`. With every tool listed permanently in the sidebar, that page stops
-being the primary discovery route and becomes mainly an SEO landing surface and
-a richer browse view. Still worth building; lower priority than it was an hour
-ago.
+**The sidebar replaces the hub page entirely.** There is no `/tools` catalogue
+(§3.4) — with every tool listed permanently in the sidebar, a browse page earns
+nothing at this scale. That makes the sidebar load-bearing rather than
+convenient: it is the only catalogue the site has, so it has to stay scannable
+as tools accumulate.
 
 **Keyboard access needs deliberate handling.** Thirty sidebar links means
 thirty tab stops before reaching a test that is Space/Enter-driven and is the
@@ -217,7 +222,7 @@ order of preference:
 
 - Off-canvas drawer behind a hamburger — conventional, costs no vertical space,
   leaves the full screen to the test.
-- Bottom tab bar for top-level categories, drawer for the full list.
+- Bottom tab bar for the two or three most-used tools, drawer for the rest.
 - Collapsed icon rail — likely too cramped past a dozen tools.
 
 Hard constraint either way: **nothing may consume vertical space during an
@@ -406,14 +411,18 @@ the tool that differs most from the one we would naturally design around.
       unported pages. Confirm the existing site still renders end to end.
 - [ ] **1 — Shell and tokens.** Generate `tokens.css` from `DESIGN.md`, then
       build the new sidebar shell (§3.5) — desktop and mobile — rather than
-      porting the existing top nav. Amend `DESIGN.md` to match.
+      porting the existing top nav. A conventional sidebar derived from the
+      existing visual language, not a redesign: same panel ramp, hairlines,
+      rationed green, and type scale. No separate design pass; amend
+      `DESIGN.md` afterwards to document what got built.
 - [ ] **2 — Engine.** Extract the shared telemetry rig plus the storage
       migration shim, built multi-metric per §3.1. Cover it with Vitest.
 - [ ] **3 — CPS.** Port as the first tool on the new engine. Validate.
 - [ ] **4 — Reaction test.** Port, with extra care around timing integrity.
 - [ ] **5 — Content.** Mechanical port of existing copy into collections;
       per-tool MDX content model. Typography pass for the narrowed column.
-- [ ] **6 — Hub.** Registry-driven grid, nav, cross-links, generated sitemap.
+- [ ] **6 — Linking and discovery.** Registry-driven related-tool cross-links
+      and generated sitemap. No catalogue page (§3.4).
 - [ ] **7 — New tools.** Typing, aim trainer, and onward.
 
 ### Cutover: preserving SEO
@@ -440,10 +449,11 @@ engines.
 pages carry no trailing slash (`/about`, `/cps`), directory indexes do (`/`,
 `/guides/`). Astro's default `build.format: 'directory'` emits `/about/` —
 which changes six of the eight URLs. Set `build.format: 'file'` against the
-existing `cleanUrls: true` to reproduce the no-slash form. `/guides/` then
-becomes the one genuine mismatch: resolve it deliberately — a 301 to `/guides`
-with the canonical updated is acceptable for a priority-0.8 page — rather than
-discovering it after merge.
+existing `cleanUrls: true` to reproduce the no-slash form.
+
+`/guides/` is then the one genuine mismatch. **Decided: 301 it to `/guides`**,
+update the canonical and the sitemap entry to match. It is the only deliberate
+URL change in the migration — every other address stays byte-identical.
 
 **Titles are the second trap.** The current titles are deliberately
 inconsistent: `/` and `/cps` carry **no** `| ReflexLab` suffix because they
