@@ -12,3 +12,7 @@ Thumbs.db
 
 # Dependencies
 node_modules/
+
+# Astro build output
+dist/
+.astro/

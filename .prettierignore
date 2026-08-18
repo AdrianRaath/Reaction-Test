@@ -1,0 +1,13 @@
+dist/
+node_modules/
+.vercel/
+
+# Legacy static site. These files are served verbatim from public/ during the
+# migration and are deleted as each page is ported (see REVAMP.md §7). Do not
+# reformat them — it would bury the real migration diffs in whitespace noise.
+public/**/*.html
+public/**/*.css
+public/**/*.js
+
+# Generated.
+package-lock.json

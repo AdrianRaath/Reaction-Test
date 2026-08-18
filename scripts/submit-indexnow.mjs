@@ -12,7 +12,7 @@ import { readFile } from 'node:fs/promises';
 const HOST = 'reflexlab.co';
 const KEY = '145db6405d4006d1f6914fd03af99c1c';
 
-const sitemap = await readFile(new URL('../sitemap.xml', import.meta.url), 'utf8');
+const sitemap = await readFile(new URL('../public/sitemap.xml', import.meta.url), 'utf8');
 const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
 
 if (urls.length === 0) {

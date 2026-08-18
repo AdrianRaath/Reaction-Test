@@ -1,0 +1,25 @@
+{
+  "name": "reflexlab",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ReflexLab — browser-based performance tests (reaction, clicking, and more).",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "indexnow": "node scripts/submit-indexnow.mjs",
+    "indexnow:dry": "node scripts/submit-indexnow.mjs --dry-run"
+  },
+  "devDependencies": {
+    "astro": "^7.2.3",
+    "prettier": "^3.9.6",
+    "prettier-plugin-astro": "^0.14.1"
+  }
+}
