@@ -8,7 +8,8 @@ import { tools, secondaryLinks } from '../data/tools';
 
 // Normalise so '/cps' and '/cps/' both match a registry href.
 const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
-const isCurrent = (href: string) => path === href.replace(/\/+$/, '') || (href === '/' && path === '/');
+const isCurrent = (href: string) =>
+  path === href.replace(/\/+$/, '') || (href === '/' && path === '/');
 ---
 
 <nav id="sidebar" class="sidebar" aria-label="Tools and site sections" data-sidebar>
@@ -65,12 +66,16 @@ const isCurrent = (href: string) => path === href.replace(/\/+$/, '') || (href =
 
 <style>
   .sidebar {
-    position: fixed;
-    inset-block: 0;
-    inset-inline-start: 0;
+    /* Sticky, not fixed: a fixed element leaves the shell grid's flow, which
+       would drop .app-main into the sidebar's 260px track and paint the
+       sidebar over the content. Sticky keeps the same pinned-full-height
+       behaviour while still occupying the first grid column. */
+    position: sticky;
+    inset-block-start: 0;
     z-index: 40;
     display: flex;
     width: var(--sidebar-width);
+    height: 100vh;
     flex-direction: column;
     border-inline-end: 1px solid var(--line);
     background-color: var(--panel-01);
@@ -189,6 +194,12 @@ const isCurrent = (href: string) => path === href.replace(/\/+$/, '') || (href =
      area needs the full screen and nothing may compete with it (§3.5). */
   @media (max-width: 900px) {
     .sidebar {
+      /* Off-canvas drawer: fixed is correct here — the shell grid collapses
+         to a single track on mobile, so there is no sidebar column to hold. */
+      position: fixed;
+      inset-block: 0;
+      inset-inline-start: 0;
+      height: auto;
       transform: translateX(-100%);
       transition: transform var(--duration-base) var(--ease);
       width: min(280px, 85vw);

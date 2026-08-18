@@ -417,7 +417,7 @@ the tool that differs most from the one we would naturally design around.
       `DESIGN.md` afterwards to document what got built.
 - [x] **2 — Engine.** Extract the shared telemetry rig plus the storage
       migration shim, built multi-metric per §3.1. Cover it with Vitest.
-- [ ] **3 — CPS.** Port as the first tool on the new engine. Validate.
+- [x] **3 — CPS.** Port as the first tool on the new engine. Validate.
 - [ ] **4 — Reaction test.** Port, with extra care around timing integrity.
 - [ ] **5 — Content.** Mechanical port of existing copy into collections;
       per-tool MDX content model. Typography pass for the narrowed column.
@@ -479,8 +479,8 @@ re-running at each future cutover.
 
 - `src/pages/shell-preview.astro` — built in phase 1 so the shell could be
   reviewed before any real page uses it. Noindexed and absent from the sitemap,
-  but it is still a public URL on the preview deployment. Delete it once the
-  CPS port (phase 3) gives the shell a real page.
+  but it is still a public URL on the preview deployment. **Deleted in
+  phase 3** when the CPS port gave the shell a real page.
 
 **After merge:** IndexNow fires automatically on push to `main`. Resubmit the
 sitemap in Search Console and watch coverage and Core Web Vitals for a few
