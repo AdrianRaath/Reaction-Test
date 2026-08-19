@@ -1,5 +1,6 @@
 ---
 import { Icon } from 'astro-icon/components';
+import BrandMark from './BrandMark.astro';
 
 // The top bar is a SLOT, not a fixed set of buttons (§3.5). Sound and reset
 // generalise across today's two tools, but an aim trainer wants sensitivity
@@ -7,7 +8,7 @@ import { Icon } from 'astro-icon/components';
 // controls in rather than the shell hardcoding them.
 
 interface Props {
-  /** Short label for the current page, shown beside the menu button. */
+  /** Short label for the current page, shown on desktop. */
   label?: string;
 }
 
@@ -15,21 +16,27 @@ const { label } = Astro.props;
 ---
 
 <header class="topbar">
-  <button
-    type="button"
-    class="menu-btn"
-    data-drawer-toggle
-    aria-controls="sidebar"
-    aria-expanded="false"
-  >
-    <Icon name="ph:list" width={20} height={20} aria-hidden="true" />
-    <span class="visually-hidden">Open menu</span>
-  </button>
+  <!-- Mobile only: the sidebar (and its brand) is hidden in a drawer, so the
+       bar carries the logo instead — matching the legacy mobile header. -->
+  <a href="/" class="topbar-brand">
+    <BrandMark size={24} />
+    <span>ReflexLab</span>
+  </a>
 
   {label && <p class="topbar-label">{label}</p>}
 
   <div class="topbar-controls">
     <slot />
+    <button
+      type="button"
+      class="menu-btn"
+      data-drawer-toggle
+      aria-controls="sidebar"
+      aria-expanded="false"
+    >
+      <Icon name="ph:list" width={20} height={20} aria-hidden="true" />
+      <span class="visually-hidden">Open menu</span>
+    </button>
   </div>
 </header>
 
@@ -42,6 +49,16 @@ const { label } = Astro.props;
     padding-inline: var(--space-md);
     border-block-end: 1px solid var(--line);
     background-color: var(--chassis-black);
+  }
+
+  .topbar-brand {
+    display: none;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-title-size);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-decoration: none;
   }
 
   .topbar-label {
@@ -86,6 +103,16 @@ const { label } = Astro.props;
   @media (max-width: 900px) {
     .menu-btn {
       display: block;
+    }
+
+    .topbar-brand {
+      display: flex;
+    }
+
+    /* The brand identifies the page context on mobile; the label would crowd
+       the controls on narrow screens. */
+    .topbar-label {
+      display: none;
     }
   }
 </style>
