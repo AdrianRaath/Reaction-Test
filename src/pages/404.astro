@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import '../styles/article.css';
+
+// Vercel serves dist/404.html for unmatched routes automatically.
+---
+
+<BaseLayout
+  title="Page Not Found | ReflexLab"
+  description="Page not found. Return to ReflexLab to test your reaction time."
+  path="/404"
+  noindex
+>
+  <div class="error-page">
+    <p class="error-code readout">404</p>
+    <h1 class="error-title">Page not found</h1>
+    <p class="error-message">The page you're looking for doesn't exist or has been moved.</p>
+    <a href="/" class="btn btn-primary">Back to ReflexLab</a>
+  </div>
+</BaseLayout>
+
+<style>
+  .error-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-3xl) 0;
+    text-align: center;
+  }
+
+  .error-code {
+    font-size: var(--text-readout-size);
+    font-weight: var(--text-readout-weight);
+    line-height: var(--text-readout-lh);
+    color: var(--ink-muted);
+  }
+
+  .error-title {
+    font-size: var(--text-headline-size);
+  }
+
+  .error-message {
+    color: var(--ink-secondary);
+  }
+</style>

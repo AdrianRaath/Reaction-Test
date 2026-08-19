@@ -18,6 +18,8 @@ export interface BeeperOptions {
   /** Seconds. Matches the legacy tools' 0.08s blip. */
   duration?: number;
   type?: OscillatorType;
+  /** Peak gain. Legacy CPS used 0.25, the reaction test 0.3. */
+  gain?: number;
   /** Read the live sound preference — kept as a callback so a settings toggle needs no re-wiring. */
   enabled: () => boolean;
 }
@@ -25,6 +27,7 @@ export interface BeeperOptions {
 export function createBeeper(options: BeeperOptions): Beeper {
   const duration = options.duration ?? 0.08;
   const type = options.type ?? 'sine';
+  const peak = options.gain ?? 0.25;
   let ctx: AudioContext | null = null;
 
   const ensureContext = () => {
@@ -51,7 +54,7 @@ export function createBeeper(options: BeeperOptions): Beeper {
         gain.connect(ctx.destination);
         osc.type = type;
         osc.frequency.value = frequency;
-        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.setValueAtTime(peak, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
         osc.start(ctx.currentTime);
         osc.stop(ctx.currentTime + duration);

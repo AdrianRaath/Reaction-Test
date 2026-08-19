@@ -1,0 +1,439 @@
+/* ==========================================================================
+   Article pages: guides, about, privacy.
+
+   Global on purpose — the markup comes from MDX content collections, which
+   scoped styles cannot reach. Class names match the legacy article.css so
+   the content port stays mechanical; values are translated onto the token
+   system. The 720px measure already satisfies the 65–75ch cap (§5).
+   ========================================================================== */
+
+.article-container {
+  max-width: 720px;
+  margin-inline: auto;
+  padding: var(--space-2xl) 0 var(--space-3xl);
+}
+
+/* --- Breadcrumbs ---------------------------------------------------------- */
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block-end: var(--space-lg);
+  font-size: var(--text-label-size);
+}
+
+.breadcrumbs a {
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.breadcrumbs a:hover {
+  color: var(--ink-secondary);
+}
+
+.breadcrumbs-separator {
+  color: var(--ink-muted);
+}
+
+.breadcrumbs-current {
+  color: var(--ink-secondary);
+}
+
+/* --- Header ----------------------------------------------------------------- */
+
+.article-header {
+  margin-block-end: var(--space-2xl);
+  padding-block-end: var(--space-2xl);
+  border-block-end: 1px solid var(--line-subtle);
+  text-align: left;
+}
+
+.article-title {
+  margin-block-end: var(--space-md);
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.article-subtitle {
+  font-size: 1.25rem;
+  color: var(--ink-secondary);
+}
+
+/* --- Body -------------------------------------------------------------------- */
+
+.article-content {
+  line-height: 1.7;
+}
+
+.article-content p {
+  margin-block-end: var(--space-lg);
+  color: var(--ink-secondary);
+}
+
+.article-content strong {
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.article-content a:not(.btn) {
+  color: var(--ink-primary);
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 40%);
+  text-underline-offset: 2px;
+}
+
+.article-content a:not(.btn):hover {
+  text-decoration-color: rgb(255 255 255 / 70%);
+}
+
+.article-intro {
+  font-size: 1.125rem;
+  line-height: 1.7;
+  color: var(--ink-secondary);
+}
+
+.article-section {
+  margin-block-end: var(--space-3xl);
+}
+
+.article-section h2 {
+  margin-block-end: var(--space-lg);
+  padding-block-start: var(--space-lg);
+  font-size: var(--text-headline-size);
+  font-weight: 700;
+}
+
+.article-section h3 {
+  margin-block: var(--space-xl) var(--space-sm);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+/* --- Lists -------------------------------------------------------------------- */
+
+.article-list {
+  margin-block-end: var(--space-lg);
+  padding-inline-start: 0;
+  list-style: none;
+}
+
+.article-list li {
+  position: relative;
+  padding-inline-start: var(--space-xl);
+  margin-block-end: var(--space-sm);
+  color: var(--ink-secondary);
+}
+
+.article-list li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0.6em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  /* Green bullet markers are inherited from the legacy article design; kept
+     for parity with the unported look until a deliberate design pass. */
+  background-color: var(--signal-green);
+}
+
+.article-list.numbered {
+  counter-reset: list-counter;
+}
+
+.article-list.numbered li {
+  counter-increment: list-counter;
+}
+
+.article-list.numbered li::before {
+  content: counter(list-counter);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inset-block-start: 0;
+  width: 24px;
+  height: 24px;
+  background-color: var(--signal-green);
+  color: var(--chassis-black);
+  font-size: var(--text-label-size);
+  font-weight: 700;
+}
+
+.article-list.highlight-list li {
+  padding: var(--space-md) var(--space-lg);
+  padding-inline-start: var(--space-2xl);
+  margin-block-end: var(--space-xs);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+.article-list.highlight-list li::before {
+  inset-inline-start: var(--space-md);
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+}
+
+/* --- Tables ------------------------------------------------------------------- */
+
+.article-table-wrapper {
+  margin-block: var(--space-xl);
+  overflow-x: auto;
+}
+
+.article-table {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  border-collapse: collapse;
+  overflow: hidden;
+}
+
+.article-table th,
+.article-table td {
+  padding: var(--space-md) var(--space-lg);
+  border-block-end: 1px solid var(--line-subtle);
+  text-align: left;
+}
+
+.article-table th {
+  background-color: var(--panel-03);
+  font-size: var(--text-label-size);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.article-table td {
+  color: var(--ink-secondary);
+}
+
+.article-table tbody tr:last-child td {
+  border-block-end: none;
+}
+
+.article-table tbody tr:hover {
+  background-color: var(--panel-hover);
+}
+
+/* Status indicators — rank palette in a data-reading context. */
+.status-optimal {
+  color: var(--rank-pro);
+  font-weight: 500;
+}
+
+.status-slight {
+  color: var(--rank-advanced);
+  font-weight: 500;
+}
+
+.status-moderate {
+  color: var(--rank-intermediate);
+  font-weight: 500;
+}
+
+.status-severe {
+  color: var(--hold-red);
+  font-weight: 500;
+}
+
+.status-critical {
+  color: var(--hold-red);
+  font-weight: 600;
+}
+
+/* --- Callout / tips ------------------------------------------------------------- */
+
+.callout-box {
+  margin-block: var(--space-xl);
+  padding: var(--space-lg) var(--space-xl);
+  border-inline-start: 4px solid var(--signal-green);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background-color: var(--panel-03);
+}
+
+.callout-text {
+  font-size: 1.125rem;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--ink-primary);
+}
+
+.tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-block: var(--space-xl);
+}
+
+.tip-item {
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-lg);
+  background-color: var(--panel-03);
+  transition: border-color var(--duration-fast) var(--ease);
+}
+
+.tip-item:hover {
+  border-color: var(--line);
+}
+
+.tip-check {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background-color: var(--signal-green);
+  color: var(--chassis-black);
+  font-size: var(--text-label-size);
+  font-weight: 700;
+}
+
+.tip-content strong {
+  display: block;
+  margin-block-end: var(--space-xs);
+  color: var(--ink-primary);
+}
+
+.tip-content p {
+  margin-block-end: 0;
+  font-size: var(--text-label-size);
+  color: var(--ink-muted);
+}
+
+/* --- Rank progression ------------------------------------------------------------- */
+
+.rank-progression {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-inline-end: var(--space-md);
+  margin-block-end: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+.rank-from {
+  color: var(--rank-intermediate);
+  font-weight: 600;
+}
+
+.rank-arrow {
+  color: var(--ink-muted);
+}
+
+.rank-to {
+  color: var(--rank-advanced);
+  font-weight: 600;
+}
+
+.rank-progression:nth-child(2) .rank-from {
+  color: var(--rank-advanced);
+}
+
+.rank-progression:nth-child(2) .rank-to {
+  color: var(--rank-pro);
+}
+
+/* --- CTA ----------------------------------------------------------------------------- */
+
+.article-cta {
+  margin-block-start: var(--space-3xl);
+  padding: var(--space-3xl) var(--space-xl);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background-color: var(--panel-03);
+  text-align: center;
+}
+
+.article-cta h2 {
+  margin-block-end: var(--space-md);
+  font-size: var(--text-headline-size);
+}
+
+.article-cta p {
+  margin-block-end: var(--space-xl);
+  color: var(--ink-secondary);
+}
+
+.article-cta .btn {
+  min-width: 200px;
+}
+
+/* Green primary CTA — "go" pointing at the test, a sanctioned use. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-lg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-label-size);
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--duration-fast) var(--ease);
+}
+
+.btn-primary {
+  background-color: var(--signal-green);
+  border-color: var(--signal-green);
+  color: var(--chassis-black);
+}
+
+.btn-primary:hover {
+  background-color: var(--signal-green-deep);
+  border-color: var(--signal-green-deep);
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 20px rgb(34 197 94 / 20%),
+    0 0 40px rgb(34 197 94 / 20%);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* --- Responsive --------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  .article-title {
+    font-size: 2rem;
+  }
+
+  .article-subtitle {
+    font-size: 1.125rem;
+  }
+
+  .article-section h2 {
+    font-size: 1.25rem;
+  }
+
+  .article-table th,
+  .article-table td {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--text-label-size);
+  }
+
+  .tip-item {
+    padding: var(--space-md);
+  }
+
+  .rank-progression {
+    display: flex;
+    margin-inline-end: 0;
+  }
+
+  .article-cta {
+    padding: var(--space-2xl) var(--space-lg);
+  }
+}

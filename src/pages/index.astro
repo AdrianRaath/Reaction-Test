@@ -5,21 +5,21 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ProgressWidgets from '../components/tool/ProgressWidgets.astro';
 import RelatedTools from '../components/tool/RelatedTools.astro';
 import ResetModal from '../components/tool/ResetModal.astro';
-import { cpsTool } from '../data/tool-defs';
+import { reactionTool } from '../data/tool-defs';
 import '../styles/content.css';
 
-// SEO values are the live page's, byte for byte — the URL contract (REVAMP.md
-// §7). The title deliberately carries no "| ReflexLab" suffix: it targets the
-// money keyword. Do not "fix" it.
-const TITLE = 'Clicks Per Second Test (CPS Test) - Free Online Click Speed Test';
+// The top-ranking page on the site. SEO values are the live page's, byte for
+// byte — the URL contract (REVAMP.md §7). No "| ReflexLab" suffix on the
+// title: it targets the money keyword. Do not "fix" it.
+const TITLE = 'Reaction Time Test - Free Online Reflex Test';
 const DESCRIPTION =
-  'Free clicks per second test (CPS test). Most people average 6-7 CPS in a 5-second burst. Test your click speed, earn a rank, and track your best CPS.';
+  'Test your reaction time online for free. The average adult reacts in about 250ms. Earn a rank from Beginner to Elite and track your personal best.';
 
 // Long-form copy and FAQ live in the content collection (§5) — one MDX
 // file per tool. The FAQPage JSON-LD is built from that entry's frontmatter;
 // §7 treats this schema as preserve-exactly, verified by the URL diff.
-const entry = await getEntry('tools', 'cps');
-if (!entry) throw new Error('Missing tools/cps content entry');
+const entry = await getEntry('tools', 'reaction-time');
+if (!entry) throw new Error('Missing tools/reaction-time content entry');
 const { Content } = await render(entry);
 
 const faqSchema = {
@@ -32,11 +32,10 @@ const faqSchema = {
   })),
 };
 
-// Checklist shows the climb worst-first, as the legacy page did.
-const checklistRanks = [...cpsTool.ranks].reverse();
+const checklistRanks = [...reactionTool.ranks].reverse();
 ---
 
-<BaseLayout title={TITLE} description={DESCRIPTION} path="/cps" topbarLabel="CPS Test">
+<BaseLayout title={TITLE} description={DESCRIPTION} path="/" topbarLabel="Reaction Time">
   <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
 
   <button slot="controls" type="button" class="ctl" id="sound-toggle" aria-label="Toggle sound">
@@ -55,10 +54,10 @@ const checklistRanks = [...cpsTool.ranks].reverse();
   <!-- ========== HERO ========== -->
   <section class="hero-section">
     <div class="hero-content">
-      <h1 class="hero-title">Clicks Per Second Test</h1>
+      <h1 class="hero-title">Reaction Time Test</h1>
       <p class="hero-subtitle">
-        Test your click speed over 5, 10, 30, or 60 seconds. Most people average 6-7 CPS. See where
-        you rank.
+        Click when the box flashes green and get your reaction time in milliseconds. Most adults
+        land around 250ms. See where you rank.
       </p>
     </div>
   </section>
@@ -68,112 +67,110 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     <div class="test-card">
       <div class="settings-panel">
         <div class="setting-group">
-          <span class="setting-label" id="duration-label">Duration</span>
-          <div class="btn-group" id="duration-group" role="group" aria-labelledby="duration-label">
-            <button type="button" class="btn-option active" data-value="5">5s</button>
-            <button type="button" class="btn-option" data-value="10">10s</button>
-            <button type="button" class="btn-option" data-value="30">30s</button>
-            <button type="button" class="btn-option" data-value="60">60s</button>
+          <span class="setting-label" id="rounds-label">Test Count</span>
+          <div class="btn-group" id="rounds-group" role="group" aria-labelledby="rounds-label">
+            <button type="button" class="btn-option" data-value="1">1</button>
+            <button type="button" class="btn-option" data-value="3">3</button>
+            <button type="button" class="btn-option active" data-value="5">5</button>
+            <button type="button" class="btn-option" data-value="10">10</button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <span class="setting-label" id="delay-label">Delay Range</span>
+          <div class="btn-group" id="delay-group" role="group" aria-labelledby="delay-label">
+            <button type="button" class="btn-option active" data-value="1-3">1-3s</button>
+            <button type="button" class="btn-option" data-value="2-4">2-4s</button>
+            <button type="button" class="btn-option" data-value="2-6">2-6s</button>
+            <button type="button" class="btn-option" data-value="3-8">3-8s</button>
           </div>
         </div>
         <div class="setting-group">
           <span class="setting-label" id="input-label">Input Method</span>
           <div class="btn-group" id="input-group" role="group" aria-labelledby="input-label">
             <button type="button" class="btn-option active" data-value="mouse">Mouse Click</button>
-            <button type="button" class="btn-option" data-value="spacebar">Spacebar</button>
+            <button type="button" class="btn-option" data-value="spacebar">Spacebar Hit</button>
           </div>
         </div>
       </div>
 
       <div
-        id="cps-area"
+        id="test-area"
         class="test-area state-idle"
         tabindex="0"
         role="button"
-        aria-label="Click speed test area. Press Enter or Space to begin, then click or press Space as fast as you can until the timer runs out."
+        aria-label="Reaction test area. Press Enter or Space to start, then click or press Space when you see GO."
       >
-        <!-- Default content (idle) -->
-        <div class="test-area-content" id="cps-content-default">
-          <p class="test-hint" id="cps-hint">
-            Click as fast as you can until the timer runs out. Your score is your clicks per second.
+        <!-- Default content (shown during test) -->
+        <div class="test-area-content" id="test-content-default">
+          <p class="test-hint" id="test-hint">
+            Wait for the <span class="hint-box hint-box-red"></span> red hold, then click the instant
+            it flashes <span class="hint-box hint-box-green"></span>
+            <strong>CLICK!</strong>
           </p>
-          <p class="test-status" id="cps-status" aria-live="polite">Click to start</p>
-          <p class="test-instruction" id="cps-instruction">5-second test</p>
+          <p class="test-status" id="test-status" aria-live="polite">Click to start</p>
+          <p class="test-result readout" id="test-result"></p>
+          <p class="test-instruction" id="test-instruction">or press Space / Enter</p>
         </div>
 
-        <!-- Live counting content -->
-        <div class="cps-live" id="cps-live" hidden aria-hidden="true">
-          <div class="cps-readout">
-            <span class="cps-value readout" id="cps-value">0.0</span>
-            <span class="cps-unit-inline">CPS</span>
+        <!-- Results content (shown after session complete) -->
+        <div class="test-area-results" id="test-content-results" hidden>
+          <!-- Individual attempt results row -->
+          <div class="attempts-row" id="attempts-list">
+            <!-- Attempts populated by JS -->
           </div>
-          <div class="cps-live-meta">
-            <span><strong id="cps-count" class="readout">0</strong> clicks</span>
-            <span class="cps-meta-sep">·</span>
-            <span><strong id="cps-timeleft" class="readout">5.0</strong>s left</span>
-          </div>
-        </div>
 
-        <!-- Results content (session complete) -->
-        <div class="test-area-results" id="cps-results" hidden>
           <div class="main-result-card">
-            <p class="result-heading">Your click speed</p>
+            <p class="result-heading">Your Average Reaction Time is</p>
             <div class="result-time-row">
-              <span class="result-time readout" id="cps-final">0.0</span>
-              <span class="result-unit">CPS</span>
-              <span class="rank-badge" id="cps-rank-label">Advanced</span>
+              <span class="result-time readout" id="avg-time">299</span>
+              <span class="result-unit">ms</span>
+              <span class="rank-badge" id="rank-label">Advanced</span>
             </div>
-            <p class="cps-result-meta" id="cps-result-meta">0 clicks in 5s</p>
-            <p class="cps-best-flag" id="cps-best-flag" hidden>
-              <span aria-hidden="true">🏆</span> New best!
-            </p>
           </div>
 
-          <p class="result-message" id="cps-message">
-            Nice pace. Keep practicing to climb the ranks.
-          </p>
+          <p class="result-message" id="result-message">Nice work! Keep practicing to improve.</p>
 
-          <button class="btn btn-try-again" id="cps-try-again" type="button">Try Again</button>
+          <button class="btn btn-try-again" id="try-again-btn" type="button">Try Again</button>
         </div>
 
-        <!-- Screen-reader live announcements (start + final result only) -->
-        <p class="visually-hidden" id="cps-announce" aria-live="assertive"></p>
+        <!-- Screen-reader live announcements -->
+        <p class="visually-hidden" id="test-announce" aria-live="assertive"></p>
       </div>
 
-      <!-- Countdown timer bar -->
-      <div class="cps-timer-track" role="presentation">
-        <div class="cps-timer-fill" id="cps-timer-fill"></div>
+      <!-- Round progress bar -->
+      <div class="progress-bar-container" role="presentation">
+        <div class="progress-bar" id="progress-bar"></div>
       </div>
     </div>
 
-    <ResetModal message="your best CPS, session history, and achieved ranks" />
+    <ResetModal message="your personal best, session history, and achieved ranks" />
 
     <ProgressWidgets
-      unit="CPS"
-      bestTitle="Best CPS"
-      bestSubtitle="Your fastest recorded run"
-      bestEmpty="Complete a run to set your best CPS."
-      avgTitle="Average CPS"
-      avgNoun="runs"
-      avgEmpty="Complete a run to see your average."
-      chartDescription="Clicks per second across your last runs"
-      chartEmpty="Complete a run to see your trend graph"
-      historyEmpty="Complete a run to see your history"
+      unit="ms"
+      bestTitle="Personal Best"
+      bestSubtitle="Your best average score"
+      bestEmpty="Complete a session to set your personal best."
+      avgTitle="Average Score"
+      avgNoun="sessions"
+      avgEmpty="Complete a session to see your average."
+      chartDescription="Average reaction time (ms) over your last sessions"
+      chartEmpty="Complete a session to see your trend graph"
+      historyEmpty="Complete a session to see your history"
       ranks={checklistRanks}
     />
   </section>
 
   <Content />
 
-  <RelatedTools current="/cps" />
+  <RelatedTools current="/" />
 </BaseLayout>
 
 <script>
-  import '../scripts/cps';
+  import '../scripts/reaction';
 </script>
 
 <style>
-  /* --- Top-bar controls (slot content, styled by the page) ---------------- */
+  /* --- Top-bar controls ------------------------------------------------------ */
 
   .ctl {
     display: flex;
@@ -291,8 +288,6 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     color: var(--ink-primary);
   }
 
-  /* Active option reads as a recessed, illuminated key — green border is the
-     sanctioned "active" use. */
   .btn-option.active {
     background-color: var(--chassis-black);
     border-color: var(--signal-green);
@@ -304,7 +299,9 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     border-color: var(--signal-green);
   }
 
-  /* --- Test area (instrument face) --------------------------------------------- */
+  /* --- Test area (the instrument face) ------------------------------------------
+     Five states, each pairing colour with a distinct text message and motion —
+     state is never signalled by colour alone (WCAG mandate, DESIGN.md §5). */
 
   .test-area {
     position: relative;
@@ -326,7 +323,7 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     outline-offset: 3px;
   }
 
-  .test-area:active:not(.state-session-complete) {
+  .test-area:active:not(.state-waiting):not(.state-session-complete) {
     transform: scale(0.98);
   }
 
@@ -340,14 +337,86 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     border-color: var(--ink-secondary);
   }
 
-  /* Counting: green means "active" — the sanctioned signal, paired with the
-     live readout so state is never colour alone. */
-  .test-area.state-cps-counting {
-    background-color: rgb(34 197 94 / 10%);
+  /* Hold: red is "wait" — the other half of the game's language. */
+  .test-area.state-waiting {
+    background: linear-gradient(135deg, #2a1a1a 0%, #3d1f1f 100%);
+    border: 2px solid var(--hold-red);
+    box-shadow: 0 0 30px rgb(239 68 68 / 20%);
+  }
+
+  .test-area.state-waiting :global(.test-status) {
+    animation: pulse-text 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-text {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* GO: the green flash the whole product exists to measure. */
+  .test-area.state-go {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
     border: 2px solid var(--signal-green);
     box-shadow:
       0 0 20px rgb(34 197 94 / 20%),
       0 0 40px rgb(34 197 94 / 20%);
+  }
+
+  .test-area.state-go :global(.test-status) {
+    color: var(--signal-green);
+    animation: pulse-go 0.3s ease-out;
+  }
+
+  @keyframes pulse-go {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .test-area.state-result {
+    background-color: var(--panel-03);
+    border: 2px solid var(--line);
+  }
+
+  .test-area.state-result :global(.test-result) {
+    color: var(--signal-green);
+  }
+
+  .test-area.state-false-start {
+    background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
+    border: 2px solid var(--hold-red);
+    box-shadow:
+      0 0 20px rgb(239 68 68 / 20%),
+      0 0 40px rgb(239 68 68 / 20%);
+  }
+
+  .test-area.state-false-start :global(.test-status) {
+    color: var(--hold-red);
+    animation: shake 0.4s ease-out;
+  }
+
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-5px);
+    }
+    75% {
+      transform: translateX(5px);
+    }
   }
 
   .test-area.state-session-complete {
@@ -357,8 +426,7 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     cursor: default;
   }
 
-  /* Session complete: border + glow adopt the achieved rank — the trophy
-     frame, the Rank-Only Colour Rule's licensed surface. */
+  /* Trophy frame: border + glow adopt the achieved rank. */
   .test-area.state-session-complete.rank-elite {
     border-color: var(--rank-elite);
     box-shadow:
@@ -400,11 +468,29 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     text-align: center;
   }
 
+  /* The hint is rewritten by JS with the same markup, so hint-box is :global. */
   .test-hint {
     margin-block-end: var(--space-lg);
     font-size: var(--text-label-size);
     font-style: italic;
     color: var(--ink-muted);
+  }
+
+  .test-area :global(.hint-box) {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 2px;
+    border-radius: 3px;
+    vertical-align: middle;
+  }
+
+  .test-area :global(.hint-box-red) {
+    background-color: var(--hold-red);
+  }
+
+  .test-area :global(.hint-box-green) {
+    background-color: var(--signal-green);
   }
 
   .test-status {
@@ -413,57 +499,14 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     font-weight: var(--text-headline-weight);
   }
 
+  .test-result {
+    margin-block-end: var(--space-xs);
+    font-size: 2.5rem;
+    font-weight: 700;
+  }
+
   .test-instruction {
     font-size: var(--text-label-size);
-    color: var(--ink-muted);
-  }
-
-  /* --- Live counting readout -------------------------------------------------- */
-
-  .cps-live {
-    z-index: 1;
-    padding: 0 var(--space-lg);
-    text-align: center;
-  }
-
-  .cps-readout {
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: var(--space-sm);
-    line-height: 1;
-  }
-
-  .cps-value {
-    font-size: clamp(3rem, 11vw, 5rem);
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -0.02em;
-    color: var(--signal-green); /* live measurement = "active" */
-  }
-
-  .cps-unit-inline {
-    font-size: 1.25rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    color: var(--ink-secondary);
-  }
-
-  .cps-live-meta {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-sm);
-    margin-block-start: var(--space-md);
-    color: var(--ink-secondary);
-  }
-
-  .cps-live-meta strong {
-    font-weight: 700;
-    color: var(--ink-primary);
-  }
-
-  .cps-meta-sep {
     color: var(--ink-muted);
   }
 
@@ -474,6 +517,35 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     width: 100%;
     padding: var(--space-lg);
     text-align: center;
+  }
+
+  /* Attempt columns are JS-created, so :global. */
+  .attempts-row {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-lg);
+    margin-block-end: var(--space-lg);
+    padding: var(--space-md) var(--space-lg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background-color: var(--panel-01);
+  }
+
+  .attempts-row :global(.attempt-column) {
+    min-width: 60px;
+    text-align: center;
+  }
+
+  .attempts-row :global(.attempt-time) {
+    display: block;
+    margin-block-end: var(--space-xs);
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  .attempts-row :global(.attempt-label) {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
   }
 
   .main-result-card {
@@ -553,39 +625,6 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     color: var(--rank-beginner);
   }
 
-  .cps-result-meta {
-    margin-block-start: var(--space-sm);
-    font-size: var(--text-label-size);
-    font-variant-numeric: tabular-nums;
-    color: var(--ink-secondary);
-  }
-
-  .cps-best-flag {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    margin-block-start: var(--space-md);
-    padding: var(--space-xs) var(--space-md);
-    border-radius: var(--radius-full);
-    background-color: rgb(34 197 94 / 10%);
-    color: var(--signal-green); /* "your best" — sanctioned */
-    font-size: var(--text-label-size);
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    animation: best-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @keyframes best-pop {
-    0% {
-      opacity: 0;
-      transform: translateY(6px) scale(0.9);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
   .result-message {
     margin-block-end: var(--space-lg);
     color: var(--ink-secondary);
@@ -604,8 +643,6 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     transition: all var(--duration-fast) var(--ease);
   }
 
-  /* Try-Again is the white "reset the loop" invert, distinct from the green
-     go-signal (DESIGN.md §5 Buttons). */
   .btn-try-again {
     min-width: 160px;
     background-color: var(--ink-primary);
@@ -618,54 +655,27 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     border-color: var(--ink-secondary);
   }
 
-  /* --- Click ripple (JS-created, so :global) ------------------------------------ */
+  /* --- Round progress bar ----------------------------------------------------------- */
 
-  .test-area :global(.cps-ripple) {
-    position: absolute;
-    z-index: 0;
-    width: 120px;
-    height: 120px;
-    border-radius: var(--radius-full);
-    background: radial-gradient(circle, rgb(34 197 94 / 35%) 0%, rgb(34 197 94 / 0%) 70%);
-    pointer-events: none;
-    opacity: 0.9;
-    transform: translate(-50%, -50%) scale(0.2);
-    animation: cps-ripple 0.5s ease-out forwards;
-  }
-
-  @keyframes cps-ripple {
-    100% {
-      transform: translate(-50%, -50%) scale(1.4);
-      opacity: 0;
-    }
-  }
-
-  /* --- Countdown timer bar --------------------------------------------------------- */
-
-  .cps-timer-track {
+  .progress-bar-container {
     width: 100%;
-    height: 6px;
-    border: 1px solid var(--line-subtle);
+    height: 4px;
     border-radius: var(--radius-full);
     background-color: var(--panel-03);
     overflow: hidden;
   }
 
-  .cps-timer-fill {
-    width: 100%;
+  .progress-bar {
+    width: 0%;
     height: 100%;
     border-radius: var(--radius-full);
     background-color: var(--signal-green);
-    transform: scaleX(0);
-    transform-origin: left center;
-    will-change: transform;
+    transition: width var(--duration-base) var(--ease);
   }
 
   /* --- Responsive --------------------------------------------------------------------- */
 
   @media (max-width: 992px) {
-    /* Settings drop below the test area so the surface leads on smaller screens,
-       matching the legacy layout's reorder. */
     .settings-panel {
       order: 3;
       padding-block: var(--space-lg) 0;
@@ -673,6 +683,10 @@ const checklistRanks = [...cpsTool.ranks].reverse();
       border-block-start: 1px solid var(--line-subtle);
       flex-wrap: wrap;
       gap: var(--space-md) var(--space-xl);
+    }
+
+    .progress-bar-container {
+      order: 2;
     }
   }
 
@@ -706,6 +720,20 @@ const checklistRanks = [...cpsTool.ranks].reverse();
       padding: var(--space-sm);
     }
 
+    .attempts-row {
+      gap: var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      flex-wrap: wrap;
+    }
+
+    .attempts-row :global(.attempt-column) {
+      min-width: 50px;
+    }
+
+    .attempts-row :global(.attempt-time) {
+      font-size: var(--text-body-size);
+    }
+
     .main-result-card {
       padding: var(--space-lg);
     }
@@ -715,13 +743,14 @@ const checklistRanks = [...cpsTool.ranks].reverse();
     }
   }
 
+  /* Reduced motion: every state keeps its text cue; the motion cues go quiet.
+     (--duration-* already collapse to 0ms; these animations use literal
+     durations to match the legacy timings, so null them explicitly.) */
   @media (prefers-reduced-motion: reduce) {
-    .cps-best-flag {
+    .test-area.state-waiting :global(.test-status),
+    .test-area.state-go :global(.test-status),
+    .test-area.state-false-start :global(.test-status) {
       animation: none;
-    }
-
-    .test-area :global(.cps-ripple) {
-      display: none;
     }
   }
 </style>

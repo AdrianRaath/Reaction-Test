@@ -1,0 +1,137 @@
+---
+import { Icon } from 'astro-icon/components';
+import { otherTools } from '../../data/tools';
+
+// Registry-driven cross-links (§3.3 / phase 6). With no catalogue page, this
+// section plus the sidebar is the entirety of tool-to-tool discovery — a new
+// registry entry appears here on every other tool page with no page edits.
+
+interface Props {
+  /** The current tool's href — excluded from the list. */
+  current: string;
+}
+
+const related = otherTools(Astro.props.current);
+---
+
+{
+  related.length > 0 && (
+    <section class="related-tools" aria-labelledby="related-tools-heading">
+      <div class="container">
+        <h2 id="related-tools-heading">More tools</h2>
+        <div class="related-grid">
+          {related.map((tool) => (
+            <a href={tool.href} class="related-card">
+              <span class="related-icon">
+                <Icon name={tool.icon} width={20} height={20} aria-hidden="true" />
+              </span>
+              <span class="related-body">
+                <span class="related-name">{tool.name}</span>
+                <span class="related-blurb">{tool.blurb}</span>
+              </span>
+              <svg
+                class="related-arrow"
+                viewBox="0 0 16 16"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  d="M6 12L10 8L6 4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+<style>
+  .related-tools {
+    padding: var(--space-2xl) 0;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 960px;
+    margin-inline: auto;
+  }
+
+  h2 {
+    margin-block-end: var(--space-md);
+    font-size: var(--text-headline-size);
+  }
+
+  .related-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-lg);
+  }
+
+  .related-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-02);
+    text-decoration: none;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  .related-card:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-muted);
+    transform: translateY(-2px);
+  }
+
+  .related-icon {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+    color: var(--ink-secondary);
+  }
+
+  .related-body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .related-name {
+    font-size: var(--text-title-size);
+    font-weight: var(--text-title-weight);
+  }
+
+  .related-blurb {
+    font-size: var(--text-label-size);
+    color: var(--ink-secondary);
+  }
+
+  .related-arrow {
+    width: 16px;
+    height: 16px;
+    margin-inline-start: auto;
+    flex-shrink: 0;
+    color: var(--ink-muted);
+    transition: transform var(--duration-fast) var(--ease);
+  }
+
+  .related-card:hover .related-arrow {
+    transform: translateX(2px);
+  }
+</style>

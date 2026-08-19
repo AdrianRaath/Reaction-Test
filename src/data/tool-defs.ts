@@ -28,11 +28,11 @@ export const reactionTool = defineTool({
     },
   },
   ranks: [
-    { id: 'elite', name: 'Elite', threshold: 149 },
-    { id: 'pro', name: 'Pro', threshold: 199 },
-    { id: 'advanced', name: 'Advanced', threshold: 249 },
-    { id: 'intermediate', name: 'Intermediate', threshold: 349 },
-    { id: 'beginner', name: 'Beginner', threshold: Infinity },
+    { id: 'elite', name: 'Elite', threshold: 149, rangeLabel: '0-149ms' },
+    { id: 'pro', name: 'Pro', threshold: 199, rangeLabel: '150-199ms' },
+    { id: 'advanced', name: 'Advanced', threshold: 249, rangeLabel: '200-249ms' },
+    { id: 'intermediate', name: 'Intermediate', threshold: 349, rangeLabel: '250-349ms' },
+    { id: 'beginner', name: 'Beginner', threshold: Infinity, rangeLabel: '350ms and above' },
   ],
   maxHistory: 50,
   legacy: {

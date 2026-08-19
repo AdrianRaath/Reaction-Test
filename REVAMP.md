@@ -418,10 +418,10 @@ the tool that differs most from the one we would naturally design around.
 - [x] **2 — Engine.** Extract the shared telemetry rig plus the storage
       migration shim, built multi-metric per §3.1. Cover it with Vitest.
 - [x] **3 — CPS.** Port as the first tool on the new engine. Validate.
-- [ ] **4 — Reaction test.** Port, with extra care around timing integrity.
-- [ ] **5 — Content.** Mechanical port of existing copy into collections;
+- [x] **4 — Reaction test.** Port, with extra care around timing integrity.
+- [x] **5 — Content.** Mechanical port of existing copy into collections;
       per-tool MDX content model. Typography pass for the narrowed column.
-- [ ] **6 — Linking and discovery.** Registry-driven related-tool cross-links
+- [x] **6 — Linking and discovery.** Registry-driven related-tool cross-links
       and generated sitemap. No catalogue page (§3.4).
 - [ ] **7 — New tools.** Typing, aim trainer, and onward.
 

@@ -19,10 +19,18 @@ import type { RankDef, ScoreRecord, ToolDefinition } from './types';
 
 /** Per-tool display copy the rig cannot invent. */
 export interface RigCopy {
-  /** e.g. rank => `${rank}-tier click speed.` */
+  /**
+   * e.g. rank => `${rank}-tier click speed.`
+   * Rendered as HTML — may carry markup like `<span class="desc-highlight">`.
+   * Author constants only; never interpolate user input.
+   */
   bestDescription: (rankName: string) => string;
-  /** e.g. n => `Average across your last ${n} run${n === 1 ? '' : 's'}.` */
-  avgDescription: (runs: number) => string;
+  /**
+   * e.g. n => `Average across your last ${n} run${n === 1 ? '' : 's'}.`
+   * Also receives the average's rank name, for tools whose copy keys off it.
+   * Rendered as HTML.
+   */
+  avgDescription: (runs: number, rankName: string) => string;
   /** History row score text, e.g. v => `${v.toFixed(1)} CPS` */
   historyScore: (value: number) => string;
   /** Chart tooltip, e.g. v => `${v} CPS` */
@@ -44,9 +52,18 @@ export interface Rig {
   recordSession(metrics: Record<string, number>, settings: Record<string, unknown>): SessionOutcome;
 }
 
-interface RigHooks {
+interface RigConfig {
   /** Runs after a confirmed reset, so the tool can return its test area to idle. */
   onReset?: () => void;
+  /**
+   * How many of the newest records feed the average widget and the trend
+   * chart. Defaults to all stored history. The reaction test keeps 50 history
+   * rows but has always averaged and charted its last 20 sessions — parity
+   * for returning players depends on this staying a window, not the full log.
+   */
+  telemetryWindow?: number;
+  /** Chart y-axis. CPS starts at zero; reaction time does not. Default true. */
+  chartBeginAtZero?: boolean;
 }
 
 function byId<T extends HTMLElement>(id: string): T | null {
@@ -64,10 +81,14 @@ export function createRig(
   store: ToolStore,
   adapter: StorageAdapter,
   copy: RigCopy,
-  hooks: RigHooks = {}
+  config: RigConfig = {}
 ): Rig {
   const metric = primaryMetric(tool);
   const metricKey = primaryMetricKey(tool);
+
+  /** The newest records feeding the average and the trend (newest-first). */
+  const windowed = (records: ScoreRecord[]) =>
+    config.telemetryWindow ? records.slice(0, config.telemetryWindow) : records;
 
   // --- Best / average widgets --------------------------------------------
 
@@ -83,7 +104,7 @@ export function createRig(
       const rank = resolveRank(tool, value);
       timeEl.textContent = formatValue(metric, value);
       setBadge(byId('widget-pb-rank'), 'pb-rank-badge', rank);
-      if (descEl) descEl.textContent = copy.bestDescription(rank.name);
+      if (descEl) descEl.innerHTML = copy.bestDescription(rank.name);
     } else {
       timeEl.textContent = '—';
       setBadge(byId('widget-pb-rank'), 'pb-rank-badge', null);
@@ -97,7 +118,7 @@ export function createRig(
     const countEl = byId('widget-avg-sessions');
     if (!timeEl) return;
 
-    const history = store.getHistory();
+    const history = windowed(store.getHistory());
     const avg = averagePrimary(tool, history);
 
     if (avg !== null) {
@@ -109,7 +130,7 @@ export function createRig(
       timeEl.textContent = display;
       setBadge(byId('widget-avg-rank'), 'pb-rank-badge', rank);
       if (countEl) countEl.textContent = String(history.length);
-      if (descEl) descEl.textContent = copy.avgDescription(history.length);
+      if (descEl) descEl.innerHTML = copy.avgDescription(history.length, rank.name);
     } else {
       timeEl.textContent = '—';
       setBadge(byId('widget-avg-rank'), 'pb-rank-badge', null);
@@ -242,7 +263,7 @@ export function createRig(
             x: { display: false },
             y: {
               display: true,
-              beginAtZero: true,
+              beginAtZero: config.chartBeginAtZero ?? true,
               grid: { color: 'rgba(255, 255, 255, 0.05)' },
               ticks: { color: ink, font: { size: 10 } },
             },
@@ -261,7 +282,7 @@ export function createRig(
   function renderChart(): void {
     const description = byId('chart-description');
     const empty = byId('chart-empty-message');
-    const series = trendSeries(tool, store.getHistory());
+    const series = trendSeries(tool, windowed(store.getHistory()));
     const hasData = series.length > 0;
 
     if (description) description.hidden = !hasData;
@@ -313,7 +334,7 @@ export function createRig(
     }
 
     refresh();
-    hooks.onReset?.();
+    config.onReset?.();
     closeModal();
   }
 

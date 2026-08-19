@@ -1,0 +1,134 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import '../styles/article.css';
+
+const TITLE = 'About | ReflexLab';
+const DESCRIPTION =
+  'Learn about ReflexLab: free reaction time and click speed tests that help you measure and improve. No accounts, and your results stay in your browser.';
+// The live page's og:description deliberately differs from its meta
+// description — preserved as-is (§7).
+const OG_DESCRIPTION =
+  'Learn about ReflexLab - a free reaction time testing tool built to help you measure, practice, and improve your reaction speed over time.';
+---
+
+<BaseLayout
+  title={TITLE}
+  description={DESCRIPTION}
+  ogDescription={OG_DESCRIPTION}
+  path="/about"
+  topbarLabel="About"
+>
+  <article class="article-container">
+    <header class="article-header">
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span class="breadcrumbs-separator">/</span>
+        <span class="breadcrumbs-current">About</span>
+      </nav>
+      <h1 class="article-title">About ReflexLab</h1>
+      <p class="article-subtitle">
+        ReflexLab makes it easy to measure your reaction time and improve it.
+      </p>
+    </header>
+
+    <div class="article-content">
+      <p class="article-intro">
+        ReflexLab grew out of a personal interest in improving reaction speed for gaming and sport.
+        Training only sticks when you can measure it, so we built a tool that makes progress visible
+        and repeatable.
+      </p>
+
+      <section class="article-section">
+        <h2>Why ReflexLab Exists</h2>
+        <p>Reaction time improves with practice, but only if you can measure it.</p>
+        <p>ReflexLab gives you:</p>
+        <ul class="article-list">
+          <li>An accurate reaction time test</li>
+          <li>Progress tracking: personal bests, averages, and trends</li>
+          <li>A clean, focused experience</li>
+        </ul>
+        <p>The point is to help you understand your own performance and improve it.</p>
+      </section>
+
+      <section class="article-section">
+        <h2>Built for Practice and Progress</h2>
+        <p>One run tells you little. ReflexLab is built for the return visit, helping you:</p>
+        <ul class="article-list">
+          <li>Test your reaction time regularly</li>
+          <li>Track personal bests and averages</li>
+          <li>Watch your scores trend down across sessions</li>
+        </ul>
+        <p>We keep the interface simple so your focus stays on the test.</p>
+      </section>
+
+      <section class="article-section">
+        <h2>More Tools Over Time</h2>
+        <p>
+          ReflexLab now offers two tools: the <a href="/">reaction time test</a> and the
+          <a href="/cps">clicks per second (CPS) test</a>.
+        </p>
+        <p>We plan to add more, covering:</p>
+        <ul class="article-list">
+          <li>Other aspects of speed and precision</li>
+          <li>New ways to practice</li>
+          <li>Deeper performance tracking</li>
+        </ul>
+        <p>Each new tool will follow the same principle: useful and focused.</p>
+      </section>
+
+      <section class="article-section">
+        <h2>Free and Accessible</h2>
+        <p>ReflexLab is:</p>
+        <ul class="article-list">
+          <li>Free, with no accounts or sign-ups</li>
+          <li>Fast on desktop and mobile</li>
+          <li>Private: your results stay in your browser</li>
+        </ul>
+        <p>Open the page, click, and you have your first result in seconds.</p>
+      </section>
+
+      <section class="article-section">
+        <h2>The Goal</h2>
+        <p>
+          <strong>
+            ReflexLab has one goal: give you an honest measurement and a reason to come back and
+            beat it.
+          </strong>
+        </p>
+        <p>If it makes you faster or more consistent, it's doing its job.</p>
+      </section>
+
+      <section class="article-cta">
+        <h2>See How Fast You Are</h2>
+        <p>
+          Take the reaction test, then measure your click speed with the
+          <a href="/cps">CPS test</a>.
+        </p>
+        <a href="/" class="btn btn-primary">Take the Test</a>
+      </section>
+    </div>
+  </article>
+
+  <section class="disclaimer-section">
+    <p class="disclaimer">
+      <strong>Disclaimer:</strong> This reaction time test is for entertainment and personal tracking
+      purposes. Results are affected by your device's hardware, browser performance, and network conditions.
+      For scientific or medical assessments, please use calibrated laboratory equipment.
+    </p>
+  </section>
+</BaseLayout>
+
+<style>
+  .disclaimer-section {
+    padding: var(--space-xl) 0 0;
+    border-block-start: 1px solid var(--line-subtle);
+  }
+
+  .disclaimer {
+    max-width: 720px;
+    margin-inline: auto;
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+    text-align: center;
+  }
+</style>

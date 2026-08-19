@@ -1,0 +1,73 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import '../../styles/article.css';
+
+// Guides use the same shell as tools — no separate reading layout (§5).
+// The entry id is the URL slug; these are live, ranked URLs (§7).
+
+export async function getStaticPaths() {
+  const guides = await getCollection('guides');
+  return guides.map((guide) => ({ params: { slug: guide.id }, props: { guide } }));
+}
+
+const { guide } = Astro.props;
+const { Content } = await render(guide);
+---
+
+<BaseLayout
+  title={guide.data.pageTitle}
+  description={guide.data.description}
+  path={`/guides/${guide.id}`}
+  ogType="article"
+  topbarLabel="Guides"
+>
+  <article class="article-container">
+    <header class="article-header">
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span class="breadcrumbs-separator">/</span>
+        <a href="/guides">Guides</a>
+        <span class="breadcrumbs-separator">/</span>
+        <span class="breadcrumbs-current">{guide.data.title}</span>
+      </nav>
+      <h1 class="article-title">{guide.data.title}</h1>
+      <p class="article-subtitle">{guide.data.subtitle}</p>
+    </header>
+
+    <div class="article-content">
+      <Content />
+    </div>
+  </article>
+
+  <section class="disclaimer-section">
+    <div class="container">
+      <p class="disclaimer">
+        <strong>Disclaimer:</strong> This reaction time test is for entertainment and personal tracking
+        purposes. Results are affected by your device's hardware, browser performance, and network conditions.
+        For scientific or medical assessments, please use calibrated laboratory equipment.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .disclaimer-section {
+    padding: var(--space-xl) 0 0;
+    border-block-start: 1px solid var(--line-subtle);
+  }
+
+  .disclaimer {
+    max-width: 720px;
+    margin-inline: auto;
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 960px;
+    margin-inline: auto;
+  }
+</style>

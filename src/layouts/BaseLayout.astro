@@ -19,6 +19,11 @@ interface Props {
    */
   title: string;
   description: string;
+  /**
+   * og:description / twitter:description when they differ from the meta
+   * description. The live /about page has exactly this split — preserve it.
+   */
+  ogDescription?: string;
   /** Root-relative path, e.g. '/cps'. Resolved against `site` for canonical + og:url. */
   path: string;
   ogType?: 'website' | 'article';
@@ -32,6 +37,7 @@ interface Props {
 const {
   title,
   description,
+  ogDescription = Astro.props.description,
   path,
   ogType = 'website',
   ogImage = '/assets/reflex-og.png',
@@ -61,12 +67,12 @@ const ogImageUrl = new URL(ogImage, site).href;
     <meta property="og:type" content={ogType} />
     <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
+    <meta property="og:description" content={ogDescription} />
     <meta property="og:image" content={ogImageUrl} />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
+    <meta name="twitter:description" content={ogDescription} />
     <meta name="twitter:image" content={ogImageUrl} />
 
     <slot name="head" />

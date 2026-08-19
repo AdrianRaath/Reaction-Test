@@ -1,0 +1,168 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// The one deliberate URL change in the migration (§7): the live site served
+// /guides/ (trailing slash); this page lives at /guides and vercel.json 301s
+// the old form here. Canonical and og:url follow the new address.
+
+const guides = (await getCollection('guides')).sort((a, b) => a.data.order - b.data.order);
+
+const TITLE = 'Guides | ReflexLab';
+const DESCRIPTION =
+  'Guides and articles about reaction time, including tips on improving your reflexes, the science behind reaction speed, and factors that affect performance.';
+---
+
+<BaseLayout title={TITLE} description={DESCRIPTION} path="/guides" topbarLabel="Guides">
+  <header class="guides-header">
+    <h1 class="guides-title">Guides</h1>
+    <p class="guides-subtitle">
+      Learn about reaction time, what affects it, and how to improve your reflexes.
+    </p>
+  </header>
+
+  <div class="guides-list">
+    {
+      guides.map((guide) => (
+        <a href={`/guides/${guide.id}`} class="guide-card">
+          <h2 class="guide-card-title">{guide.data.title}</h2>
+          <p class="guide-card-snippet">{guide.data.snippet}</p>
+          <span class="guide-card-link">
+            Read guide
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path
+                d="M6 12L10 8L6 4"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+        </a>
+      ))
+    }
+  </div>
+
+  <section class="disclaimer-section">
+    <p class="disclaimer">
+      <strong>Disclaimer:</strong> This reaction time test is for entertainment and personal tracking
+      purposes. Results are affected by your device's hardware, browser performance, and network conditions.
+      For scientific or medical assessments, please use calibrated laboratory equipment.
+    </p>
+  </section>
+</BaseLayout>
+
+<style>
+  .guides-header {
+    max-width: 960px;
+    margin-inline: auto;
+    padding: var(--space-xl) 0 var(--space-2xl);
+    text-align: center;
+  }
+
+  .guides-title {
+    margin-block-end: var(--space-md);
+    font-size: var(--text-display-size);
+    font-weight: var(--text-display-weight);
+    letter-spacing: var(--text-display-ls);
+    line-height: var(--text-display-lh);
+  }
+
+  .guides-subtitle {
+    max-width: 500px;
+    margin-inline: auto;
+    font-size: 1.125rem;
+    color: var(--ink-secondary);
+  }
+
+  .guides-list {
+    display: flex;
+    max-width: 700px;
+    margin-inline: auto;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding-block-end: var(--space-3xl);
+  }
+
+  .guide-card {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-xl);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-02);
+    text-decoration: none;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  .guide-card:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-muted);
+    transform: translateY(-2px);
+  }
+
+  .guide-card-title {
+    margin-block-end: var(--space-sm);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .guide-card-snippet {
+    flex-grow: 1;
+    margin-block-end: var(--space-lg);
+    font-size: var(--text-label-size);
+    line-height: 1.7;
+    color: var(--ink-secondary);
+  }
+
+  .guide-card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-label-size);
+    font-weight: 500;
+    /* Signal Green as "go read this" affordance — carried from the live design. */
+    color: var(--signal-green);
+    transition: gap var(--duration-fast) var(--ease);
+  }
+
+  .guide-card:hover .guide-card-link {
+    gap: var(--space-sm);
+  }
+
+  .guide-card-link svg {
+    width: 16px;
+    height: 16px;
+    transition: transform var(--duration-fast) var(--ease);
+  }
+
+  .guide-card:hover .guide-card-link svg {
+    transform: translateX(2px);
+  }
+
+  .disclaimer-section {
+    padding: var(--space-xl) 0 0;
+    border-block-start: 1px solid var(--line-subtle);
+  }
+
+  .disclaimer {
+    max-width: 720px;
+    margin-inline: auto;
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  @media (max-width: 768px) {
+    .guides-title {
+      font-size: 2rem;
+    }
+  }
+</style>

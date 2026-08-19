@@ -209,6 +209,11 @@ const {
     color: var(--ink-secondary);
   }
 
+  /* Injected by the rig inside description HTML, so :global. */
+  .pb-description :global(.desc-highlight) {
+    color: var(--ink-primary);
+  }
+
   /* --- Rank badge tints (Rank-Only Colour Rule: badges only) ------------- */
 
   .pb-rank-badge.elite {
