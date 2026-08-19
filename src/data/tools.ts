@@ -48,6 +48,13 @@ export const tools: Tool[] = [
     icon: 'ph:cursor-click',
     blurb: 'Measure how fast you can click, in clicks per second.',
   },
+  {
+    href: '/kohi-click-test',
+    name: 'Kohi Click Test',
+    navLabel: 'Kohi Test',
+    icon: 'ph:sword',
+    blurb: 'The classic fixed 10-second click test. Get your CPS and rank.',
+  },
 ];
 
 /**

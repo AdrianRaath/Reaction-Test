@@ -79,3 +79,33 @@ export const cpsTool = defineTool({
     sessionHistory: 'cpslab_session_history',
   },
 });
+
+/**
+ * Kohi click test. Higher is better.
+ * The classic fixed format: 10 seconds, mouse clicks. Thresholds deliberately
+ * match the CPS test so scores compare across the two tools (user decision).
+ * A new tool — no legacy keys.
+ */
+export const kohiTool = defineTool({
+  id: 'kohi',
+  metrics: {
+    cps: {
+      label: 'Clicks per second',
+      direction: 'higher-is-better',
+      format: (v) => v.toFixed(1),
+      primary: true,
+    },
+    clicks: {
+      label: 'Total clicks',
+      direction: 'higher-is-better',
+    },
+  },
+  ranks: [
+    { id: 'elite', name: 'Elite', threshold: 10, rangeLabel: '10+ CPS' },
+    { id: 'pro', name: 'Pro', threshold: 8, rangeLabel: '8–9.9 CPS' },
+    { id: 'advanced', name: 'Advanced', threshold: 7, rangeLabel: '7–7.9 CPS' },
+    { id: 'intermediate', name: 'Intermediate', threshold: 4, rangeLabel: '4–6.9 CPS' },
+    { id: 'beginner', name: 'Beginner', threshold: 0, rangeLabel: 'Under 4 CPS' },
+  ],
+  maxHistory: 20,
+});

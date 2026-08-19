@@ -1,0 +1,619 @@
+---
+import { getEntry, render } from 'astro:content';
+import { Icon } from 'astro-icon/components';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProgressWidgets from '../components/tool/ProgressWidgets.astro';
+import RelatedTools from '../components/tool/RelatedTools.astro';
+import ResetModal from '../components/tool/ResetModal.astro';
+import { kohiTool } from '../data/tool-defs';
+import '../styles/content.css';
+
+// Tool-page titles target the primary keyword and carry no "| ReflexLab"
+// suffix (NEW-TOOL.md). Primary keyword: "Kohi Click Test".
+const TITLE = 'Kohi Click Test - Free 10 Second Click Speed Test';
+const DESCRIPTION =
+  'Free Kohi click test. Click as fast as you can for 10 seconds, get your CPS, earn a rank from Beginner to Elite, and track your best score.';
+
+const entry = await getEntry('tools', 'kohi');
+if (!entry) throw new Error('Missing tools/kohi content entry');
+const { Content } = await render(entry);
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: entry.data.faq.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
+};
+
+// Checklist shows the climb worst-first.
+const checklistRanks = [...kohiTool.ranks].reverse();
+---
+
+<BaseLayout title={TITLE} description={DESCRIPTION} path="/kohi-click-test" topbarLabel="Kohi Test">
+  <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+
+  <button slot="controls" type="button" class="ctl" id="sound-toggle" aria-label="Toggle sound">
+    <span class="ctl-icon" id="sound-icon-on">
+      <Icon name="ph:speaker-high" width={18} height={18} aria-hidden="true" />
+    </span>
+    <span class="ctl-icon" id="sound-icon-off" hidden>
+      <Icon name="ph:speaker-slash" width={18} height={18} aria-hidden="true" />
+    </span>
+  </button>
+  <button slot="controls" type="button" class="ctl" id="reset-btn" aria-label="Reset all data">
+    <Icon name="ph:trash" width={18} height={18} aria-hidden="true" />
+    <span>Reset</span>
+  </button>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Kohi Click Test</h1>
+      <p class="hero-subtitle">
+        The classic 10-second click test. Your first click starts the clock. Most people land 6-7
+        CPS. See where you rank.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== TEST ========== -->
+  <!-- No settings panel: the Kohi format is fixed (10 seconds, mouse clicks),
+       and the fixed conditions are the point. -->
+  <section id="test-section" class="test-section">
+    <div class="test-card">
+      <div
+        id="kohi-area"
+        class="test-area state-idle"
+        tabindex="0"
+        role="button"
+        aria-label="Kohi click test area. Press Enter or Space to begin, then click or press Space as fast as you can for 10 seconds."
+      >
+        <!-- Default content (idle) -->
+        <div class="test-area-content" id="kohi-content-default">
+          <p class="test-hint" id="kohi-hint">
+            Your first click starts the clock and counts. Click as fast as you can for 10 seconds.
+          </p>
+          <p class="test-status" id="kohi-status" aria-live="polite">Click to start</p>
+          <p class="test-instruction" id="kohi-instruction">Fixed 10-second test</p>
+        </div>
+
+        <!-- Live counting content -->
+        <div class="kohi-live" id="kohi-live" hidden aria-hidden="true">
+          <div class="kohi-readout">
+            <span class="kohi-value readout" id="kohi-value">0.0</span>
+            <span class="kohi-unit-inline">CPS</span>
+          </div>
+          <div class="kohi-live-meta">
+            <span><strong id="kohi-count" class="readout">0</strong> clicks</span>
+            <span class="kohi-meta-sep">·</span>
+            <span><strong id="kohi-timeleft" class="readout">10.0</strong>s left</span>
+          </div>
+        </div>
+
+        <!-- Results content (session complete) -->
+        <div class="test-area-results" id="kohi-results" hidden>
+          <div class="main-result-card">
+            <p class="result-heading">Your Kohi CPS</p>
+            <div class="result-time-row">
+              <span class="result-time readout" id="kohi-final">0.0</span>
+              <span class="result-unit">CPS</span>
+              <span class="rank-badge" id="kohi-rank-label">Advanced</span>
+            </div>
+            <p class="kohi-result-meta" id="kohi-result-meta">0 clicks in 10s</p>
+            <p class="kohi-best-flag" id="kohi-best-flag" hidden>
+              <span aria-hidden="true">🏆</span> New best!
+            </p>
+          </div>
+
+          <p class="result-message" id="kohi-message">
+            Nice pace. Keep practicing to climb the ranks.
+          </p>
+
+          <button class="btn btn-try-again" id="kohi-try-again" type="button">Try Again</button>
+        </div>
+
+        <!-- Screen-reader live announcements (start + final result only) -->
+        <p class="visually-hidden" id="kohi-announce" aria-live="assertive"></p>
+      </div>
+
+      <!-- Countdown timer bar -->
+      <div class="kohi-timer-track" role="presentation">
+        <div class="kohi-timer-fill" id="kohi-timer-fill"></div>
+      </div>
+    </div>
+
+    <ResetModal message="your best CPS, run history, and achieved ranks" />
+
+    <ProgressWidgets
+      unit="CPS"
+      bestTitle="Best CPS"
+      bestSubtitle="Your fastest 10-second run"
+      bestEmpty="Complete a run to set your best CPS."
+      avgTitle="Average CPS"
+      avgNoun="runs"
+      avgEmpty="Complete a run to see your average."
+      chartDescription="Clicks per second across your last runs"
+      chartEmpty="Complete a run to see your trend graph"
+      historyEmpty="Complete a run to see your history"
+      ranks={checklistRanks}
+    />
+  </section>
+
+  <Content />
+
+  <RelatedTools current="/kohi-click-test" />
+</BaseLayout>
+
+<script>
+  import '../scripts/kohi';
+</script>
+
+<style>
+  /* --- Top-bar controls (slot content, styled by the page) ---------------- */
+
+  .ctl {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+  }
+
+  .ctl:hover {
+    background-color: var(--panel-hover);
+    color: var(--ink-primary);
+  }
+
+  .ctl.muted {
+    color: var(--ink-muted);
+  }
+
+  .ctl-icon {
+    display: inline-flex;
+  }
+
+  /* --- Hero ----------------------------------------------------------------- */
+
+  .hero-section {
+    padding: var(--space-xl) 0 var(--space-md);
+    text-align: center;
+  }
+
+  .hero-content {
+    max-width: 600px;
+    margin-inline: auto;
+  }
+
+  .hero-title {
+    margin-block-end: var(--space-md);
+    font-size: var(--text-display-size);
+    font-weight: var(--text-display-weight);
+    line-height: var(--text-display-lh);
+    letter-spacing: var(--text-display-ls);
+  }
+
+  .hero-subtitle {
+    font-size: 1.125rem;
+    color: var(--ink-secondary);
+  }
+
+  /* --- Test card --------------------------------------------------------------- */
+
+  .test-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-block: var(--space-md) var(--space-2xl);
+  }
+
+  .test-card {
+    display: flex;
+    width: 100%;
+    max-width: 960px;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-2xl);
+    background-color: var(--panel-02);
+  }
+
+  /* --- Test area (instrument face) --------------------------------------------- */
+
+  .test-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 340px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: all var(--duration-base) var(--ease);
+  }
+
+  .test-area:focus-visible {
+    outline: 2px solid var(--signal-green);
+    outline-offset: 3px;
+  }
+
+  .test-area:active:not(.state-session-complete) {
+    transform: scale(0.98);
+  }
+
+  .test-area.state-idle {
+    background-color: var(--panel-03);
+    border: 2px solid var(--line);
+  }
+
+  .test-area.state-idle:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-secondary);
+  }
+
+  /* Counting: green means "active" — the sanctioned signal, paired with the
+     live readout so state is never colour alone. */
+  .test-area.state-kohi-counting {
+    background-color: rgb(34 197 94 / 10%);
+    border: 2px solid var(--signal-green);
+    box-shadow:
+      0 0 20px rgb(34 197 94 / 20%),
+      0 0 40px rgb(34 197 94 / 20%);
+  }
+
+  .test-area.state-session-complete {
+    background-color: var(--panel-03);
+    border: 2px solid var(--line);
+    min-height: 320px;
+    cursor: default;
+  }
+
+  /* Session complete: border + glow adopt the achieved rank — the trophy
+     frame, the Rank-Only Colour Rule's licensed surface. */
+  .test-area.state-session-complete.rank-elite {
+    border-color: var(--rank-elite);
+    box-shadow:
+      0 0 20px rgb(168 85 247 / 20%),
+      0 0 40px rgb(168 85 247 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-pro {
+    border-color: var(--rank-pro);
+    box-shadow:
+      0 0 20px rgb(34 197 94 / 20%),
+      0 0 40px rgb(34 197 94 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-advanced {
+    border-color: var(--rank-advanced);
+    box-shadow:
+      0 0 20px rgb(59 130 246 / 20%),
+      0 0 40px rgb(59 130 246 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-intermediate {
+    border-color: var(--rank-intermediate);
+    box-shadow:
+      0 0 20px rgb(245 158 11 / 20%),
+      0 0 40px rgb(245 158 11 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-beginner {
+    border-color: var(--rank-beginner);
+    box-shadow:
+      0 0 20px rgb(144 144 153 / 20%),
+      0 0 40px rgb(144 144 153 / 10%);
+  }
+
+  .test-area-content {
+    z-index: 1;
+    padding: 0 var(--space-lg);
+    text-align: center;
+  }
+
+  .test-hint {
+    margin-block-end: var(--space-lg);
+    font-size: var(--text-label-size);
+    font-style: italic;
+    color: var(--ink-muted);
+  }
+
+  .test-status {
+    margin-block-end: var(--space-xs);
+    font-size: var(--text-headline-size);
+    font-weight: var(--text-headline-weight);
+  }
+
+  .test-instruction {
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+  }
+
+  /* --- Live counting readout -------------------------------------------------- */
+
+  .kohi-live {
+    z-index: 1;
+    padding: 0 var(--space-lg);
+    text-align: center;
+  }
+
+  .kohi-readout {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-sm);
+    line-height: 1;
+  }
+
+  .kohi-value {
+    font-size: clamp(3rem, 11vw, 5rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--signal-green); /* live measurement = "active" */
+  }
+
+  .kohi-unit-inline {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--ink-secondary);
+  }
+
+  .kohi-live-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-md);
+    color: var(--ink-secondary);
+  }
+
+  .kohi-live-meta strong {
+    font-weight: 700;
+    color: var(--ink-primary);
+  }
+
+  .kohi-meta-sep {
+    color: var(--ink-muted);
+  }
+
+  /* --- Results ------------------------------------------------------------------ */
+
+  .test-area-results {
+    z-index: 1;
+    width: 100%;
+    padding: var(--space-lg);
+    text-align: center;
+  }
+
+  .main-result-card {
+    margin-block-end: var(--space-lg);
+    padding: var(--space-xl) var(--space-2xl);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-01);
+  }
+
+  .result-heading {
+    margin-block-end: var(--space-sm);
+    color: var(--ink-secondary);
+  }
+
+  .result-time-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  .result-time-row .rank-badge {
+    align-self: center;
+  }
+
+  .result-time {
+    font-size: var(--text-readout-size);
+    font-weight: var(--text-readout-weight);
+    line-height: var(--text-readout-lh);
+  }
+
+  .result-unit {
+    font-size: var(--text-headline-size);
+    font-weight: 500;
+    color: var(--ink-secondary);
+  }
+
+  .rank-badge {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: capitalize;
+  }
+
+  .rank-badge.elite {
+    background-color: rgb(168 85 247 / 20%);
+    border: 1px solid rgb(168 85 247 / 30%);
+    color: var(--rank-elite);
+  }
+
+  .rank-badge.pro {
+    background-color: rgb(34 197 94 / 20%);
+    border: 1px solid rgb(34 197 94 / 30%);
+    color: var(--rank-pro);
+  }
+
+  .rank-badge.advanced {
+    background-color: rgb(59 130 246 / 20%);
+    border: 1px solid rgb(59 130 246 / 30%);
+    color: var(--rank-advanced);
+  }
+
+  .rank-badge.intermediate {
+    background-color: rgb(245 158 11 / 20%);
+    border: 1px solid rgb(245 158 11 / 30%);
+    color: var(--rank-intermediate);
+  }
+
+  .rank-badge.beginner {
+    background-color: rgb(144 144 153 / 20%);
+    border: 1px solid rgb(144 144 153 / 30%);
+    color: var(--rank-beginner);
+  }
+
+  .kohi-result-meta {
+    margin-block-start: var(--space-sm);
+    font-size: var(--text-label-size);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-secondary);
+  }
+
+  .kohi-best-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-block-start: var(--space-md);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-full);
+    background-color: rgb(34 197 94 / 10%);
+    color: var(--signal-green); /* "your best" — sanctioned */
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    animation: best-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes best-pop {
+    0% {
+      opacity: 0;
+      transform: translateY(6px) scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .result-message {
+    margin-block-end: var(--space-lg);
+    color: var(--ink-secondary);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  /* Try-Again is the white "reset the loop" invert, distinct from the green
+     go-signal (DESIGN.md §5 Buttons). */
+  .btn-try-again {
+    min-width: 160px;
+    background-color: var(--ink-primary);
+    border-color: var(--ink-primary);
+    color: var(--chassis-black);
+  }
+
+  .btn-try-again:hover {
+    background-color: var(--ink-secondary);
+    border-color: var(--ink-secondary);
+  }
+
+  /* --- Click ripple (JS-created, so :global) ------------------------------------ */
+
+  .test-area :global(.kohi-ripple) {
+    position: absolute;
+    z-index: 0;
+    width: 120px;
+    height: 120px;
+    border-radius: var(--radius-full);
+    background: radial-gradient(circle, rgb(34 197 94 / 35%) 0%, rgb(34 197 94 / 0%) 70%);
+    pointer-events: none;
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.2);
+    animation: kohi-ripple 0.5s ease-out forwards;
+  }
+
+  @keyframes kohi-ripple {
+    100% {
+      transform: translate(-50%, -50%) scale(1.4);
+      opacity: 0;
+    }
+  }
+
+  /* --- Countdown timer bar --------------------------------------------------------- */
+
+  .kohi-timer-track {
+    width: 100%;
+    height: 6px;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-full);
+    background-color: var(--panel-03);
+    overflow: hidden;
+  }
+
+  .kohi-timer-fill {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background-color: var(--signal-green);
+    transform: scaleX(0);
+    transform-origin: left center;
+    will-change: transform;
+  }
+
+  /* --- Responsive --------------------------------------------------------------------- */
+
+  @media (max-width: 768px) {
+    .hero-title {
+      font-size: 2rem;
+    }
+
+    .hero-subtitle {
+      font-size: var(--text-body-size);
+    }
+
+    .test-card {
+      padding: var(--space-md);
+    }
+
+    .main-result-card {
+      padding: var(--space-lg);
+    }
+
+    .result-time {
+      font-size: 3rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kohi-best-flag {
+      animation: none;
+    }
+
+    .test-area :global(.kohi-ripple) {
+      display: none;
+    }
+  }
+</style>

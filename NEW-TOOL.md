@@ -152,8 +152,8 @@ is the rig's job. Follow `src/scripts/cps.ts`:
    label); `config` takes `onReset` and optionally `telemetryWindow` /
    `chartBeginAtZero`.
 4. The loop itself. Record a finished run with
-   `rig.recordScore({ <metrics> }, { <settings snapshot> })` — metrics plus
-   the settings context, always.
+   `rig.recordSession({ <metrics> }, { <settings snapshot> })` — metrics plus
+   the settings context, always (it returns `{ isBest }`).
 5. Sound via `createBeeper({ enabled: () => settings.sound })`.
 
 **Timing integrity (REVAMP.md §8, non-negotiable):** `performance.now()` is
