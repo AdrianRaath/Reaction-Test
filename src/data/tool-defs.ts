@@ -109,3 +109,33 @@ export const kohiTool = defineTool({
   ],
   maxHistory: 20,
 });
+
+/**
+ * Right click CPS. Higher is better.
+ * Thresholds deliberately match the CPS and Kohi tests so a rank means the
+ * same thing across all three click tools (user decision). A new tool — no
+ * legacy keys.
+ */
+export const rightClickTool = defineTool({
+  id: 'right-click',
+  metrics: {
+    cps: {
+      label: 'Clicks per second',
+      direction: 'higher-is-better',
+      format: (v) => v.toFixed(1),
+      primary: true,
+    },
+    clicks: {
+      label: 'Total clicks',
+      direction: 'higher-is-better',
+    },
+  },
+  ranks: [
+    { id: 'elite', name: 'Elite', threshold: 10, rangeLabel: '10+ CPS' },
+    { id: 'pro', name: 'Pro', threshold: 8, rangeLabel: '8–9.9 CPS' },
+    { id: 'advanced', name: 'Advanced', threshold: 7, rangeLabel: '7–7.9 CPS' },
+    { id: 'intermediate', name: 'Intermediate', threshold: 4, rangeLabel: '4–6.9 CPS' },
+    { id: 'beginner', name: 'Beginner', threshold: 0, rangeLabel: 'Under 4 CPS' },
+  ],
+  maxHistory: 20,
+});

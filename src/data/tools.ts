@@ -55,6 +55,13 @@ export const tools: Tool[] = [
     icon: 'ph:sword',
     blurb: 'The classic fixed 10-second click test. Get your CPS and rank.',
   },
+  {
+    href: '/right-click-cps-test',
+    name: 'Right Click CPS Test',
+    navLabel: 'Right Click Test',
+    icon: 'ph:mouse-right-click',
+    blurb: 'Measure how fast you can right click, in clicks per second.',
+  },
 ];
 
 /**
