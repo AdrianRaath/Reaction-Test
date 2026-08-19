@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { defineTool, openTool } from './index';
 import {
+  achievedTierIds,
   formatMetric,
   isBetter,
   meetsThreshold,
@@ -69,7 +70,7 @@ describe('rank parity with the legacy thresholds', () => {
     [350, 'beginner'],
     [2000, 'beginner'],
   ])('reaction %ims ranks as %s', (ms, expected) => {
-    expect(resolveRank(reactionTool, ms).id).toBe(expected);
+    expect(resolveRank(reactionTool, ms)!.id).toBe(expected);
   });
 
   it.each([
@@ -84,7 +85,7 @@ describe('rank parity with the legacy thresholds', () => {
     [3.9, 'beginner'],
     [0, 'beginner'],
   ])('cps %s ranks as %s', (cps, expected) => {
-    expect(resolveRank(cpsTool, cps).id).toBe(expected);
+    expect(resolveRank(cpsTool, cps)!.id).toBe(expected);
   });
 
   it('includes every rank at or below the one achieved', () => {
@@ -137,6 +138,84 @@ describe('defineTool', () => {
 
   it('accepts a multi-metric tool with one primary', () => {
     expect(primaryMetricKey(cpsTool)).toBe('cps');
+  });
+
+  it('rejects a tool declaring neither ranks nor milestones', () => {
+    expect(() =>
+      defineTool({
+        id: 'x',
+        metrics: { a: { label: 'A', direction: 'higher-is-better', primary: true } },
+      })
+    ).toThrow(/either ranks or milestones, not neither/);
+  });
+
+  it('rejects a tool declaring both ranks and milestones', () => {
+    expect(() =>
+      defineTool({
+        ...base,
+        metrics: { a: { label: 'A', direction: 'lower-is-better', primary: true } },
+        milestones: [{ id: 'm1', name: 'One', threshold: 1 }],
+      })
+    ).toThrow(/either ranks or milestones, not both/);
+  });
+
+  it('exempts milestones from the reachable-bottom-rank rule', () => {
+    // Every milestone may sit out of reach; only rank tables must classify
+    // every possible score.
+    expect(() =>
+      defineTool({
+        id: 'x',
+        metrics: { a: { label: 'A', direction: 'higher-is-better', primary: true } },
+        milestones: [{ id: 'm1', name: 'Level 5', threshold: 5 }],
+      })
+    ).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Milestones — the rank-free flavour (visual memory). Ranks band every score;
+// milestones are checkpoints with no "current tier".
+// ---------------------------------------------------------------------------
+
+describe('milestones', () => {
+  const memoryTool = defineTool({
+    id: 'test-memory',
+    metrics: { level: { label: 'Level', direction: 'higher-is-better', primary: true } },
+    milestones: [
+      { id: 'level-5', name: 'Level 5', threshold: 5 },
+      { id: 'level-10', name: 'Level 10', threshold: 10 },
+      { id: 'level-15', name: 'Level 15', threshold: 15 },
+    ],
+  });
+
+  it('has no rank to resolve', () => {
+    expect(resolveRank(memoryTool, 12)).toBeNull();
+    expect(ranksUpTo(memoryTool, 12)).toEqual([]);
+  });
+
+  it('collects every milestone the score clears', () => {
+    expect(achievedTierIds(memoryTool, 12)).toEqual(['level-5', 'level-10']);
+    expect(achievedTierIds(memoryTool, 4)).toEqual([]);
+    expect(achievedTierIds(memoryTool, 15)).toEqual(['level-5', 'level-10', 'level-15']);
+  });
+
+  it('counts a score exactly on a threshold as clearing it', () => {
+    expect(achievedTierIds(memoryTool, 5)).toEqual(['level-5']);
+  });
+
+  it('agrees with ranksUpTo for a ranked tool, in both directions', () => {
+    // The same filter drives both flavours, so the ranked path must be
+    // unchanged by its introduction.
+    expect(achievedTierIds(reactionTool, 180)).toEqual(
+      ranksUpTo(reactionTool, 180).map((r) => r.id)
+    );
+    expect(achievedTierIds(cpsTool, 8.5)).toEqual(ranksUpTo(cpsTool, 8.5).map((r) => r.id));
+  });
+
+  it('persists milestone ids through the same store field as ranks', () => {
+    const store = createToolStore(memoryTool, memoryAdapter());
+    store.addAchievedTiers(achievedTierIds(memoryTool, 11));
+    expect([...store.getAchievedTiers()].sort()).toEqual(['level-10', 'level-5']);
   });
 });
 
@@ -241,10 +320,10 @@ describe('storage', () => {
   it('does not duplicate achieved ranks', () => {
     const adapter = memoryAdapter();
     const store = createToolStore(cpsTool, adapter);
-    store.addAchievedRanks(['pro', 'advanced']);
-    store.addAchievedRanks(['pro', 'beginner']);
+    store.addAchievedTiers(['pro', 'advanced']);
+    store.addAchievedTiers(['pro', 'beginner']);
 
-    expect([...store.getAchievedRanks()].sort()).toEqual(['advanced', 'beginner', 'pro']);
+    expect([...store.getAchievedTiers()].sort()).toEqual(['advanced', 'beginner', 'pro']);
   });
 
   it('clears progress but preserves settings, as the Reset dialog promises', () => {
@@ -253,13 +332,13 @@ describe('storage', () => {
     store.setSettings({ duration: 30 });
     store.setBest(record('cps', 1, { cps: 9 }));
     store.addRecord(record('cps', 1, { cps: 9 }));
-    store.addAchievedRanks(['pro']);
+    store.addAchievedTiers(['pro']);
 
     store.clearProgress();
 
     expect(store.getBest()).toBeNull();
     expect(store.getHistory()).toEqual([]);
-    expect(store.getAchievedRanks()).toEqual([]);
+    expect(store.getAchievedTiers()).toEqual([]);
     expect(store.getSettings({ duration: 5 })).toEqual({ duration: 30 });
   });
 
@@ -297,7 +376,7 @@ describe('legacy migration', () => {
     expect(store.getHistory().map((r) => r.metrics.cps)).toEqual([9.4, 7.1, 5.2]);
     expect(store.getBest()?.metrics.cps).toBe(9.4);
     expect(store.getSettings({ duration: 5 }).duration).toBe(30);
-    expect([...store.getAchievedRanks()].sort()).toEqual(['advanced', 'intermediate', 'pro']);
+    expect([...store.getAchievedTiers()].sort()).toEqual(['advanced', 'intermediate', 'pro']);
   });
 
   it('gives the imported best the timestamp of the session it came from', () => {
@@ -362,7 +441,7 @@ describe('legacy migration', () => {
     expect(migration.recordsImported).toBe(1);
     expect(migration.bestImported).toBe(false);
     expect(store.getHistory()[0]!.metrics.cps).toBe(8.2);
-    expect(store.getAchievedRanks()).toEqual(['pro']);
+    expect(store.getAchievedTiers()).toEqual(['pro']);
   });
 
   it('is a no-op for a user with no legacy data', () => {

@@ -29,7 +29,7 @@ const faqSchema = {
 };
 
 // Checklist shows the climb worst-first.
-const checklistRanks = [...rightClickTool.ranks].reverse();
+const checklistRanks = [...(rightClickTool.ranks ?? [])].reverse();
 ---
 
 <BaseLayout

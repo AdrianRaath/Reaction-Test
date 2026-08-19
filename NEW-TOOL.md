@@ -47,10 +47,21 @@ agreed. A wrong tool shipped "by the book" is worse than a conversation.
    trend graph. Pick its `direction` (`'higher-is-better'` or
    `'lower-is-better'`) and unit. Secondary metrics (like the CPS test's
    `clicks`) are recorded for context but never ranked.
-2. **Rank table.** Five tiers, always the same ids: `elite`, `pro`,
-   `advanced`, `intermediate`, `beginner`. Thresholds are the *worst* value
-   that still earns the tier (`Infinity`/`0` for beginner). Each tier gets a
-   human `rangeLabel` for the checklist.
+2. **Ranks or milestones.** A tool declares exactly one of the two.
+   - **`ranks`** — five tiers, always the same ids: `elite`, `pro`,
+     `advanced`, `intermediate`, `beginner`. Thresholds are the _worst_ value
+     that still earns the tier (`Infinity`/`0` for beginner). Each tier gets a
+     human `rangeLabel`. The bottom rank must be unconditionally reachable.
+   - **`milestones`** — aspirational checkpoints for a score that does not band
+     meaningfully, like a level number. Each is an id, a name, a threshold, and
+     an optional `detail` line. No colour, no badge on the personal best or
+     history rows, and a milestone may sit out of reach for nearly everyone.
+     The rig renders these in place of the rank checklist; see
+     `visualMemoryTool`.
+
+   Both persist through the same achieved-tier storage, so the reset flow and
+   checklist behave identically either way.
+
 3. **Settings.** What the user can configure (duration, difficulty, input
    method…). Every recorded score stores the settings it was achieved under —
    this is the leaderboard-readiness rule (REVAMP.md §4.1). Keep the set
@@ -198,6 +209,9 @@ mode, and announces state changes through a `visually-hidden`
 - [ ] Playwright smoke test (system Chrome: `channel: 'chrome'`) covering the
       happy path and keyboard input, mirroring the scripts used for the CPS
       and reaction tests.
+- [ ] Re-run every existing tool's smoke test. Anything touching the engine,
+      the rig, or `ProgressWidgets` can regress a shipped tool, and adding a
+      registry entry changes the "More tools" count on every other page.
 - [ ] Mobile viewport (~390px) eyeball: settings panel wraps, test area is
       usable, top bar intact.
 - [ ] SEO block review: authored title (no suffix), description, canonical =
@@ -205,7 +219,9 @@ mode, and announces state changes through a `visually-hidden`
 
 ## Don'ts
 
-- Don't modify `src/engine/*` for a tool-specific need.
+- Don't modify `src/engine/*` for a tool-specific need. (Ranks being
+  optional came from a considered extension agreed up front, not a workaround
+  bolted on mid-build — that is the bar.)
 - Don't rename a tool `id` or any rig DOM id after shipping.
 - Don't add a `legacy` block to a new tool, or touch `reactionlab_*` /
   `cpslab_*` keys.

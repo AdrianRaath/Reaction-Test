@@ -12,7 +12,13 @@
  * core (ranks/stats/storage) — logic lives there, DOM wiring lives here.
  */
 
-import { formatValue, primaryMetric, primaryMetricKey, ranksUpTo, resolveRank } from './ranks';
+import {
+  achievedTierIds,
+  formatValue,
+  primaryMetric,
+  primaryMetricKey,
+  resolveRank,
+} from './ranks';
 import { averagePrimary, beatsBest, trendSeries } from './stats';
 import type { StorageAdapter, ToolStore } from './storage';
 import type { RankDef, ScoreRecord, ToolDefinition } from './types';
@@ -23,12 +29,15 @@ export interface RigCopy {
    * e.g. rank => `${rank}-tier click speed.`
    * Rendered as HTML — may carry markup like `<span class="desc-highlight">`.
    * Author constants only; never interpolate user input.
+   *
+   * A milestone tool has no rank, so it receives '' and should ignore the
+   * argument entirely.
    */
   bestDescription: (rankName: string) => string;
   /**
    * e.g. n => `Average across your last ${n} run${n === 1 ? '' : 's'}.`
-   * Also receives the average's rank name, for tools whose copy keys off it.
-   * Rendered as HTML.
+   * Also receives the average's rank name ('' for a milestone tool), for tools
+   * whose copy keys off it. Rendered as HTML.
    */
   avgDescription: (runs: number, rankName: string) => string;
   /** History row score text, e.g. v => `${v.toFixed(1)} CPS` */
@@ -41,7 +50,8 @@ export interface RigCopy {
 
 export interface SessionOutcome {
   record: ScoreRecord;
-  rank: RankDef;
+  /** Null for a milestone tool, which has no current tier. */
+  rank: RankDef | null;
   isBest: boolean;
 }
 
@@ -104,7 +114,7 @@ export function createRig(
       const rank = resolveRank(tool, value);
       timeEl.textContent = formatValue(metric, value);
       setBadge(byId('widget-pb-rank'), 'pb-rank-badge', rank);
-      if (descEl) descEl.innerHTML = copy.bestDescription(rank.name);
+      if (descEl) descEl.innerHTML = copy.bestDescription(rank?.name ?? '');
     } else {
       timeEl.textContent = '—';
       setBadge(byId('widget-pb-rank'), 'pb-rank-badge', null);
@@ -130,7 +140,7 @@ export function createRig(
       timeEl.textContent = display;
       setBadge(byId('widget-avg-rank'), 'pb-rank-badge', rank);
       if (countEl) countEl.textContent = String(history.length);
-      if (descEl) descEl.innerHTML = copy.avgDescription(history.length, rank.name);
+      if (descEl) descEl.innerHTML = copy.avgDescription(history.length, rank?.name ?? '');
     } else {
       timeEl.textContent = '—';
       setBadge(byId('widget-avg-rank'), 'pb-rank-badge', null);
@@ -139,17 +149,20 @@ export function createRig(
     }
   }
 
-  // --- Rank checklist ------------------------------------------------------
+  // --- Achieved tier checklist ---------------------------------------------
+  // One renderer for both flavours: a ranked tool emits #rank-checklist with
+  // .rank-item[data-rank], a milestone tool emits #milestone-list with
+  // .milestone-item[data-tier]. Only one is ever on the page.
 
   function renderChecklist(): void {
-    const list = byId('rank-checklist');
+    const list = byId('rank-checklist') ?? byId('milestone-list');
     if (!list) return;
 
-    const achieved = new Set<string>(store.getAchievedRanks());
-    list.querySelectorAll<HTMLElement>('.rank-item').forEach((item) => {
-      const hit = achieved.has(item.dataset.rank ?? '');
+    const achieved = new Set<string>(store.getAchievedTiers());
+    list.querySelectorAll<HTMLElement>('.rank-item, .milestone-item').forEach((item) => {
+      const hit = achieved.has(item.dataset.rank ?? item.dataset.tier ?? '');
       item.classList.toggle('achieved', hit);
-      const check = item.querySelector('.rank-check');
+      const check = item.querySelector('.rank-check, .milestone-check');
       if (check) check.textContent = hit ? '✓' : '✗';
     });
   }
@@ -177,9 +190,12 @@ export function createRig(
       score.className = 'history-score';
       score.textContent = copy.historyScore(value);
 
-      const badge = document.createElement('span');
-      badge.className = `history-rank ${rank.id}`;
-      badge.textContent = rank.name;
+      // Milestone tools have no rank, so their rows carry score and time only.
+      const badge = rank ? document.createElement('span') : null;
+      if (badge && rank) {
+        badge.className = `history-rank ${rank.id}`;
+        badge.textContent = rank.name;
+      }
 
       const time = document.createElement('span');
       time.className = 'history-time';
@@ -189,7 +205,7 @@ export function createRig(
         hour12: true,
       });
 
-      item.append(score, badge, time);
+      item.append(...(badge ? [score, badge, time] : [score, time]));
       list.appendChild(item);
     }
   }
@@ -380,7 +396,7 @@ export function createRig(
       if (isBest) store.setBest(record);
 
       const rank = resolveRank(tool, value);
-      store.addAchievedRanks(ranksUpTo(tool, value).map((r) => r.id));
+      store.addAchievedTiers(achievedTierIds(tool, value));
 
       refresh();
       return { record, rank, isBest };

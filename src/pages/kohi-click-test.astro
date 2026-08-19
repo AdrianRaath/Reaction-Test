@@ -29,7 +29,7 @@ const faqSchema = {
 };
 
 // Checklist shows the climb worst-first.
-const checklistRanks = [...kohiTool.ranks].reverse();
+const checklistRanks = [...(kohiTool.ranks ?? [])].reverse();
 ---
 
 <BaseLayout title={TITLE} description={DESCRIPTION} path="/kohi-click-test" topbarLabel="Kohi Test">

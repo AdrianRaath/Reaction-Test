@@ -37,11 +37,17 @@ export interface MetricDef {
   primary?: boolean;
 }
 
-export interface RankDef {
-  id: RankId;
+/**
+ * A threshold on the primary metric that a score either clears or does not.
+ *
+ * Ranks and milestones are the two flavours. Ranks band every score into
+ * exactly one tier and carry colour; milestones are aspirational checkpoints
+ * with no colour and no notion of "the tier you are currently in".
+ */
+export interface TierDef {
+  /** Stable id — persisted in the achieved list, so renaming one orphans it. */
+  id: string;
   name: string;
-  /** Human-readable range shown in the checklist and rank table, e.g. '8–9.9 CPS'. */
-  rangeLabel?: string;
   /**
    * Threshold on the primary metric, expressed as "at least this good".
    *
@@ -51,6 +57,26 @@ export interface RankDef {
    * rank resolver instead of forking it.
    */
   threshold: number;
+}
+
+export interface RankDef extends TierDef {
+  id: RankId;
+  /** Human-readable range shown in the checklist and rank table, e.g. '8–9.9 CPS'. */
+  rangeLabel?: string;
+}
+
+/**
+ * An aspirational checkpoint, for tools that measure progress without banding
+ * it into tiers.
+ *
+ * Deliberately not a RankDef: milestones take no colour (the Rank-Only Colour
+ * Rule), never badge the personal best or a history row, and may sit out of
+ * reach for nearly every player without breaking anything — where a rank table
+ * must classify every possible score.
+ */
+export interface MilestoneDef extends TierDef {
+  /** Short qualifier shown beneath the name, e.g. 'Above average'. */
+  detail?: string;
 }
 
 /**
@@ -84,8 +110,17 @@ export interface ToolDefinition {
   id: string;
   /** Keyed by metric key. Exactly one entry must be `primary: true`. */
   metrics: Record<string, MetricDef>;
-  /** Ordered best to worst. The last entry should be unconditionally reachable. */
-  ranks: RankDef[];
+  /**
+   * Rank bands, ordered best to worst. The last entry must be unconditionally
+   * reachable. Mutually exclusive with `milestones` — a tool declares one or
+   * the other, never both and never neither.
+   */
+  ranks?: RankDef[];
+  /**
+   * Milestone checkpoints, ordered easiest to hardest. The alternative to
+   * `ranks` for a tool where banding every score would be meaningless.
+   */
+  milestones?: MilestoneDef[];
   /** How many session records to retain. Defaults to 50. */
   maxHistory?: number;
   /** Legacy localStorage keys to migrate from, if this tool predates the engine. */

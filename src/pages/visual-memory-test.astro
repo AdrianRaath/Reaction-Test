@@ -1,0 +1,556 @@
+---
+import { getEntry, render } from 'astro:content';
+import { Icon } from 'astro-icon/components';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProgressWidgets from '../components/tool/ProgressWidgets.astro';
+import RelatedTools from '../components/tool/RelatedTools.astro';
+import ResetModal from '../components/tool/ResetModal.astro';
+import { visualMemoryTool } from '../data/tool-defs';
+import '../styles/content.css';
+
+// Tool-page titles target the primary keyword and carry no "| ReflexLab"
+// suffix (NEW-TOOL.md). Primary keyword: "Visual Memory Test".
+const TITLE = 'Visual Memory Test - Free Online Memory Test';
+const DESCRIPTION =
+  'Free visual memory test. Memorise the pattern of squares, then click them back. Each level adds a tile. How many can you hold before your memory gives out?';
+
+const entry = await getEntry('tools', 'visual-memory');
+if (!entry) throw new Error('Missing tools/visual-memory content entry');
+const { Content } = await render(entry);
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: entry.data.faq.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
+};
+
+// Milestones read easiest-first, the order they are reached in.
+const milestones = visualMemoryTool.milestones ?? [];
+---
+
+<BaseLayout
+  title={TITLE}
+  description={DESCRIPTION}
+  path="/visual-memory-test"
+  topbarLabel="Visual Memory"
+>
+  <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+
+  <button slot="controls" type="button" class="ctl" id="sound-toggle" aria-label="Toggle sound">
+    <span class="ctl-icon" id="sound-icon-on">
+      <Icon name="ph:speaker-high" width={18} height={18} aria-hidden="true" />
+    </span>
+    <span class="ctl-icon" id="sound-icon-off" hidden>
+      <Icon name="ph:speaker-slash" width={18} height={18} aria-hidden="true" />
+    </span>
+  </button>
+  <button slot="controls" type="button" class="ctl" id="reset-btn" aria-label="Reset all data">
+    <Icon name="ph:trash" width={18} height={18} aria-hidden="true" />
+    <span>Reset</span>
+  </button>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Visual Memory Test</h1>
+      <p class="hero-subtitle">
+        Squares flash for two seconds. Click them back from memory. Every level adds one more tile
+        than you just held.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== TEST ========== -->
+  <!-- No settings panel: the fixed ruleset is what keeps scores comparable. -->
+  <section id="test-section" class="test-section">
+    <div class="test-card">
+      <!-- Level + lives. Hidden until a run starts. -->
+      <div class="vm-status-bar" id="vm-status-bar" hidden>
+        <p class="vm-level-label">
+          Level <span class="readout" id="vm-level">1</span>
+        </p>
+        <p class="vm-phase" id="vm-status" aria-live="polite"></p>
+        <div class="vm-lives" id="vm-lives" aria-label="Lives remaining"></div>
+      </div>
+
+      <div id="vm-area" class="test-area phase-idle" tabindex="-1">
+        <!-- Idle intro -->
+        <div class="test-area-content" id="vm-intro">
+          <p class="test-hint">
+            Watch which squares light up, then click them back once they go dark. Three lives for
+            the whole run.
+          </p>
+          <p class="test-status">Ready when you are</p>
+          <button class="btn btn-start" id="vm-start" type="button">Start Test</button>
+        </div>
+
+        <!-- The grid. Built by JS; sized by --vm-grid-size. -->
+        <div class="vm-grid" id="vm-grid" role="group" aria-label="Memory grid" hidden></div>
+
+        <!-- Run over -->
+        <div class="test-area-results" id="vm-results" hidden>
+          <div class="main-result-card">
+            <p class="result-heading">You reached</p>
+            <div class="result-time-row">
+              <span class="result-label">Level</span>
+              <span class="result-time readout" id="vm-final-level">0</span>
+            </div>
+            <p class="vm-result-meta" id="vm-result-meta">0 tiles recalled</p>
+            <p class="vm-best-flag" id="vm-best-flag" hidden>
+              <span aria-hidden="true">🏆</span> New best!
+            </p>
+          </div>
+
+          <p class="result-message" id="vm-message">Nice run.</p>
+
+          <button class="btn btn-try-again" id="vm-try-again" type="button">Try Again</button>
+        </div>
+
+        <!-- Screen-reader live announcements -->
+        <p class="visually-hidden" id="vm-announce" aria-live="assertive"></p>
+      </div>
+    </div>
+
+    <ResetModal message="your best level, run history, and milestones" />
+
+    <ProgressWidgets
+      bestTitle="Best Level"
+      bestSubtitle="The furthest you have reached"
+      bestEmpty="Complete a run to set your best level."
+      avgTitle="Average Level"
+      avgNoun="runs"
+      avgEmpty="Complete a run to see your average."
+      chartDescription="Level reached across your last runs"
+      chartEmpty="Complete a run to see your trend graph"
+      historyEmpty="Complete a run to see your history"
+      milestones={milestones}
+    />
+  </section>
+
+  <Content />
+
+  <RelatedTools current="/visual-memory-test" />
+</BaseLayout>
+
+<script>
+  import '../scripts/visual-memory';
+</script>
+
+<style>
+  /* --- Top-bar controls (slot content, styled by the page) ---------------- */
+
+  .ctl {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+  }
+
+  .ctl:hover {
+    background-color: var(--panel-hover);
+    color: var(--ink-primary);
+  }
+
+  .ctl.muted {
+    color: var(--ink-muted);
+  }
+
+  .ctl-icon {
+    display: inline-flex;
+  }
+
+  /* --- Hero ----------------------------------------------------------------- */
+
+  .hero-section {
+    padding: var(--space-xl) 0 var(--space-md);
+    text-align: center;
+  }
+
+  .hero-content {
+    max-width: 600px;
+    margin-inline: auto;
+  }
+
+  .hero-title {
+    margin-block-end: var(--space-md);
+    font-size: var(--text-display-size);
+    font-weight: var(--text-display-weight);
+    line-height: var(--text-display-lh);
+    letter-spacing: var(--text-display-ls);
+  }
+
+  .hero-subtitle {
+    font-size: 1.125rem;
+    color: var(--ink-secondary);
+  }
+
+  /* --- Test card --------------------------------------------------------------- */
+
+  .test-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-block: var(--space-md) var(--space-2xl);
+  }
+
+  .test-card {
+    display: flex;
+    width: 100%;
+    max-width: 960px;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-2xl);
+    background-color: var(--panel-02);
+  }
+
+  /* --- Status bar (level, phase, lives) ----------------------------------------- */
+
+  .vm-status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding-block-end: var(--space-lg);
+    border-block-end: 1px solid var(--line-subtle);
+  }
+
+  .vm-level-label {
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    color: var(--ink-secondary);
+  }
+
+  .vm-level-label .readout {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ink-primary);
+  }
+
+  .vm-phase {
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  .vm-lives {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  /* Lives are pips, not colour alone — a spent pip is hollow as well as dim. */
+  .vm-lives :global(.vm-life) {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--ink-secondary);
+    border-radius: var(--radius-full);
+    background-color: var(--ink-secondary);
+  }
+
+  .vm-lives :global(.vm-life.spent) {
+    border-color: var(--line);
+    background-color: transparent;
+  }
+
+  /* --- Test area ---------------------------------------------------------------- */
+
+  .test-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 420px;
+    padding: var(--space-lg);
+    border: 2px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-03);
+    transition: border-color var(--duration-base) var(--ease);
+  }
+
+  /* Green marks the recall phase — "your turn to act", the One Signal Rule's
+     sanctioned meaning. The show phase deliberately stays neutral: watching is
+     not acting, so the lit tiles are white (below), not green. */
+  .test-area.phase-recall {
+    border-color: var(--signal-green);
+    box-shadow:
+      0 0 20px rgb(34 197 94 / 12%),
+      0 0 40px rgb(34 197 94 / 8%);
+  }
+
+  .test-area-content {
+    z-index: 1;
+    padding: 0 var(--space-lg);
+    text-align: center;
+  }
+
+  .test-hint {
+    max-width: 42ch;
+    margin-inline: auto;
+    margin-block-end: var(--space-lg);
+    font-size: var(--text-label-size);
+    font-style: italic;
+    color: var(--ink-muted);
+  }
+
+  .test-status {
+    margin-block-end: var(--space-lg);
+    font-size: var(--text-headline-size);
+    font-weight: var(--text-headline-weight);
+  }
+
+  /* --- Grid ---------------------------------------------------------------------- */
+
+  .vm-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--vm-grid-size, 3), 1fr);
+    gap: var(--space-sm);
+    width: 100%;
+    max-width: 460px;
+    aspect-ratio: 1;
+  }
+
+  .vm-grid :global(.vm-cell) {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-01);
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease),
+      border-color var(--duration-fast) var(--ease),
+      transform var(--duration-fast) var(--ease);
+  }
+
+  .vm-grid :global(.vm-cell:focus-visible) {
+    outline: 2px solid var(--signal-green);
+    outline-offset: 2px;
+  }
+
+  .test-area.phase-recall .vm-grid :global(.vm-cell:hover) {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-muted);
+  }
+
+  /* The pattern itself: white is information, not a go-signal. */
+  .vm-grid :global(.vm-cell.lit) {
+    background-color: var(--ink-primary);
+    border-color: var(--ink-primary);
+  }
+
+  /* Confirming your own correct action — the sanctioned green. */
+  .vm-grid :global(.vm-cell.correct) {
+    background-color: var(--signal-green);
+    border-color: var(--signal-green);
+  }
+
+  .vm-grid :global(.vm-cell.wrong) {
+    background-color: var(--hold-red);
+    border-color: var(--hold-red);
+    animation: vm-shake 0.3s var(--ease);
+  }
+
+  @keyframes vm-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-3px);
+    }
+    75% {
+      transform: translateX(3px);
+    }
+  }
+
+  /* --- Results -------------------------------------------------------------------- */
+
+  .test-area-results {
+    z-index: 1;
+    width: 100%;
+    padding: var(--space-lg);
+    text-align: center;
+  }
+
+  .main-result-card {
+    margin-block-end: var(--space-lg);
+    padding: var(--space-xl) var(--space-2xl);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-01);
+  }
+
+  .result-heading {
+    margin-block-end: var(--space-sm);
+    color: var(--ink-secondary);
+  }
+
+  .result-time-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  .result-label {
+    font-size: var(--text-headline-size);
+    font-weight: 500;
+    color: var(--ink-secondary);
+  }
+
+  .result-time {
+    font-size: var(--text-readout-size);
+    font-weight: var(--text-readout-weight);
+    line-height: var(--text-readout-lh);
+  }
+
+  .vm-result-meta {
+    margin-block-start: var(--space-sm);
+    font-size: var(--text-label-size);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-secondary);
+  }
+
+  .vm-best-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-block-start: var(--space-md);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-full);
+    background-color: rgb(34 197 94 / 10%);
+    color: var(--signal-green); /* "your best" — sanctioned */
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    animation: best-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes best-pop {
+    0% {
+      opacity: 0;
+      transform: translateY(6px) scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .result-message {
+    margin-block-end: var(--space-lg);
+    color: var(--ink-secondary);
+  }
+
+  /* --- Buttons ---------------------------------------------------------------------- */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  /* Start is the green go-signal; Try Again is the white "reset the loop"
+     invert (DESIGN.md §5 Buttons). */
+  .btn-start {
+    min-width: 180px;
+    background-color: var(--signal-green);
+    border-color: var(--signal-green);
+    color: var(--chassis-black);
+  }
+
+  .btn-start:hover {
+    background-color: var(--signal-green-deep);
+    border-color: var(--signal-green-deep);
+    transform: translateY(-1px);
+  }
+
+  .btn-try-again {
+    min-width: 160px;
+    background-color: var(--ink-primary);
+    border-color: var(--ink-primary);
+    color: var(--chassis-black);
+  }
+
+  .btn-try-again:hover {
+    background-color: var(--ink-secondary);
+    border-color: var(--ink-secondary);
+  }
+
+  /* --- Responsive --------------------------------------------------------------------- */
+
+  @media (max-width: 768px) {
+    .hero-title {
+      font-size: 2rem;
+    }
+
+    .hero-subtitle {
+      font-size: var(--text-body-size);
+    }
+
+    .test-card {
+      padding: var(--space-md);
+    }
+
+    .test-area {
+      min-height: 360px;
+      padding: var(--space-sm);
+    }
+
+    .vm-grid {
+      gap: var(--space-xs);
+    }
+
+    .vm-phase {
+      display: none; /* level + lives are what matter when space is tight */
+    }
+
+    .main-result-card {
+      padding: var(--space-lg);
+    }
+
+    .result-time {
+      font-size: 3rem;
+    }
+  }
+
+  /* The flash IS the test, so it stays. Only the decorative motion goes. */
+  @media (prefers-reduced-motion: reduce) {
+    .vm-grid :global(.vm-cell) {
+      transition: none;
+    }
+
+    .vm-grid :global(.vm-cell.wrong) {
+      animation: none;
+    }
+
+    .vm-best-flag {
+      animation: none;
+    }
+
+    .btn-start:hover {
+      transform: none;
+    }
+  }
+</style>

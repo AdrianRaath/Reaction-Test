@@ -32,7 +32,7 @@ const faqSchema = {
   })),
 };
 
-const checklistRanks = [...reactionTool.ranks].reverse();
+const checklistRanks = [...(reactionTool.ranks ?? [])].reverse();
 ---
 
 <BaseLayout title={TITLE} description={DESCRIPTION} path="/" topbarLabel="Reaction Time">

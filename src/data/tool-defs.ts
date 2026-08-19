@@ -139,3 +139,34 @@ export const rightClickTool = defineTool({
   ],
   maxHistory: 20,
 });
+
+/**
+ * Visual memory. Higher is better.
+ *
+ * The first milestone tool: a level number does not band into "you are an
+ * Advanced rememberer", so it declares checkpoints instead of ranks (see
+ * MilestoneDef). Level 25 is deliberately near-unreachable — milestones may
+ * aspire in a way a rank table may not.
+ */
+export const visualMemoryTool = defineTool({
+  id: 'visual-memory',
+  metrics: {
+    level: {
+      label: 'Level',
+      direction: 'higher-is-better',
+      primary: true,
+    },
+    tiles: {
+      label: 'Tiles recalled',
+      direction: 'higher-is-better',
+    },
+  },
+  milestones: [
+    { id: 'level-5', name: 'Level 5', threshold: 5, detail: 'Warmed up' },
+    { id: 'level-10', name: 'Level 10', threshold: 10, detail: 'Around average' },
+    { id: 'level-15', name: 'Level 15', threshold: 15, detail: 'Strong recall' },
+    { id: 'level-20', name: 'Level 20', threshold: 20, detail: 'Exceptional' },
+    { id: 'level-25', name: 'Level 25', threshold: 25, detail: 'Almost nobody' },
+  ],
+  maxHistory: 20,
+});

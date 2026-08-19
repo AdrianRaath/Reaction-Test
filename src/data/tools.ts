@@ -62,6 +62,13 @@ export const tools: Tool[] = [
     icon: 'ph:mouse-right-click',
     blurb: 'Measure how fast you can right click, in clicks per second.',
   },
+  {
+    href: '/visual-memory-test',
+    name: 'Visual Memory Test',
+    navLabel: 'Visual Memory',
+    icon: 'ph:grid-four',
+    blurb: 'Memorise the pattern and recall it. How many tiles can you hold?',
+  },
 ];
 
 /**

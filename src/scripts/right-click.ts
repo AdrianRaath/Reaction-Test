@@ -193,7 +193,8 @@ function endRun(): void {
   timerFill.style.transform = 'scaleX(0)';
 
   const cps = Math.round((clicks / runDuration) * 10) / 10;
-  const rank = resolveRank(rightClickTool, cps);
+  // Non-null: this tool declares ranks, so resolveRank always finds one.
+  const rank = resolveRank(rightClickTool, cps)!;
 
   live.hidden = true;
   live.setAttribute('aria-hidden', 'true');

@@ -33,7 +33,7 @@ const faqSchema = {
 };
 
 // Checklist shows the climb worst-first, as the legacy page did.
-const checklistRanks = [...cpsTool.ranks].reverse();
+const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
 ---
 
 <BaseLayout title={TITLE} description={DESCRIPTION} path="/cps" topbarLabel="CPS Test">

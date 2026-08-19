@@ -13,7 +13,7 @@
  */
 
 import { DEFAULT_MAX_HISTORY } from './types';
-import type { RankId, ScoreRecord, ToolDefinition } from './types';
+import type { ScoreRecord, ToolDefinition } from './types';
 
 export const KEY_PREFIX = 'reflexlab';
 
@@ -122,8 +122,13 @@ export interface ToolStore {
   addRecord(record: ScoreRecord): void;
   getSettings<T extends Record<string, unknown>>(fallback: T): T;
   setSettings(settings: Record<string, unknown>): void;
-  getAchievedRanks(): RankId[];
-  addAchievedRanks(ids: RankId[]): void;
+  /**
+   * Ids of every tier the user has ever cleared — rank ids for a ranked tool,
+   * milestone ids otherwise. Stored under the `ranks` field either way, so
+   * existing players' checklists survive the introduction of milestones.
+   */
+  getAchievedTiers(): string[];
+  addAchievedTiers(ids: string[]): void;
   /** Clears progress but keeps settings — matching the documented Reset behaviour. */
   clearProgress(): void;
   isMigrated(): boolean;
@@ -155,10 +160,10 @@ export function createToolStore(
 
     setSettings: (settings) => writeJson(adapter, k('settings'), settings),
 
-    getAchievedRanks: () => readJson<RankId[]>(adapter, k('ranks'), []),
+    getAchievedTiers: () => readJson<string[]>(adapter, k('ranks'), []),
 
-    addAchievedRanks(ids) {
-      const merged = new Set([...this.getAchievedRanks(), ...ids]);
+    addAchievedTiers(ids) {
+      const merged = new Set([...this.getAchievedTiers(), ...ids]);
       writeJson(adapter, k('ranks'), [...merged]);
     },
 

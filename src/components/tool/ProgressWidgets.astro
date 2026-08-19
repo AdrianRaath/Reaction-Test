@@ -1,5 +1,5 @@
 ---
-import type { RankDef } from '../../engine/types';
+import type { MilestoneDef, RankDef } from '../../engine/types';
 
 // Static skeleton for the telemetry rig (src/engine/rig.ts). The rig owns all
 // dynamic content; this component owns structure, ids, and empty states. The
@@ -7,8 +7,9 @@ import type { RankDef } from '../../engine/types';
 // at all.
 
 interface Props {
-  /** Unit label rendered beside the readouts, e.g. 'CPS' or 'ms'. */
-  unit: string;
+  /** Unit label rendered beside the readouts, e.g. 'CPS' or 'ms'. Omit for a
+   *  unitless score like a level number. */
+  unit?: string;
   bestTitle: string;
   bestSubtitle: string;
   bestEmpty: string;
@@ -20,7 +21,12 @@ interface Props {
   chartEmpty: string;
   historyEmpty: string;
   /** Worst-first, matching the climb the checklist depicts. */
-  ranks: RankDef[];
+  ranks?: RankDef[];
+  /**
+   * The alternative to `ranks` — easiest-first checkpoints, rendered without
+   * badges or rank colour. Pass exactly one of the two.
+   */
+  milestones?: MilestoneDef[];
 }
 
 const {
@@ -35,7 +41,12 @@ const {
   chartEmpty,
   historyEmpty,
   ranks,
+  milestones,
 } = Astro.props;
+
+// A ranked tool badges its readouts; a milestone tool has no current tier, so
+// the badge spans are left out entirely rather than sitting on '—' forever.
+const ranked = (ranks?.length ?? 0) > 0;
 ---
 
 <!-- Row 1: best + average, rank checklist -->
@@ -48,8 +59,14 @@ const {
       </h3>
       <div class="pb-score-display">
         <span class="pb-time readout" id="widget-pb-time">—</span>
-        <span class="pb-unit">{unit}</span>
-        <span class="pb-rank-badge" id="widget-pb-rank">—</span>
+        {unit && <span class="pb-unit">{unit}</span>}
+        {
+          ranked && (
+            <span class="pb-rank-badge" id="widget-pb-rank">
+              —
+            </span>
+          )
+        }
       </div>
       <p class="pb-subtitle">{bestSubtitle}</p>
       <p class="pb-description" id="widget-pb-description" data-empty={bestEmpty}>
@@ -63,8 +80,14 @@ const {
       </h3>
       <div class="pb-score-display">
         <span class="pb-time readout" id="widget-avg-time">—</span>
-        <span class="pb-unit">{unit}</span>
-        <span class="pb-rank-badge" id="widget-avg-rank">—</span>
+        {unit && <span class="pb-unit">{unit}</span>}
+        {
+          ranked && (
+            <span class="pb-rank-badge" id="widget-avg-rank">
+              —
+            </span>
+          )
+        }
       </div>
       <p class="pb-subtitle">Across <span id="widget-avg-sessions">0</span> {avgNoun}</p>
       <p class="pb-description" id="widget-avg-description" data-empty={avgEmpty}>
@@ -73,24 +96,49 @@ const {
     </div>
   </div>
 
-  <div class="widget widget-rank-checklist">
-    <h3 class="widget-title">
-      Ranks Achieved <span class="widget-icon" aria-hidden="true">🎯</span>
-    </h3>
-    <ul class="rank-checklist" id="rank-checklist">
-      {
-        ranks.map((rank) => (
-          <li class={`rank-item ${rank.id}`} data-rank={rank.id}>
-            <span class="rank-check">✗</span>
-            <div class="rank-info">
-              <span class="rank-name">{rank.name}:</span>
-              <span class="rank-range readout">{rank.rangeLabel}</span>
-            </div>
-          </li>
-        ))
-      }
-    </ul>
-  </div>
+  {
+    ranked ? (
+      <div class="widget widget-rank-checklist">
+        <h3 class="widget-title">
+          Ranks Achieved{' '}
+          <span class="widget-icon" aria-hidden="true">
+            🎯
+          </span>
+        </h3>
+        <ul class="rank-checklist" id="rank-checklist">
+          {ranks!.map((rank) => (
+            <li class={`rank-item ${rank.id}`} data-rank={rank.id}>
+              <span class="rank-check">✗</span>
+              <div class="rank-info">
+                <span class="rank-name">{rank.name}:</span>
+                <span class="rank-range readout">{rank.rangeLabel}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : (
+      <div class="widget widget-rank-checklist">
+        <h3 class="widget-title">
+          Milestones{' '}
+          <span class="widget-icon" aria-hidden="true">
+            🎯
+          </span>
+        </h3>
+        <ul class="rank-checklist" id="milestone-list">
+          {(milestones ?? []).map((milestone) => (
+            <li class="milestone-item" data-tier={milestone.id}>
+              <span class="milestone-check">✗</span>
+              <div class="rank-info">
+                <span class="rank-name">{milestone.name}</span>
+                <span class="rank-range">{milestone.detail}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
 </div>
 
 <!-- Row 2: trend chart, history log -->
@@ -247,7 +295,8 @@ const {
     list-style: none;
   }
 
-  .rank-item {
+  .rank-item,
+  .milestone-item {
     display: flex;
     align-items: center;
     gap: var(--space-md);
@@ -256,14 +305,16 @@ const {
     background-color: var(--panel-03);
   }
 
-  .rank-check {
+  .rank-check,
+  .milestone-check {
     min-width: 20px;
     font-weight: 700;
     color: var(--ink-muted);
     text-align: center;
   }
 
-  .rank-item.achieved .rank-check {
+  .rank-item.achieved .rank-check,
+  .milestone-item.achieved .milestone-check {
     /* Signal Green = "achieved / active" — a sanctioned use. */
     color: var(--signal-green);
   }
@@ -281,7 +332,8 @@ const {
     transition: color var(--duration-fast) var(--ease);
   }
 
-  .rank-item.achieved .rank-name {
+  .rank-item.achieved .rank-name,
+  .milestone-item.achieved .rank-name {
     color: var(--ink-primary);
   }
 

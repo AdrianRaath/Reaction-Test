@@ -293,7 +293,8 @@ function completeSession(): void {
   testStatus = 'session-complete';
 
   const avg = Math.round(attempts.reduce((a, b) => a + b, 0) / attempts.length);
-  const rank = resolveRank(reactionTool, avg);
+  // Non-null: this tool declares ranks, so resolveRank always finds one.
+  const rank = resolveRank(reactionTool, avg)!;
 
   setAreaState('session-complete', rank.id);
 

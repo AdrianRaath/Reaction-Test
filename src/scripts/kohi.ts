@@ -181,7 +181,8 @@ function endRun(): void {
   timerFill.style.transform = 'scaleX(0)';
 
   const cps = Math.round((clicks / DURATION) * 10) / 10;
-  const rank = resolveRank(kohiTool, cps);
+  // Non-null: this tool declares ranks, so resolveRank always finds one.
+  const rank = resolveRank(kohiTool, cps)!;
 
   live.hidden = true;
   live.setAttribute('aria-hidden', 'true');

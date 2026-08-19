@@ -24,7 +24,7 @@
 
 import { primaryMetricKey } from './ranks';
 import type { StorageAdapter, ToolStore } from './storage';
-import type { RankId, ScoreRecord, ToolDefinition } from './types';
+import type { ScoreRecord, ToolDefinition } from './types';
 
 interface LegacyHistoryEntry {
   score: number;
@@ -137,10 +137,12 @@ export function migrateLegacyData(
   // --- Achieved ranks ----------------------------------------------------
   const rawRanks = parse<unknown[]>(adapter, legacy.achievedRanks);
   if (Array.isArray(rawRanks)) {
-    const valid = new Set(tool.ranks.map((r) => r.id as string));
-    const ids = rawRanks.filter((id): id is RankId => typeof id === 'string' && valid.has(id));
+    // Only ranked tools have legacy keys, but guard anyway so the milestone
+    // flavour cannot trip this path if one ever gains a legacy import.
+    const valid = new Set((tool.ranks ?? []).map((r) => r.id as string));
+    const ids = rawRanks.filter((id): id is string => typeof id === 'string' && valid.has(id));
     if (ids.length > 0) {
-      store.addAchievedRanks(ids);
+      store.addAchievedTiers(ids);
       result.ranksImported = ids.length;
     }
   }
