@@ -1,0 +1,397 @@
+---
+faq:
+  - question: 'What is a spacebar speed test?'
+    answer: 'A spacebar speed test measures how many times you can press the spacebar in a fixed window of time. Pick a duration, press the spacebar as fast as you can, and your score is your total presses divided by the seconds elapsed. The clock starts on your first press, so there is no countdown to sit through.'
+  - question: 'What is a good spacebar speed?'
+    answer: 'Most people manage 6 to 8 presses per second with one thumb. Anything above 9 is fast, and holding 12 or more takes an alternating technique rather than a single thumb. Scores also fall as the duration grows, so 10 presses per second over 5 seconds is easier than holding 8 for a full minute.'
+  - question: 'How can I press the spacebar faster?'
+    answer: 'Switch from one thumb to two fingers alternating on the bar, which nearly doubles most peoples rate. Rest your palms on the desk so your fingers do the work, tap near the middle of the bar where the stabilisers are evenest, and keep a rhythm you can hold instead of sprinting the first two seconds. Warm up with a throwaway run first.'
+  - question: 'Does my keyboard affect my spacebar speed?'
+    answer: 'Yes. Linear mechanical switches actuate partway down and reset fast, so they register quick repeated taps better than a membrane keyboard that needs a full press. Debounce time matters too: most keyboards ignore a second signal within a few milliseconds of the first, which puts a ceiling on very fast tapping. The spacebar is also the longest key on the board, so its stabilisers make the edges feel slower than the centre.'
+  - question: 'Can I hold the spacebar down instead of pressing it?'
+    answer: 'No. Holding the key makes your operating system fire auto-repeat events, and the test ignores every one of them. Only a fresh press counts, so a held spacebar scores zero after the first press.'
+  - question: 'Is the spacebar faster than clicking a mouse?'
+    answer: 'It depends on your hands and your hardware. The spacebar suits alternating fingers, which is why two-finger techniques push it past most single-finger mouse clicking. Mouse techniques like jitter and butterfly clicking reach higher peaks for trained players. Compare spacebar scores against other spacebar scores rather than against your CPS test results, since the two use different muscles and different hardware.'
+  - question: 'How many times can you press the spacebar in 10 seconds?'
+    answer: 'At an average 7 presses per second, 10 seconds works out to roughly 70 presses. Fast players clear 90, and 120 in ten seconds puts you at 12 per second, which is Elite on this test. Set the duration to 10 seconds and the results panel shows your total press count next to your score.'
+  - question: 'How is my data stored?'
+    answer: "Your browser stores everything (best spacebar speed, run history, trend, achieved ranks, and settings) locally using localStorage. Nothing reaches any server, so your results stay private on your device and won't sync across browsers."
+---
+
+<section id="what-is" class="info-section">
+  <div class="container">
+    <h2>What is a spacebar speed test?</h2>
+
+      A spacebar speed test measures how many times you can press the spacebar in a fixed window of
+      time. Choose 5, 10, 30, or 60 seconds, then tap the bar as fast as your hand allows. Your
+      score is your total presses divided by the duration: your presses per second.
+
+      The spacebar is the key games lean on hardest. Minecraft players mash it to jump and bridge,
+      runners and platformers map it to a sprint, and half the browser games ever made turn it into
+      the only control you have. Knowing how fast yours goes tells you whether the bottleneck is
+      your hand or your keyboard.
+
+      This test only accepts the spacebar. If you want to measure mouse clicks instead, use the
+      <a href="/cps">CPS test</a>.
+
+  </div>
+</section>
+
+<section id="how-it-works" class="info-section alt-bg">
+  <div class="container">
+    <h2>How this spacebar speed test works</h2>
+    <ol class="steps-list section-content">
+      <li>
+        <strong>Pick a duration</strong>
+
+          Choose 5, 10, 30, or 60 seconds. Your browser remembers the choice for next time.
+
+      </li>
+      <li>
+        <strong>Press space to start</strong>
+
+          Your first press starts the clock and counts as press number one. Nothing to click, no
+          countdown to wait through. On a phone or tablet, tap the key on screen instead.
+
+      </li>
+      <li>
+        <strong>Keep pressing</strong>
+
+          The readout shows your live presses per second, your press count, and the seconds left.
+          The bar under the test area drains as your time runs down.
+
+      </li>
+      <li>
+        <strong>Read your score</strong>
+
+          When time is up the test locks and shows your final score, your total presses, and a rank
+          from Beginner to Elite. Beat your record and the "New best!" flag appears.
+
+      </li>
+      <li>
+        <strong>Track your progress</strong>
+
+          Your best run, average, trend graph, achieved ranks, and history all save in your browser
+          so you can watch the number climb.
+
+      </li>
+    </ol>
+    <div class="note">
+      <strong>Note:</strong> Holding the spacebar down does nothing. Your operating system fires
+      auto-repeat events when a key is held, and the test throws all of them away. One press, one
+      count.
+    </div>
+
+  </div>
+</section>
+
+<section id="good-score" class="info-section">
+  <div class="container">
+    <h2>What is a good spacebar speed?</h2>
+
+      A good spacebar speed is anything above 7.5 presses per second. Most people land between 6 and
+      8 with a single thumb, and passing 9 usually means alternating two fingers on the bar. Scores
+      fall into five tiers:
+
+    <div class="rank-table">
+      <div class="rank-row elite">
+        <span class="rank-name">Elite</span>
+        <span class="rank-range">12+ CPS</span>
+        <span class="rank-desc">Exceptional. Alternating fingers and a fast keyboard.</span>
+      </div>
+      <div class="rank-row pro">
+        <span class="rank-name">Pro</span>
+        <span class="rank-range">9–11.9 CPS</span>
+        <span class="rank-desc">Very fast. Practised two-finger technique.</span>
+      </div>
+      <div class="rank-row advanced">
+        <span class="rank-name">Advanced</span>
+        <span class="rank-range">7.5–8.9 CPS</span>
+        <span class="rank-desc">Above average. Quick, consistent pressing.</span>
+      </div>
+      <div class="rank-row intermediate">
+        <span class="rank-name">Intermediate</span>
+        <span class="rank-range">5–7.4 CPS</span>
+        <span class="rank-desc">The range most single-thumb players sit in.</span>
+      </div>
+      <div class="rank-row beginner">
+        <span class="rank-name">Beginner</span>
+        <span class="rank-range">Under 5 CPS</span>
+        <span class="rank-desc">Room to grow. Technique and warm-up help a lot.</span>
+      </div>
+    </div>
+
+      These tiers belong to the spacebar and nowhere else on ReflexLab. Pressing a key and clicking a
+      mouse have different ceilings, so the click tests use their own table. Compare a spacebar score
+      against your other spacebar scores.
+
+      Duration shapes the number too. A 5-second sprint flatters your peak, while 60 seconds asks
+      your forearm to hold that pace, so reaching a tier over a minute is the harder feat.
+
+  </div>
+</section>
+
+<section id="tracking" class="info-section alt-bg">
+  <div class="container">
+    <h2>Track your spacebar speed progress</h2>
+
+      ReflexLab saves your best run, your history, your trend graph, and your rank badges. Your
+      browser holds all of it and we never see your results.
+
+    <div class="tips-grid grid-2x2 section-content">
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🏆
+        </span>
+        <h3>Best Speed</h3>
+
+          Your fastest run sits beside every new result. Beat it and the number updates on the spot.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          📈
+        </span>
+        <h3>Trend Graph</h3>
+
+          A graph of your last 20 runs shows whether you are climbing or having an off day.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          📋
+        </span>
+        <h3>Run History</h3>
+
+          Every run logs its score, the rank you hit, and when you set it, so you can review a
+          session afterwards.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🎯
+        </span>
+        <h3>Ranks Achieved</h3>
+
+          Clear a tier and it stays checked off until you reset. Five to collect.
+
+      </div>
+    </div>
+    <div class="note">
+      <strong>Privacy note:</strong> Your browser stores all of this locally using localStorage. We
+      do not collect, transmit, or store your results. The Reset button in the toolbar clears
+      everything.
+    </div>
+
+  </div>
+</section>
+
+<section id="tips" class="info-section">
+  <div class="container">
+    <h2>How to press the spacebar faster</h2>
+    <div class="tips-grid section-content">
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          ✌️
+        </span>
+        <h3>Alternate two fingers</h3>
+
+          One thumb tops out around 7 presses per second. Two index fingers taking turns on the bar
+          get most people past 10 within a few attempts. This is the single biggest change you can
+          make.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          ✋
+        </span>
+        <h3>Rest your palms</h3>
+
+          Plant both palms on the desk and let your fingers do the travel. Holding your hands in the
+          air burns energy you want going into the key.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🎯
+        </span>
+        <h3>Hit the centre</h3>
+
+          The spacebar is the longest key on the board and rides on stabilisers. The middle presses
+          cleanest, while the far edges tilt and cost you actuations.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🎵
+        </span>
+        <h3>Find a rhythm</h3>
+
+          A cadence you can hold beats a frantic opening that fades at second four. Longer durations
+          punish the sprint start hardest.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🪶
+        </span>
+        <h3>Tap, do not push</h3>
+
+          Most switches actuate around halfway down. Bottoming out the key wastes travel and slows
+          the reset, so aim for light taps that just clear the actuation point.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🔥
+        </span>
+        <h3>Warm up first</h3>
+
+          Cold hands run slow. Two throwaway runs before your real attempt are worth most of a press
+          per second.
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section id="factors" class="info-section alt-bg">
+  <div class="container">
+    <h2>Factors that affect your spacebar speed</h2>
+    <div class="factors-list section-content">
+      <div class="factor">
+        <h3>Technique</h3>
+
+          One thumb reaches 6 to 8 presses per second for most people. Alternating two fingers
+          roughly doubles the ceiling, and drumming three fingers along the bar goes higher again at
+          the cost of consistency.
+
+      </div>
+      <div class="factor">
+        <h3>Switch type</h3>
+
+          Linear mechanical switches actuate partway through the travel and reset quickly, which
+          suits rapid taps. Membrane and scissor keyboards need a fuller press and a fuller release,
+          so the same hand scores lower on a laptop than on a mechanical board.
+
+      </div>
+      <div class="factor">
+        <h3>Debounce time</h3>
+
+          Keyboards ignore a second signal that arrives within a few milliseconds of the first,
+          which is how they filter electrical noise from a single press. On a board with a long
+          debounce window, very fast tapping loses presses that your fingers made.
+
+      </div>
+      <div class="factor">
+        <h3>Stabilisers</h3>
+
+          The spacebar spans several key units and needs metal bars underneath to keep it level.
+          Worn or rattly stabilisers make the key press unevenly, which shows up as dropped
+          actuations near the ends.
+
+      </div>
+      <div class="factor">
+        <h3>Duration and fatigue</h3>
+
+          Five seconds measures your peak. Thirty or sixty seconds measures your forearm, and almost
+          everyone gives up a press or two per second by the end of a long run.
+
+      </div>
+      <div class="factor">
+        <h3>Polling rate</h3>
+
+          A keyboard reports its state to your computer on a fixed interval, often every 8
+          milliseconds at 125Hz. Two presses inside a single interval can arrive as one event, which
+          caps the top end regardless of how fast your fingers move.
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section id="faq" class="info-section">
+  <div class="container">
+    <h2>Spacebar speed test FAQ</h2>
+    <div class="faq-list section-content">
+      <details class="faq-item">
+        <summary>What is a spacebar speed test?</summary>
+
+          A spacebar speed test measures how many times you can press the spacebar in a fixed window
+          of time. Pick a duration, press as fast as you can, and your score is total presses
+          divided by seconds. The clock starts on your first press.
+
+      </details>
+      <details class="faq-item">
+        <summary>What is a good spacebar speed?</summary>
+
+          Most people manage 6 to 8 presses per second with one thumb. Above 9 is fast, and holding
+          12 or more takes an alternating technique. Scores drop as the duration grows, so 10 per
+          second over 5 seconds is easier than 8 over a minute.
+
+      </details>
+      <details class="faq-item">
+        <summary>How can I press the spacebar faster?</summary>
+
+          Alternate two fingers on the bar instead of using one thumb, which nearly doubles most
+          rates. Rest your palms on the desk, tap near the middle of the bar, and hold a rhythm
+          rather than sprinting the first two seconds. Warm up with a throwaway run.
+
+      </details>
+      <details class="faq-item">
+        <summary>Does my keyboard affect my spacebar speed?</summary>
+
+          Yes. Linear mechanical switches actuate partway down and reset fast, so they handle quick
+          taps better than a membrane board that wants a full press. Debounce time sets a ceiling on
+          very fast tapping, and the spacebar's stabilisers make its edges feel slower than its
+          centre.
+
+      </details>
+      <details class="faq-item">
+        <summary>Can I hold the spacebar down instead of pressing it?</summary>
+
+          No. Holding the key makes your operating system fire auto-repeat events and the test
+          discards every one of them. Only a fresh press counts.
+
+      </details>
+      <details class="faq-item">
+        <summary>Is the spacebar faster than clicking a mouse?</summary>
+
+          It depends on your hands and your hardware. The spacebar rewards alternating fingers,
+          while trained mouse techniques like jitter and butterfly clicking reach higher peaks.
+          Compare spacebar scores against other spacebar scores, since the two tests use different
+          muscles and different hardware.
+
+      </details>
+      <details class="faq-item">
+        <summary>How many times can you press the spacebar in 10 seconds?</summary>
+
+          At an average 7 presses per second, 10 seconds comes to about 70 presses. Fast players
+          clear 90, and 120 works out to 12 per second, which is Elite here. Set the duration to 10
+          seconds and your results show the total press count beside your score.
+
+      </details>
+      <details class="faq-item">
+        <summary>How is my data stored?</summary>
+
+          Your browser stores everything (best spacebar speed, run history, trend, achieved ranks,
+          and settings) locally using localStorage. Nothing reaches any server, so your results stay
+          private on your device and won't sync across browsers.
+
+      </details>
+    </div>
+
+  </div>
+</section>
+
+<section class="disclaimer-section">
+  <div class="container">
+    <div class="disclaimer">
+      <strong>Disclaimer:</strong> This spacebar speed test is for entertainment and personal
+      tracking. Your keyboard, browser, and technique all affect the result. Avoid straining your
+      hand; if pressing hurts, stop and rest.
+    </div>
+  </div>
+</section>

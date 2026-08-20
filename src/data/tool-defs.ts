@@ -170,3 +170,39 @@ export const visualMemoryTool = defineTool({
   ],
   maxHistory: 20,
 });
+
+/**
+ * Spacebar speed. Higher is better.
+ *
+ * The one click-family tool that does NOT share the CPS rank table (user
+ * decision). Spacebar pressing has a different ceiling from mouse clicking —
+ * two-thumb and drum techniques push the top end higher — and the site's own
+ * advice is to compare spacebar scores only against other spacebar scores. A
+ * shared table would have contradicted that.
+ *
+ * The metric key stays `cps` so the phrasing people search for ("spacebar
+ * CPS") holds, even though the copy calls them presses.
+ */
+export const spacebarTool = defineTool({
+  id: 'spacebar',
+  metrics: {
+    cps: {
+      label: 'Presses per second',
+      direction: 'higher-is-better',
+      format: (v) => v.toFixed(1),
+      primary: true,
+    },
+    presses: {
+      label: 'Total presses',
+      direction: 'higher-is-better',
+    },
+  },
+  ranks: [
+    { id: 'elite', name: 'Elite', threshold: 12, rangeLabel: '12+ CPS' },
+    { id: 'pro', name: 'Pro', threshold: 9, rangeLabel: '9–11.9 CPS' },
+    { id: 'advanced', name: 'Advanced', threshold: 7.5, rangeLabel: '7.5–8.9 CPS' },
+    { id: 'intermediate', name: 'Intermediate', threshold: 5, rangeLabel: '5–7.4 CPS' },
+    { id: 'beginner', name: 'Beginner', threshold: 0, rangeLabel: 'Under 5 CPS' },
+  ],
+  maxHistory: 20,
+});

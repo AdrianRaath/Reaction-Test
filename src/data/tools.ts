@@ -63,6 +63,13 @@ export const tools: Tool[] = [
     blurb: 'Measure how fast you can right click, in clicks per second.',
   },
   {
+    href: '/spacebar-speed-test',
+    name: 'Spacebar Speed Test',
+    navLabel: 'Spacebar Test',
+    icon: 'ph:keyboard',
+    blurb: 'Measure how fast you can press the spacebar, in presses per second.',
+  },
+  {
     href: '/visual-memory-test',
     name: 'Visual Memory Test',
     navLabel: 'Visual Memory',

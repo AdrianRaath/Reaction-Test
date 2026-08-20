@@ -1,47 +1,47 @@
 /**
- * CPS test — measurement loop and test-area rendering.
+ * Spacebar speed test — measurement loop and test-area rendering.
  *
- * Ported from the pre-revamp cps.js. Everything below the test area (best,
- * average, ranks, trend, history, reset) moved into the engine's telemetry
- * rig; this file owns only what is unique to this tool: the click counting,
- * the timer, and the test-area state machine.
+ * A sibling of the CPS test with one deliberate difference: the spacebar is
+ * the only input. There is no input-method setting to get wrong, which is the
+ * whole reason this tool exists separately from /cps.
  *
- * Timing integrity: performance.now() is the clock, and the pointerdown /
- * keydown handlers count clicks synchronously — nothing sits between the
- * input and the increment (REVAMP.md §8).
+ * Timing integrity: performance.now() is the clock, and the keydown handler
+ * increments synchronously — nothing sits between the key and the count
+ * (REVAMP.md §8).
  */
 
 import { openTool, resolveRank } from '../engine';
 import { createRig } from '../engine/rig';
 import { createBeeper } from '../engine/sound';
-import { cpsTool } from '../data/tool-defs';
+import { spacebarTool } from '../data/tool-defs';
 
-interface CpsSettings extends Record<string, unknown> {
+interface SpacebarSettings extends Record<string, unknown> {
   duration: number;
   sound: boolean;
 }
 
 const DURATIONS = [5, 10, 30, 60];
-const DEFAULT_SETTINGS: CpsSettings = { duration: 5, sound: true };
+const DEFAULT_SETTINGS: SpacebarSettings = { duration: 5, sound: true };
 const START_FREQ = 1046; // C6 — run start
 const END_FREQ = 523; // C5 — run end
 
 const { store, adapter } = (() => {
-  const opened = openTool(cpsTool);
+  const opened = openTool(spacebarTool);
   return { store: opened.store, adapter: opened.adapter };
 })();
 
-// --- Settings ---------------------------------------------------------------
-//
-// This tool used to carry an `inputMethod` setting with a 'spacebar' option.
-// That belonged to a different test and now lives at /spacebar-speed-test, so
-// the key is simply not read any more: a returning player who left it on
-// spacebar lands back on mouse, and the stale key drops out of storage on the
-// next settings write. Their recorded runs keep the `inputMethod` they were
-// set under, which is exactly what the settings snapshot is for (§3.2).
+/**
+ * Phones and tablets have no spacebar, and a keyboard-only test would be dead
+ * on the largest slice of traffic. On a coarse pointer the test area doubles
+ * as a tappable key; on a mouse-driven machine taps are ignored, so this
+ * cannot quietly become a second click test.
+ */
+const isTouchInput = window.matchMedia('(pointer: coarse)').matches;
 
-function loadSettings(): CpsSettings {
-  const raw = store.getSettings<CpsSettings>(DEFAULT_SETTINGS);
+// --- Settings ----------------------------------------------------------------
+
+function loadSettings(): SpacebarSettings {
+  const raw = store.getSettings<SpacebarSettings>(DEFAULT_SETTINGS);
   return {
     duration: DURATIONS.includes(Number(raw.duration))
       ? Number(raw.duration)
@@ -56,28 +56,28 @@ const settings = loadSettings();
 
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
-  if (!node) throw new Error(`CPS test: missing #${id}`);
+  if (!node) throw new Error(`Spacebar test: missing #${id}`);
   return node as T;
 }
 
-const area = el('cps-area');
-const contentDefault = el('cps-content-default');
-const live = el('cps-live');
-const results = el('cps-results');
-const hint = el('cps-hint');
-const status = el('cps-status-text');
-const instruction = el('cps-instruction');
-const announceEl = el('cps-announce');
-const cpsValue = el('cps-value');
-const cpsCount = el('cps-count');
-const timeleft = el('cps-timeleft');
-const cpsFinal = el('cps-final');
-const rankLabel = el('cps-rank-label');
-const resultMeta = el('cps-result-meta');
-const bestFlag = el('cps-best-flag');
-const message = el('cps-message');
-const tryAgainBtn = el('cps-try-again');
-const timerFill = el('cps-timer-fill');
+const area = el('sb-area');
+const contentDefault = el('sb-content-default');
+const live = el('sb-live');
+const results = el('sb-results');
+const hint = el('sb-hint');
+const status = el('sb-status-text');
+const instruction = el('sb-instruction');
+const announceEl = el('sb-announce');
+const cpsValue = el('sb-value');
+const pressCount = el('sb-count');
+const timeleft = el('sb-timeleft');
+const cpsFinal = el('sb-final');
+const rankLabel = el('sb-rank-label');
+const resultMeta = el('sb-result-meta');
+const bestFlag = el('sb-best-flag');
+const message = el('sb-message');
+const tryAgainBtn = el('sb-try-again');
+const timerFill = el('sb-timer-fill');
 const durationGroup = el('duration-group');
 const soundToggle = el('sound-toggle');
 const soundOnIcon = el('sound-icon-on');
@@ -98,11 +98,11 @@ function updateSoundIcon(): void {
 // --- Telemetry rig -----------------------------------------------------------------
 
 const rig = createRig(
-  cpsTool,
+  spacebarTool,
   store,
   adapter,
   {
-    bestDescription: (rank) => `${rank}-tier click speed.`,
+    bestDescription: (rank) => `${rank}-tier spacebar speed.`,
     avgDescription: (runs) => `Average across your last ${runs} run${runs === 1 ? '' : 's'}.`,
     historyScore: (v) => `${v.toFixed(1)} CPS`,
     chartTooltip: (v) => `${v} CPS`,
@@ -116,7 +116,7 @@ const rig = createRig(
 type RunStatus = 'idle' | 'counting' | 'complete';
 
 let runStatus: RunStatus = 'idle';
-let clicks = 0;
+let presses = 0;
 let startTime = 0;
 let runDuration = settings.duration;
 let rafId = 0;
@@ -143,8 +143,8 @@ function announce(text: string): void {
 }
 
 const MESSAGES: Record<string, string> = {
-  elite: 'Elite speed. Your hands are flying.',
-  pro: 'Pro-level clicking. Seriously fast.',
+  elite: 'Elite speed. That thumb is a machine.',
+  pro: 'Pro-level pressing. Seriously fast.',
   advanced: 'Fast and steady - above the pack.',
   intermediate: 'Solid pace. A warm-up and some rhythm will push you higher.',
   beginner: 'Good start. Relax your hand and try a quick warm-up run.',
@@ -155,7 +155,7 @@ const MESSAGES: Record<string, string> = {
 function startRun(): void {
   beeper.unlock();
   runStatus = 'counting';
-  clicks = 0;
+  presses = 0;
   runDuration = settings.duration;
   startTime = performance.now();
 
@@ -166,11 +166,11 @@ function startRun(): void {
   live.removeAttribute('aria-hidden');
 
   cpsValue.textContent = '0.0';
-  cpsCount.textContent = '0';
+  pressCount.textContent = '0';
   timeleft.textContent = runDuration.toFixed(1);
 
   setAreaState('cps-counting');
-  announce(`Go. Click as fast as you can for ${runDuration} seconds.`);
+  announce(`Go. Press the spacebar as fast as you can for ${runDuration} seconds.`);
   beeper.play(START_FREQ);
 
   rafId = requestAnimationFrame(tick);
@@ -183,7 +183,7 @@ function tick(): void {
   timerFill.style.transform = `scaleX(${remaining / runDuration})`;
   timeleft.textContent = remaining.toFixed(1);
   // Clamp the denominator early so the first fraction of a second doesn't spike.
-  cpsValue.textContent = (clicks / Math.max(elapsed, 0.3)).toFixed(1);
+  cpsValue.textContent = (presses / Math.max(elapsed, 0.3)).toFixed(1);
 
   if (remaining <= 0) {
     endRun();
@@ -197,26 +197,28 @@ function endRun(): void {
   runStatus = 'complete';
   timerFill.style.transform = 'scaleX(0)';
 
-  const cps = Math.round((clicks / runDuration) * 10) / 10;
+  const cps = Math.round((presses / runDuration) * 10) / 10;
   // Non-null: this tool declares ranks, so resolveRank always finds one.
-  const rank = resolveRank(cpsTool, cps)!;
+  const rank = resolveRank(spacebarTool, cps)!;
 
   live.hidden = true;
   live.setAttribute('aria-hidden', 'true');
   cpsFinal.textContent = cps.toFixed(1);
   rankLabel.textContent = rank.name;
   rankLabel.className = `rank-badge ${rank.id}`;
-  resultMeta.textContent = `${clicks} click${clicks === 1 ? '' : 's'} in ${runDuration}s`;
+  resultMeta.textContent = `${presses} press${presses === 1 ? '' : 'es'} in ${runDuration}s`;
 
   setAreaState('session-complete', rank.id);
   results.hidden = false;
   beeper.play(END_FREQ);
 
   // Sound is a preference, not a condition — it does not shape the score, so
-  // it stays out of the record's settings context (§3.2).
+  // it stays out of the record's settings context (§3.2). `inputMethod` is
+  // recorded even though it never varies: a leaderboard reading these records
+  // should not have to infer it from the tool id.
   const { isBest } = rig.recordSession(
-    { cps, clicks },
-    { duration: runDuration, inputMethod: 'mouse' }
+    { cps, presses },
+    { duration: runDuration, inputMethod: 'spacebar' }
   );
 
   bestFlag.hidden = !isBest;
@@ -225,7 +227,7 @@ function endRun(): void {
     : (MESSAGES[rank.id] ?? 'Nice run. Go again to beat it.');
 
   announce(
-    `Time. ${cps.toFixed(1)} clicks per second. Rank ${rank.name}. ${clicks} clicks.` +
+    `Time. ${cps.toFixed(1)} presses per second. Rank ${rank.name}. ${presses} presses.` +
       (isBest ? ' New best.' : '')
   );
 }
@@ -233,7 +235,7 @@ function endRun(): void {
 function resetRun(): void {
   cancelAnimationFrame(rafId);
   runStatus = 'idle';
-  clicks = 0;
+  presses = 0;
 
   live.hidden = true;
   live.setAttribute('aria-hidden', 'true');
@@ -247,57 +249,77 @@ function resetRun(): void {
 
 // --- Input ------------------------------------------------------------------------
 
-function registerClick(e?: Event): void {
+function registerPress(e?: Event): void {
   if (runStatus !== 'counting') return;
-  clicks++;
-  cpsCount.textContent = String(clicks);
+  presses++;
+  pressCount.textContent = String(presses);
+  pulseKey();
   spawnRipple(e);
 }
 
 function handleInput(e?: Event): void {
   if (runStatus === 'idle') {
     startRun();
-    registerClick(e);
+    registerPress(e);
   } else if (runStatus === 'counting') {
-    registerClick(e);
+    registerPress(e);
   }
   // 'complete': ignore; Try Again restarts.
 }
-
-area.addEventListener('pointerdown', (e) => {
-  if ((e.target as HTMLElement).closest('#cps-try-again')) return; // the button handles it
-  if (e.button && e.button !== 0) return; // primary button only
-  e.preventDefault();
-  handleInput(e);
-});
 
 document.addEventListener('keydown', (e) => {
   // The rig owns Escape-to-close for the modal; while it is open the test
   // must not swallow keys.
   if (!resetModal.hidden) return;
+  if (e.code !== 'Space' && e.key !== ' ') return;
 
-  const isSpace = e.code === 'Space' || e.key === ' ';
-  const isEnter = e.key === 'Enter';
-  const areaFocused = document.activeElement === area;
+  // Don't hijack Space meant to activate a focused control (settings buttons,
+  // links, the FAQ disclosures below the test).
+  const active = document.activeElement;
+  const onControl =
+    active instanceof HTMLElement &&
+    active !== area &&
+    ['BUTTON', 'A', 'SUMMARY', 'INPUT', 'TEXTAREA', 'SELECT', 'DETAILS'].includes(active.tagName);
+  if (onControl) return;
 
-  // Keyboard is the accessibility path for a mouse test, not a second input
-  // mode: it only fires with the area focused or a run already under way, so
-  // it never turns this page back into a spacebar test.
-  if ((isSpace || isEnter) && (areaFocused || runStatus === 'counting')) {
-    if (isSpace) e.preventDefault();
-    handleInput(e);
-  }
+  e.preventDefault(); // stop page scroll
+  // Auto-repeat would let a held key farm presses. One press, one count.
+  if (e.repeat) return;
+  handleInput(e);
 });
+
+// Touch devices have no spacebar, so the area itself is the key (see
+// isTouchInput). A fine pointer gets nothing here on purpose.
+if (isTouchInput) {
+  area.addEventListener('pointerdown', (e) => {
+    if ((e.target as HTMLElement).closest('#sb-try-again')) return; // the button handles it
+    e.preventDefault();
+    handleInput(e);
+  });
+}
 
 tryAgainBtn.addEventListener('click', () => {
   resetRun();
   area.focus();
 });
 
-// --- Click ripple --------------------------------------------------------------------
+// --- Key press feedback ----------------------------------------------------------------
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * The pressed-key flash. Colour alone never carries state here — the live
+ * readout and count are the real signal (PRODUCT.md, WCAG 2.1 AA).
+ */
+function pulseKey(): void {
+  if (prefersReducedMotion()) return;
+  area.classList.remove('key-down');
+  // Force a reflow so a press mid-animation restarts it rather than being
+  // swallowed. Deliberate layout read, and it happens after the count.
+  void area.offsetWidth;
+  area.classList.add('key-down');
 }
 
 function spawnRipple(e?: Event): void {
@@ -312,7 +334,7 @@ function spawnRipple(e?: Event): void {
   }
 
   const ripple = document.createElement('span');
-  ripple.className = 'cps-ripple';
+  ripple.className = 'sb-ripple';
   ripple.style.left = `${x}px`;
   ripple.style.top = `${y}px`;
   ripple.addEventListener('animationend', () => ripple.remove());
@@ -326,10 +348,12 @@ function saveSettings(): void {
 }
 
 function updateInputText(): void {
-  if (runStatus === 'idle') status.textContent = 'Click to start';
+  const action = isTouchInput ? 'Tap the key' : 'Press Space';
+  if (runStatus === 'idle') status.textContent = `${action} to start`;
   instruction.textContent = `${settings.duration}-second test`;
-  hint.textContent =
-    'Click as fast as you can until the timer runs out. Your score is your clicks per second.';
+  hint.textContent = isTouchInput
+    ? 'Tap the key as fast as you can until the timer runs out. Your score is your presses per second.'
+    : 'Press the spacebar as fast as you can until the timer runs out. Your score is your presses per second.';
 }
 
 function setupButtonGroup(group: HTMLElement, apply: (value: string) => void): void {
@@ -343,6 +367,11 @@ function setupButtonGroup(group: HTMLElement, apply: (value: string) => void): v
       // Abort any run in progress — visibly, not silently.
       if (runStatus !== 'idle') resetRun();
       else updateInputText();
+
+      // A duration button keeps focus after the click, and Space is the test's
+      // input — leaving focus there would re-fire the button instead of
+      // starting a run.
+      btn.blur();
     });
   });
 }
@@ -357,15 +386,18 @@ setupButtonGroup(durationGroup, (value) => {
   const parsed = Number.parseInt(value, 10);
   if (DURATIONS.includes(parsed)) settings.duration = parsed;
 });
+
 soundToggle.addEventListener('click', () => {
   settings.sound = !settings.sound;
   saveSettings();
   updateSoundIcon();
   beeper.unlock();
+  soundToggle.blur(); // same reason as the duration buttons
 });
 
 // --- Boot --------------------------------------------------------------------------------
 
+if (isTouchInput) area.classList.add('touch-key');
 setActiveOption(durationGroup, String(settings.duration));
 updateSoundIcon();
 updateInputText();

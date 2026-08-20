@@ -5,22 +5,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import ProgressWidgets from '../components/tool/ProgressWidgets.astro';
 import RelatedTools from '../components/tool/RelatedTools.astro';
 import ResetModal from '../components/tool/ResetModal.astro';
-import { cpsTool } from '../data/tool-defs';
+import { spacebarTool } from '../data/tool-defs';
 import '../styles/content.css';
 import '../styles/instrument.css';
 
-// SEO values are the live page's, byte for byte — the URL contract (REVAMP.md
-// §7). The title deliberately carries no "| ReflexLab" suffix: it targets the
-// money keyword. Do not "fix" it.
-const TITLE = 'Clicks Per Second Test (CPS Test) - Free Online Click Speed Test';
+// Authored for the primary keyword "spacebar speed test". No "| ReflexLab"
+// suffix on a tool page (NEW-TOOL.md step 4).
+const TITLE = 'Spacebar Speed Test - Free Online Spacebar Clicker Test';
 const DESCRIPTION =
-  'Free clicks per second test (CPS test). Most people average 6-7 CPS in a 5-second burst. Test your click speed, earn a rank, and track your best CPS.';
+  'Free spacebar speed test. Most people manage 6-8 presses per second. Test your spacebar speed over 5 to 60 seconds, earn a rank, and track your best.';
 
-// Long-form copy and FAQ live in the content collection (§5) — one MDX
-// file per tool. The FAQPage JSON-LD is built from that entry's frontmatter;
-// §7 treats this schema as preserve-exactly, verified by the URL diff.
-const entry = await getEntry('tools', 'cps');
-if (!entry) throw new Error('Missing tools/cps content entry');
+const entry = await getEntry('tools', 'spacebar');
+if (!entry) throw new Error('Missing tools/spacebar content entry');
 const { Content } = await render(entry);
 
 const faqSchema = {
@@ -33,11 +29,16 @@ const faqSchema = {
   })),
 };
 
-// Checklist shows the climb worst-first, as the legacy page did.
-const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
+// Checklist shows the climb worst-first.
+const checklistRanks = [...(spacebarTool.ranks ?? [])].reverse();
 ---
 
-<BaseLayout title={TITLE} description={DESCRIPTION} path="/cps" topbarLabel="CPS Test">
+<BaseLayout
+  title={TITLE}
+  description={DESCRIPTION}
+  path="/spacebar-speed-test"
+  topbarLabel="Spacebar Test"
+>
   <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
 
   <button slot="controls" type="button" class="ctl" id="sound-toggle" aria-label="Toggle sound">
@@ -56,10 +57,10 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
   <!-- ========== HERO ========== -->
   <section class="hero-section">
     <div class="hero-content">
-      <h1 class="hero-title">Clicks Per Second Test</h1>
+      <h1 class="hero-title">Spacebar Speed Test</h1>
       <p class="hero-subtitle">
-        Test your click speed over 5, 10, 30, or 60 seconds. Most people average 6-7 CPS. See where
-        you rank.
+        Press the spacebar as fast as you can over 5, 10, 30, or 60 seconds. Most people manage 6-8
+        presses per second. See where you rank.
       </p>
     </div>
   </section>
@@ -80,84 +81,86 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
       </div>
 
       <div
-        id="cps-area"
+        id="sb-area"
         class="test-area state-idle"
         tabindex="0"
         role="button"
-        aria-label="Click speed test area. Press Enter or Space to begin, then click as fast as you can until the timer runs out."
+        aria-label="Spacebar speed test area. Press the spacebar to begin, then press it as fast as you can until the timer runs out. On a touch screen, tap this area instead."
       >
         <!-- Default content (idle) -->
-        <div class="test-area-content" id="cps-content-default">
-          <p class="test-hint" id="cps-hint">
-            Click as fast as you can until the timer runs out. Your score is your clicks per second.
+        <div class="test-area-content" id="sb-content-default">
+          <p class="test-hint" id="sb-hint">
+            Press the spacebar as fast as you can until the timer runs out. Your score is your
+            presses per second.
           </p>
           <!-- The text lives in its own span because the script rewrites it;
                writing to the <p> would delete the glyph beside it. -->
-          <p class="test-status" id="cps-status" aria-live="polite">
+          <p class="test-status" id="sb-status" aria-live="polite">
             <span class="status-icon" aria-hidden="true">
-              <Icon name="ph:cursor-click" width={26} height={26} />
+              <Icon name="ph:keyboard" width={26} height={26} />
             </span>
-            <span id="cps-status-text">Click to start</span>
+            <span id="sb-status-text">Press Space to start</span>
           </p>
-          <p class="test-instruction" id="cps-instruction">5-second test</p>
+          <p class="keycap" aria-hidden="true">space</p>
+          <p class="test-instruction" id="sb-instruction">5-second test</p>
         </div>
 
         <!-- Live counting content -->
-        <div class="cps-live" id="cps-live" hidden aria-hidden="true">
+        <div class="cps-live" id="sb-live" hidden aria-hidden="true">
           <div class="cps-readout">
-            <span class="cps-value readout" id="cps-value">0.0</span>
+            <span class="cps-value readout" id="sb-value">0.0</span>
             <span class="cps-unit-inline">CPS</span>
           </div>
           <div class="cps-live-meta">
-            <span><strong id="cps-count" class="readout">0</strong> clicks</span>
+            <span><strong id="sb-count" class="readout">0</strong> presses</span>
             <span class="cps-meta-sep">·</span>
-            <span><strong id="cps-timeleft" class="readout">5.0</strong>s left</span>
+            <span><strong id="sb-timeleft" class="readout">5.0</strong>s left</span>
           </div>
         </div>
 
         <!-- Results content (session complete) -->
-        <div class="test-area-results" id="cps-results" hidden>
+        <div class="test-area-results" id="sb-results" hidden>
           <div class="main-result-card">
-            <p class="result-heading">Your click speed</p>
+            <p class="result-heading">Your spacebar speed</p>
             <div class="result-time-row">
-              <span class="result-time readout" id="cps-final">0.0</span>
+              <span class="result-time readout" id="sb-final">0.0</span>
               <span class="result-unit">CPS</span>
-              <span class="rank-badge" id="cps-rank-label">Advanced</span>
+              <span class="rank-badge" id="sb-rank-label">Advanced</span>
             </div>
-            <p class="cps-result-meta" id="cps-result-meta">0 clicks in 5s</p>
-            <p class="cps-best-flag" id="cps-best-flag" hidden>
+            <p class="cps-result-meta" id="sb-result-meta">0 presses in 5s</p>
+            <p class="cps-best-flag" id="sb-best-flag" hidden>
               <span aria-hidden="true">🏆</span> New best!
             </p>
           </div>
 
-          <p class="result-message" id="cps-message">
+          <p class="result-message" id="sb-message">
             Nice pace. Keep practicing to climb the ranks.
           </p>
 
-          <button class="btn btn-try-again" id="cps-try-again" type="button">Try Again</button>
+          <button class="btn btn-try-again" id="sb-try-again" type="button">Try Again</button>
         </div>
 
         <!-- Screen-reader live announcements (start + final result only) -->
-        <p class="visually-hidden" id="cps-announce" aria-live="assertive"></p>
+        <p class="visually-hidden" id="sb-announce" aria-live="assertive"></p>
       </div>
 
       <!-- Countdown timer bar -->
       <div class="cps-timer-track" role="presentation">
-        <div class="cps-timer-fill" id="cps-timer-fill"></div>
+        <div class="cps-timer-fill" id="sb-timer-fill"></div>
       </div>
     </div>
 
-    <ResetModal message="your best CPS, session history, and achieved ranks" />
+    <ResetModal message="your best spacebar speed, session history, and achieved ranks" />
 
     <ProgressWidgets
       unit="CPS"
-      bestTitle="Best CPS"
+      bestTitle="Best Spacebar Speed"
       bestSubtitle="Your fastest recorded run"
-      bestEmpty="Complete a run to set your best CPS."
-      avgTitle="Average CPS"
+      bestEmpty="Complete a run to set your best spacebar speed."
+      avgTitle="Average Speed"
       avgNoun="runs"
       avgEmpty="Complete a run to see your average."
-      chartDescription="Clicks per second across your last runs"
+      chartDescription="Presses per second across your last runs"
       chartEmpty="Complete a run to see your trend graph"
       historyEmpty="Complete a run to see your history"
       ranks={checklistRanks}
@@ -166,11 +169,11 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
 
   <Content />
 
-  <RelatedTools current="/cps" />
+  <RelatedTools current="/spacebar-speed-test" />
 </BaseLayout>
 
 <script>
-  import '../scripts/cps';
+  import '../scripts/spacebar';
 </script>
 
 <style>
@@ -316,20 +319,21 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
     min-height: 340px;
     border-radius: var(--radius-xl);
     overflow: hidden;
-    cursor: pointer;
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
     transition: all var(--duration-base) var(--ease);
   }
 
+  /* Only a touch device can drive this surface by pointer, so only there does
+     it advertise itself as clickable. */
+  .test-area.touch-key {
+    cursor: pointer;
+  }
+
   .test-area:focus-visible {
     outline: 2px solid var(--signal-green);
     outline-offset: 3px;
-  }
-
-  .test-area:active:not(.state-session-complete) {
-    transform: scale(0.98);
   }
 
   .test-area.state-idle {
@@ -350,6 +354,21 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
     box-shadow:
       0 0 20px rgb(34 197 94 / 20%),
       0 0 40px rgb(34 197 94 / 20%);
+  }
+
+  /* Per-press flash. The count and live CPS carry the real feedback; this is
+     the tactile echo of a key bottoming out. */
+  .test-area.state-cps-counting.key-down {
+    animation: key-down var(--duration-fast) var(--ease);
+  }
+
+  @keyframes key-down {
+    0% {
+      background-color: rgb(34 197 94 / 22%);
+    }
+    100% {
+      background-color: rgb(34 197 94 / 10%);
+    }
   }
 
   .test-area.state-session-complete {
@@ -413,6 +432,26 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
     margin-block-end: var(--space-xs);
     font-size: var(--text-headline-size);
     font-weight: var(--text-headline-weight);
+  }
+
+  /* --- Keycap (idle only) --------------------------------------------------- */
+
+  /* A spacebar drawn in the chassis palette, not the signal palette: it names
+     the input, it does not tell you to act. */
+  .keycap {
+    display: block;
+    width: min(320px, 70%);
+    margin: var(--space-lg) auto var(--space-md);
+    padding: var(--space-sm) 0;
+    border: 1px solid var(--line);
+    border-block-end-width: 3px;
+    border-radius: var(--radius-md);
+    background-color: var(--panel-01);
+    color: var(--ink-muted);
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
   }
 
   .test-instruction {
@@ -620,9 +659,9 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
     border-color: var(--ink-secondary);
   }
 
-  /* --- Click ripple (JS-created, so :global) ------------------------------------ */
+  /* --- Press ripple (JS-created, so :global) ------------------------------------ */
 
-  .test-area :global(.cps-ripple) {
+  .test-area :global(.sb-ripple) {
     position: absolute;
     z-index: 0;
     width: 120px;
@@ -632,10 +671,10 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
     pointer-events: none;
     opacity: 0.9;
     transform: translate(-50%, -50%) scale(0.2);
-    animation: cps-ripple 0.5s ease-out forwards;
+    animation: sb-ripple 0.5s ease-out forwards;
   }
 
-  @keyframes cps-ripple {
+  @keyframes sb-ripple {
     100% {
       transform: translate(-50%, -50%) scale(1.4);
       opacity: 0;
@@ -666,8 +705,7 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
   /* --- Responsive --------------------------------------------------------------------- */
 
   @media (max-width: 992px) {
-    /* Settings drop below the test area so the surface leads on smaller screens,
-       matching the legacy layout's reorder. */
+    /* Settings drop below the test area so the surface leads on smaller screens. */
     .settings-panel {
       order: 3;
       padding-block: var(--space-lg) 0;
@@ -708,6 +746,10 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
       padding: var(--space-sm);
     }
 
+    .keycap {
+      width: 100%;
+    }
+
     .main-result-card {
       padding: var(--space-lg);
     }
@@ -722,7 +764,11 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
       animation: none;
     }
 
-    .test-area :global(.cps-ripple) {
+    .test-area.state-cps-counting.key-down {
+      animation: none;
+    }
+
+    .test-area :global(.sb-ripple) {
       display: none;
     }
   }
