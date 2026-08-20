@@ -1,14 +1,18 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { tools } from '../data/tools';
 import '../styles/article.css';
+
+// The tool list below is registry-driven (§3.3), so tool six appears here
+// without a copy edit. The prose around it must not name a count.
 
 const TITLE = 'About | ReflexLab';
 const DESCRIPTION =
-  'Learn about ReflexLab: free reaction time and click speed tests that help you measure and improve. No accounts, and your results stay in your browser.';
+  'Learn about ReflexLab: free reaction time, click speed, and visual memory tests that track your personal best, ranks, and trend. No accounts, and your results stay in your browser.';
 // The live page's og:description deliberately differs from its meta
 // description — preserved as-is (§7).
 const OG_DESCRIPTION =
-  'Learn about ReflexLab - a free reaction time testing tool built to help you measure, practice, and improve your reaction speed over time.';
+  'Learn about ReflexLab - free reflex and performance tests built to help you measure, practice, and improve your speed over time.';
 ---
 
 <BaseLayout
@@ -27,82 +31,97 @@ const OG_DESCRIPTION =
       </nav>
       <h1 class="article-title">About ReflexLab</h1>
       <p class="article-subtitle">
-        ReflexLab makes it easy to measure your reaction time and improve it.
+        Reflex and performance tests that keep score, so you can see whether you are improving.
       </p>
     </header>
 
     <div class="article-content">
       <p class="article-intro">
-        ReflexLab grew out of a personal interest in improving reaction speed for gaming and sport.
-        Training only sticks when you can measure it, so we built a tool that makes progress visible
-        and repeatable.
+        ReflexLab began as one reaction time test, built for gaming and sport, where a tenth of a
+        second decides the duel. It has grown into a set of tests, and each one keeps a record of
+        every attempt so you can tell a real gain from a good day.
       </p>
 
       <section class="article-section">
-        <h2>Why ReflexLab Exists</h2>
-        <p>Reaction time improves with practice, but only if you can measure it.</p>
-        <p>ReflexLab gives you:</p>
+        <h2>What You Can Measure</h2>
+        <p>Every test gives you one number to chase and stores the settings you set it under.</p>
         <ul class="article-list">
-          <li>An accurate reaction time test</li>
-          <li>Progress tracking: personal bests, averages, and trends</li>
-          <li>A clean, focused experience</li>
+          {
+            tools.map((tool) => (
+              <li>
+                <a href={tool.href}>{tool.name}</a>: {tool.blurb}
+              </li>
+            ))
+          }
         </ul>
-        <p>The point is to help you understand your own performance and improve it.</p>
-      </section>
-
-      <section class="article-section">
-        <h2>Built for Practice and Progress</h2>
-        <p>One run tells you little. ReflexLab is built for the return visit, helping you:</p>
-        <ul class="article-list">
-          <li>Test your reaction time regularly</li>
-          <li>Track personal bests and averages</li>
-          <li>Watch your scores trend down across sessions</li>
-        </ul>
-        <p>We keep the interface simple so your focus stays on the test.</p>
-      </section>
-
-      <section class="article-section">
-        <h2>More Tools Over Time</h2>
         <p>
-          ReflexLab now offers two tools: the <a href="/">reaction time test</a> and the
-          <a href="/cps">clicks per second (CPS) test</a>.
+          The click tests share one rank table on purpose. Eight clicks per second means the same
+          thing whether you hit it on the timed <a href="/cps">CPS test</a>, the ten-second{' '}
+          <a href="/kohi-click-test">Kohi format</a>, or with your{' '}
+          <a href="/right-click-cps-test">right mouse button</a>.
         </p>
-        <p>We plan to add more, covering:</p>
-        <ul class="article-list">
-          <li>Other aspects of speed and precision</li>
-          <li>New ways to practice</li>
-          <li>Deeper performance tracking</li>
-        </ul>
-        <p>Each new tool will follow the same principle: useful and focused.</p>
       </section>
 
       <section class="article-section">
-        <h2>Free and Accessible</h2>
-        <p>ReflexLab is:</p>
-        <ul class="article-list">
-          <li>Free, with no accounts or sign-ups</li>
-          <li>Fast on desktop and mobile</li>
-          <li>Private: your results stay in your browser</li>
-        </ul>
-        <p>Open the page, click, and you have your first result in seconds.</p>
-      </section>
-
-      <section class="article-section">
-        <h2>The Goal</h2>
+        <h2>What Happens After a Run</h2>
         <p>
-          <strong>
-            ReflexLab has one goal: give you an honest measurement and a reason to come back and
-            beat it.
-          </strong>
+          Finish a run and the panel under the test shows your personal best, your session average,
+          a trend graph, and a timestamped history of recent attempts. Ranks climb from Beginner to
+          Elite. Clear a tier once and it stays ticked on your checklist, even if the next ten runs
+          fall short of it.
         </p>
-        <p>If it makes you faster or more consistent, it's doing its job.</p>
+        <p>
+          The <a href="/visual-memory-test">visual memory test</a> uses milestones instead of ranks. A
+          level number does not band into tiers that mean anything, so it marks checkpoints you either
+          reached or have not reached yet.
+        </p>
+        <p>
+          Hitting Reset clears a test's best, history, and ranks. Your settings survive it, so you
+          do not have to rebuild them to start over.
+        </p>
+      </section>
+
+      <section class="article-section">
+        <h2>Honest Measurement</h2>
+        <p>
+          A reaction test is worth no more than its clock. ReflexLab stamps the time with
+          <code>performance.now()</code> at the instant the target flips, stamps it again inside your
+          input handler, and does nothing in between that could add delay.
+        </p>
+        <p>
+          Your monitor, your mouse, and your browser still add a few milliseconds on top. Compare
+          your score against your own history rather than against a laboratory. The reaction test
+          also runs five rounds by default and scores the average, so a single lucky click never
+          sets your personal best.
+        </p>
+      </section>
+
+      <section class="article-section">
+        <h2>Private by Default</h2>
+        <p>
+          No account, no email, no sign-in. Your results sit in your browser's localStorage and go
+          nowhere else. Your scores will not follow you to another browser or another device, and
+          clearing site data erases them.
+        </p>
+        <p>
+          The <a href="/privacy">privacy policy</a> covers what gets stored and what analytics see.
+        </p>
+      </section>
+
+      <section class="article-section">
+        <h2>Guides</h2>
+        <p>
+          Knowing what moves your reaction time helps you train instead of guess. The{' '}
+          <a href="/guides">guides</a> cover how sleep and caffeine change your numbers, and which practice
+          methods hold up.
+        </p>
       </section>
 
       <section class="article-cta">
-        <h2>See How Fast You Are</h2>
+        <h2>See Where You Stand</h2>
         <p>
-          Take the reaction test, then measure your click speed with the
-          <a href="/cps">CPS test</a>.
+          Start with the reaction time test. Five rounds gives you an average, a rank, and a number
+          to beat next time.
         </p>
         <a href="/" class="btn btn-primary">Take the Test</a>
       </section>
@@ -111,9 +130,9 @@ const OG_DESCRIPTION =
 
   <section class="disclaimer-section">
     <p class="disclaimer">
-      <strong>Disclaimer:</strong> This reaction time test is for entertainment and personal tracking
-      purposes. Results are affected by your device's hardware, browser performance, and network conditions.
-      For scientific or medical assessments, please use calibrated laboratory equipment.
+      <strong>Disclaimer:</strong> ReflexLab's tests are built for entertainment and personal tracking.
+      Your device, browser, input hardware, and display refresh rate all shape the numbers you see. For
+      clinical or research measurement, use calibrated laboratory equipment.
     </p>
   </section>
 </BaseLayout>
@@ -130,5 +149,15 @@ const OG_DESCRIPTION =
     font-size: var(--text-label-size);
     color: var(--ink-muted);
     text-align: center;
+  }
+
+  .article-content code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    color: var(--ink-primary);
+    background: var(--panel-02);
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-sm);
+    padding: 0.1em 0.35em;
   }
 </style>
