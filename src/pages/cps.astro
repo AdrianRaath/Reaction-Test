@@ -7,6 +7,7 @@ import RelatedTools from '../components/tool/RelatedTools.astro';
 import ResetModal from '../components/tool/ResetModal.astro';
 import { cpsTool } from '../data/tool-defs';
 import '../styles/content.css';
+import '../styles/instrument.css';
 
 // SEO values are the live page's, byte for byte — the URL contract (REVAMP.md
 // §7). The title deliberately carries no "| ReflexLab" suffix: it targets the
@@ -97,7 +98,14 @@ const checklistRanks = [...(cpsTool.ranks ?? [])].reverse();
           <p class="test-hint" id="cps-hint">
             Click as fast as you can until the timer runs out. Your score is your clicks per second.
           </p>
-          <p class="test-status" id="cps-status" aria-live="polite">Click to start</p>
+          <!-- The text lives in its own span because the script rewrites it;
+               writing to the <p> would delete the glyph beside it. -->
+          <p class="test-status" id="cps-status" aria-live="polite">
+            <span class="status-icon" aria-hidden="true">
+              <Icon name="ph:cursor-click" width={26} height={26} />
+            </span>
+            <span id="cps-status-text">Click to start</span>
+          </p>
           <p class="test-instruction" id="cps-instruction">5-second test</p>
         </div>
 

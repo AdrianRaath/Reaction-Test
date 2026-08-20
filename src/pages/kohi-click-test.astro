@@ -7,6 +7,7 @@ import RelatedTools from '../components/tool/RelatedTools.astro';
 import ResetModal from '../components/tool/ResetModal.astro';
 import { kohiTool } from '../data/tool-defs';
 import '../styles/content.css';
+import '../styles/instrument.css';
 
 // Tool-page titles target the primary keyword and carry no "| ReflexLab"
 // suffix (NEW-TOOL.md). Primary keyword: "Kohi Click Test".
@@ -235,10 +236,6 @@ const checklistRanks = [...(kohiTool.ranks ?? [])].reverse();
 
   /* --- Test area (instrument face) --------------------------------------------- */
 
-  /* Instrument face: a fine graticule so the surface reads as a machined panel
-     rather than a hole in the page. Ink at 3.5%, no colour and no glow, so it
-     sits outside both the One Signal and Glow-Is-A-Signal rules. Centred so the
-     grid stays symmetrical as the area resizes. */
   .test-area {
     position: relative;
     display: flex;
@@ -251,11 +248,6 @@ const checklistRanks = [...(kohiTool.ranks ?? [])].reverse();
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
-    background-image:
-      linear-gradient(to right, rgb(255 255 255 / 3.5%) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(255 255 255 / 3.5%) 1px, transparent 1px);
-    background-size: 32px 32px;
-    background-position: center;
     transition: all var(--duration-base) var(--ease);
   }
 
@@ -346,23 +338,9 @@ const checklistRanks = [...(kohiTool.ranks ?? [])].reverse();
   }
 
   .test-status {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-sm);
     margin-block-end: var(--space-xs);
     font-size: var(--text-headline-size);
     font-weight: var(--text-headline-weight);
-  }
-
-  /* The idle instruction IS the go affordance, so the glyph beside it carries
-     Signal Green under the One Signal Rule — it marks "act now", not
-     decoration. Only sanctioned on tools whose idle face has no other colour:
-     the reaction test (red/green hint boxes) and visual memory (green Start
-     button) already say "go" and must not say it twice. */
-  .status-icon {
-    display: inline-flex;
-    color: var(--signal-green);
   }
 
   .test-instruction {

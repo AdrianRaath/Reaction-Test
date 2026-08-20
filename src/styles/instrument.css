@@ -1,0 +1,47 @@
+/* ==========================================================================
+   The instrument face — shared surface treatment for every tool's test area.
+
+   Global rather than repeated in five scoped page blocks: these are design
+   constants (graticule weight, cell size, the go-glyph colour) that should be
+   tuned in one place. Astro's scoped page styles outrank these — their
+   selectors carry an extra attribute — so any page can still override locally,
+   as the visual memory test does to drop the graticule once its tile grid is
+   on screen.
+   ========================================================================== */
+
+/* A fine graticule so the test surface reads as a machined panel rather than a
+   hole in the page. Ink at 3.5%, no colour and no glow, so it sits outside both
+   the One Signal Rule and the Glow-Is-A-Signal Rule. Centred so the grid stays
+   symmetrical as the area resizes.
+
+   Painted once and never touched by a state change — the state classes only
+   alter background-color and border — so it adds nothing to the paint at the
+   moment a stimulus flips (REVAMP.md §8). */
+.test-area {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 3.5%) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 3.5%) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: center;
+}
+
+/* Lets a glyph sit inline beside the idle instruction. Harmless on the tools
+   that carry no glyph — a lone text node centres identically. */
+.test-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+/* The idle instruction IS the go affordance, so the glyph beside it carries
+   Signal Green under the One Signal Rule — it marks "act now", not decoration.
+
+   Deliberately NOT used on every tool. It applies only where the idle face has
+   no other colour: the reaction test (red/green hint boxes) and the visual
+   memory test (green Start button) already say "go", and must not say it
+   twice. */
+.status-icon {
+  display: inline-flex;
+  color: var(--signal-green);
+}

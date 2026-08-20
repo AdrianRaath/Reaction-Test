@@ -7,6 +7,7 @@ import RelatedTools from '../components/tool/RelatedTools.astro';
 import ResetModal from '../components/tool/ResetModal.astro';
 import { rightClickTool } from '../data/tool-defs';
 import '../styles/content.css';
+import '../styles/instrument.css';
 
 // Tool-page titles target the primary keyword and carry no "| ReflexLab"
 // suffix (NEW-TOOL.md). Primary keyword: "Right Click CPS Test".
@@ -97,7 +98,14 @@ const checklistRanks = [...(rightClickTool.ranks ?? [])].reverse();
           <p class="test-hint" id="rclick-hint">
             Right click as fast as you can until the timer runs out. Left clicks don't count.
           </p>
-          <p class="test-status" id="rclick-status" aria-live="polite">Right click to start</p>
+          <!-- The text lives in its own span because the script rewrites it;
+               writing to the <p> would delete the glyph beside it. -->
+          <p class="test-status" id="rclick-status" aria-live="polite">
+            <span class="status-icon" aria-hidden="true">
+              <Icon name="ph:mouse-right-click" width={26} height={26} />
+            </span>
+            <span id="rclick-status-text">Right click to start</span>
+          </p>
           <p class="test-instruction" id="rclick-instruction">5-second test</p>
         </div>
 

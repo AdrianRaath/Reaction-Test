@@ -7,6 +7,7 @@ import RelatedTools from '../components/tool/RelatedTools.astro';
 import ResetModal from '../components/tool/ResetModal.astro';
 import { visualMemoryTool } from '../data/tool-defs';
 import '../styles/content.css';
+import '../styles/instrument.css';
 
 // Tool-page titles target the primary keyword and carry no "| ReflexLab"
 // suffix (NEW-TOOL.md). Primary keyword: "Visual Memory Test".
@@ -277,6 +278,14 @@ const milestones = visualMemoryTool.milestones ?? [];
     border-radius: var(--radius-xl);
     background-color: var(--panel-03);
     transition: border-color var(--duration-base) var(--ease);
+  }
+
+  /* The graticule from instrument.css is dropped the moment the tile grid is
+     up. Faint background lines behind a memory grid read as noise, and in a
+     test where the whole task is scanning for lit squares that is actively
+     unhelpful. It stays on the empty idle face, which is what it is for. */
+  .test-area:not(.phase-idle) {
+    background-image: none;
   }
 
   /* Green marks the recall phase — "your turn to act", the One Signal Rule's
