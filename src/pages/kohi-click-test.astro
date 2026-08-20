@@ -76,7 +76,14 @@ const checklistRanks = [...(kohiTool.ranks ?? [])].reverse();
           <p class="test-hint" id="kohi-hint">
             Your first click starts the clock and counts. Click as fast as you can for 10 seconds.
           </p>
-          <p class="test-status" id="kohi-status" aria-live="polite">Click to start</p>
+          <!-- The text lives in its own span because the script rewrites it on
+               reset; writing to the <p> would delete the glyph beside it. -->
+          <p class="test-status" id="kohi-status" aria-live="polite">
+            <span class="status-icon" aria-hidden="true">
+              <Icon name="ph:sword" width={26} height={26} />
+            </span>
+            <span id="kohi-status-text">Click to start</span>
+          </p>
           <p class="test-instruction" id="kohi-instruction">Fixed 10-second test</p>
         </div>
 
@@ -228,6 +235,10 @@ const checklistRanks = [...(kohiTool.ranks ?? [])].reverse();
 
   /* --- Test area (instrument face) --------------------------------------------- */
 
+  /* Instrument face: a fine graticule so the surface reads as a machined panel
+     rather than a hole in the page. Ink at 3.5%, no colour and no glow, so it
+     sits outside both the One Signal and Glow-Is-A-Signal rules. Centred so the
+     grid stays symmetrical as the area resizes. */
   .test-area {
     position: relative;
     display: flex;
@@ -240,6 +251,11 @@ const checklistRanks = [...(kohiTool.ranks ?? [])].reverse();
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 3.5%) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 3.5%) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: center;
     transition: all var(--duration-base) var(--ease);
   }
 
@@ -330,9 +346,23 @@ const checklistRanks = [...(kohiTool.ranks ?? [])].reverse();
   }
 
   .test-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
     margin-block-end: var(--space-xs);
     font-size: var(--text-headline-size);
     font-weight: var(--text-headline-weight);
+  }
+
+  /* The idle instruction IS the go affordance, so the glyph beside it carries
+     Signal Green under the One Signal Rule — it marks "act now", not
+     decoration. Only sanctioned on tools whose idle face has no other colour:
+     the reaction test (red/green hint boxes) and visual memory (green Start
+     button) already say "go" and must not say it twice. */
+  .status-icon {
+    display: inline-flex;
+    color: var(--signal-green);
   }
 
   .test-instruction {

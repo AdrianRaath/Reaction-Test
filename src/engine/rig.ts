@@ -18,6 +18,7 @@ import {
   primaryMetric,
   primaryMetricKey,
   resolveRank,
+  tiersOf,
 } from './ranks';
 import { averagePrimary, beatsBest, trendSeries } from './stats';
 import type { StorageAdapter, ToolStore } from './storage';
@@ -147,6 +148,63 @@ export function createRig(
       if (countEl) countEl.textContent = '0';
       if (descEl) descEl.textContent = descEl.dataset.empty ?? '';
     }
+  }
+
+  // --- Top-bar telemetry readout -------------------------------------------
+
+  /** Best tier the value has reached: its rank, or the highest milestone. */
+  function tierLabel(value: number): string | null {
+    const rank = resolveRank(tool, value);
+    if (rank) return rank.name;
+
+    const cleared = achievedTierIds(tool, value);
+    const topId = cleared[cleared.length - 1];
+    return tiersOf(tool).find((t) => t.id === topId)?.name ?? null;
+  }
+
+  /** Set a readout value, dimming it when there is nothing to show yet. */
+  function setStat(el: HTMLElement | null, base: string, value: string | null): void {
+    if (!el) return;
+    el.textContent = value ?? '—';
+    el.className = value === null ? `${base} is-empty` : base;
+  }
+
+  function renderTopBarStats(): void {
+    const wrap = byId('topbar-stats');
+    if (!wrap) return; // not a tool page
+
+    const best = store.getBest();
+    const bestValue = best ? best.metrics[metricKey] : undefined;
+    const hasBest = typeof bestValue === 'number' && Number.isFinite(bestValue);
+
+    // The strip always renders. Before the first run each value is a dimmed
+    // dash, so the bar keeps its shape instead of the readout popping in.
+    setStat(
+      byId('topbar-best'),
+      'tb-value tb-best readout',
+      hasBest ? copy.historyScore(bestValue) : null
+    );
+
+    const avg = averagePrimary(tool, windowed(store.getHistory()));
+    setStat(
+      byId('topbar-avg'),
+      'tb-value readout',
+      // Format through the metric first, so a 3.5 average renders as "Level 4"
+      // rather than "Level 3.5" — the same rounding the average widget shows.
+      avg === null ? null : copy.historyScore(Number.parseFloat(formatValue(metric, avg)))
+    );
+
+    // Milestone tools have no rank, so the label names what they do have.
+    const labelEl = byId('topbar-tier-label');
+    if (labelEl) labelEl.textContent = tool.ranks ? 'Rank' : 'Milestone';
+
+    const rank = hasBest ? resolveRank(tool, bestValue) : null;
+    // Rank tools tint the chip; milestone tools take no colour.
+    setStat(
+      byId('topbar-tier'),
+      rank ? `tb-tier ${rank.id}` : 'tb-tier',
+      hasBest ? tierLabel(bestValue) : null
+    );
   }
 
   // --- Achieved tier checklist ---------------------------------------------
@@ -373,6 +431,7 @@ export function createRig(
   function refresh(): void {
     renderBest();
     renderAverage();
+    renderTopBarStats();
     renderChecklist();
     renderHistory();
     renderChart();

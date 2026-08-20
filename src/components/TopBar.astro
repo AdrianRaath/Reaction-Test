@@ -10,9 +10,15 @@ import BrandMark from './BrandMark.astro';
 interface Props {
   /** Short label for the current page, shown on desktop. */
   label?: string;
+  /**
+   * Render the telemetry readout (best / average / tier). Tool pages only.
+   * The rig fills these ids; before the first run every value shows a dimmed
+   * dash rather than the strip disappearing.
+   */
+  showStats?: boolean;
 }
 
-const { label } = Astro.props;
+const { label, showStats = false } = Astro.props;
 ---
 
 <header class="topbar">
@@ -24,6 +30,40 @@ const { label } = Astro.props;
   </a>
 
   {label && <p class="topbar-label">{label}</p>}
+
+  {
+    showStats && (
+      <div class="topbar-stats" id="topbar-stats">
+        <span class="tb-stat">
+          <span class="tb-label">Best</span>
+          <span class="tb-value tb-best readout is-empty" id="topbar-best">
+            —
+          </span>
+        </span>
+        <span class="tb-sep" aria-hidden="true">
+          ·
+        </span>
+        <span class="tb-stat">
+          <span class="tb-label">Avg</span>
+          <span class="tb-value readout is-empty" id="topbar-avg">
+            —
+          </span>
+        </span>
+        <span class="tb-sep" aria-hidden="true">
+          ·
+        </span>
+        <span class="tb-stat">
+          {/* The rig relabels this "Milestone" on tools that have no ranks. */}
+          <span class="tb-label" id="topbar-tier-label">
+            Rank
+          </span>
+          <span class="tb-tier is-empty" id="topbar-tier">
+            —
+          </span>
+        </span>
+      </div>
+    )
+  }
 
   <div class="topbar-controls">
     <slot />
@@ -42,6 +82,7 @@ const { label } = Astro.props;
 
 <style>
   .topbar {
+    position: relative;
     display: flex;
     height: var(--topbar-height);
     align-items: center;
@@ -65,6 +106,93 @@ const { label } = Astro.props;
     font-size: var(--text-label-size);
     font-weight: 600;
     color: var(--ink-secondary);
+  }
+
+  /* --- Telemetry readout (tool pages) ------------------------------------- */
+
+  /* Centred on the bar itself, not on the space left over between the label and
+     the controls — auto margins would split the free space three ways with the
+     controls' own auto margin and land it left of centre. Taken out of flow so
+     neither neighbour can shift it. */
+  .topbar-stats {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+  }
+
+  .tb-stat {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+  }
+
+  .tb-label {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  .tb-value {
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  /* Signal Green on the personal best is sanctioned by the One Signal Rule —
+     "your best" is one of its three licensed meanings. */
+  .tb-best {
+    color: var(--signal-green);
+  }
+
+  .tb-sep {
+    color: var(--ink-disabled);
+  }
+
+  /* Rank tint here is licensed by the Rank-Only Colour Rule: this is a rank
+     badge. Milestone tools get the same chip with no tint. */
+  .tb-tier {
+    padding: 2px var(--space-sm);
+    border-radius: var(--radius-sm);
+    background-color: var(--panel-hover);
+    color: var(--ink-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  .tb-tier.elite {
+    background-color: rgb(168 85 247 / 20%);
+    color: var(--rank-elite);
+  }
+  .tb-tier.pro {
+    background-color: rgb(34 197 94 / 20%);
+    color: var(--rank-pro);
+  }
+  .tb-tier.advanced {
+    background-color: rgb(59 130 246 / 20%);
+    color: var(--rank-advanced);
+  }
+  .tb-tier.intermediate {
+    background-color: rgb(245 158 11 / 20%);
+    color: var(--rank-intermediate);
+  }
+  .tb-tier.beginner {
+    background-color: rgb(144 144 153 / 20%);
+    color: var(--rank-beginner);
+  }
+
+  /* Before the first run every value is a dash — dim, so the strip reads as
+     "nothing yet" rather than a broken readout. */
+  .tb-value.is-empty,
+  .tb-tier.is-empty {
+    color: var(--ink-disabled);
+  }
+
+  .tb-tier.is-empty {
+    background-color: transparent;
+    padding-inline: 0;
   }
 
   .topbar-controls {
@@ -94,6 +222,14 @@ const { label } = Astro.props;
       position: sticky;
       top: 0;
       z-index: 20;
+    }
+  }
+
+  /* The readout needs more room than the label, so it drops first. Below this
+     width the same numbers are a short scroll away in the widgets. */
+  @media (max-width: 1100px) {
+    .topbar-stats {
+      display: none;
     }
   }
 

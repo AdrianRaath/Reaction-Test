@@ -2,6 +2,7 @@
 import Sidebar from '../components/Sidebar.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import TopBar from '../components/TopBar.astro';
+import { getTool } from '../data/tools';
 import '../styles/tokens.css';
 import '../styles/base.css';
 
@@ -101,7 +102,7 @@ const ogImageUrl = new URL(ogImage, site).href;
       <Sidebar />
 
       <div class="app-main">
-        <TopBar label={topbarLabel}>
+        <TopBar label={topbarLabel} showStats={Boolean(getTool(path))}>
           <slot name="controls" />
         </TopBar>
 
