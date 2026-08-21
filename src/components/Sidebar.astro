@@ -6,10 +6,24 @@ import { tools, secondaryLinks } from '../data/tools';
 // The sidebar is the site's only catalogue — there is no /tools page (§3.4) —
 // so it has to stay scannable as tools accumulate. Flat list, no grouping.
 
-// Normalise so '/cps' and '/cps/' both match a registry href.
-const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
-const isCurrent = (href: string) =>
-  path === href.replace(/\/+$/, '') || (href === '/' && path === '/');
+interface Props {
+  /**
+   * The current route, as authored on the page (e.g. '/cps'). Passed down from
+   * BaseLayout rather than read from Astro.url.
+   *
+   * `Astro.url.pathname` is NOT usable here. `build.format: 'file'` emits
+   * cps.html, so at build time the pathname is '/cps.html' and never matches a
+   * registry href — every link lost its active state in production while the
+   * dev server, which serves '/cps', looked fine. The authored path is the same
+   * value BaseLayout already trusts for the canonical URL.
+   */
+  currentPath?: string;
+}
+
+// Fall back to the URL (minus any .html) if a caller omits the prop.
+const raw = Astro.props.currentPath ?? Astro.url.pathname.replace(/\.html$/, '');
+const path = raw.replace(/\/+$/, '') || '/';
+const isCurrent = (href: string) => path === (href.replace(/\/+$/, '') || '/');
 ---
 
 <nav id="sidebar" class="sidebar" aria-label="Tools and site sections" data-sidebar>

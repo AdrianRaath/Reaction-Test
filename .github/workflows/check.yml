@@ -1,0 +1,49 @@
+name: Check
+
+# REVAMP.md §6.2: until this existed, the only workflow was IndexNow, which
+# fires *after* merge to main — so the first signal that the site was broken
+# was the live site being broken. This runs on every PR and every push to main.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Matches .nvmrc, package.json engines, and the IndexNow workflow.
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Formatting
+        run: npm run format:check
+
+      - name: Types
+        run: npm run check
+
+      - name: Unit tests
+        run: npm test
+
+      # Last, because it is the slowest and the least specific failure. Also
+      # regenerates public/sitemap.xml — see the drift check below.
+      - name: Build
+        run: npm run build
+
+      # The build writes sitemap.xml to both dist/ and public/, and the
+      # committed copy is what scripts/submit-indexnow.mjs reads on merge. If a
+      # route changed without the committed sitemap being rebuilt, IndexNow
+      # would submit a stale URL list. Fail loudly instead.
+      - name: Committed sitemap matches the built routes
+        run: |
+          if ! git diff --quiet -- public/sitemap.xml; then
+            echo "::error::public/sitemap.xml is out of date. Run 'npm run build' and commit the result."
+            git --no-pager diff -- public/sitemap.xml
+            exit 1
+          fi

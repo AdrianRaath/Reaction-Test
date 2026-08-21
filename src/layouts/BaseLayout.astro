@@ -99,7 +99,7 @@ const ogImageUrl = new URL(ogImage, site).href;
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <div class="app-shell">
-      <Sidebar />
+      <Sidebar currentPath={path} />
 
       <div class="app-main">
         <TopBar label={topbarLabel} showStats={Boolean(getTool(path))}>
