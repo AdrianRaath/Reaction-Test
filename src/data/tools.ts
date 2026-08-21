@@ -70,7 +70,7 @@ export const tools: Tool[] = [
     blurb: 'Measure how fast you can press the spacebar, in presses per second.',
   },
   {
-    href: '/visual-memory-test',
+    href: '/memory-test',
     name: 'Visual Memory Test',
     navLabel: 'Visual Memory',
     icon: 'ph:grid-four',

@@ -33,12 +33,7 @@ const faqSchema = {
 const milestones = visualMemoryTool.milestones ?? [];
 ---
 
-<BaseLayout
-  title={TITLE}
-  description={DESCRIPTION}
-  path="/visual-memory-test"
-  topbarLabel="Visual Memory"
->
+<BaseLayout title={TITLE} description={DESCRIPTION} path="/memory-test" topbarLabel="Visual Memory">
   <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
 
   <button slot="controls" type="button" class="ctl" id="sound-toggle" aria-label="Toggle sound">
@@ -134,7 +129,7 @@ const milestones = visualMemoryTool.milestones ?? [];
 
   <Content />
 
-  <RelatedTools current="/visual-memory-test" />
+  <RelatedTools current="/memory-test" />
 </BaseLayout>
 
 <script>
