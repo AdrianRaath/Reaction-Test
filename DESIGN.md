@@ -184,6 +184,8 @@ A closed set of five telemetry colors, used **only** on rank badges and the matc
 
 **The Rank-Only Color Rule.** The five rank hues (violet / green / blue / amber / gray) are licensed for rank badges and the results-border glow — nowhere else. The rest of the interface is black, zinc-gray, and one green. This is what separates ReflexLab from the RGB-gamer lane: color is telemetry, not upholstery.
 
+**The Target-Paint Exception.** Inside a tool's test arena, a game target the user aims at is game content, not chrome, and its paint may be user-selected — like the emoji vocabulary, it sits outside the One Signal Rule and the Rank-Only Color Rule. The palette is still closed: Signal Green (the default — a target means *act now*), White (`#fafafa`), Blue (`#3b82f6`), Violet (`#a855f7`), and Amber (`#f59e0b`) — hues the system already owns, no new ones. **Hold Red is excluded**: red means *wait / error* sitewide and must never mark a thing the user is asked to click. The exception covers target paint only — never buttons, cards, text, or any other surface — and paint choices must stay cosmetic: identical hitbox, identical sizing, identical scoring.
+
 ## 3. Typography
 
 **Display / UI Font:** System sans stack (`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, ...`)

@@ -76,6 +76,13 @@ export const tools: Tool[] = [
     icon: 'ph:grid-four',
     blurb: 'Memorise the pattern and recall it. How many tiles can you hold?',
   },
+  {
+    href: '/aim-trainer',
+    name: 'Aim Trainer',
+    navLabel: 'Aim Trainer',
+    icon: 'ph:target',
+    blurb: 'Hit 30 targets fast and clean. One score for speed and accuracy.',
+  },
 ];
 
 /**

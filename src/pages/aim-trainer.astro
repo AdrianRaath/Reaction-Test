@@ -1,0 +1,911 @@
+---
+import { getEntry, render } from 'astro:content';
+import { Icon } from 'astro-icon/components';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProgressWidgets from '../components/tool/ProgressWidgets.astro';
+import RelatedTools from '../components/tool/RelatedTools.astro';
+import ResetModal from '../components/tool/ResetModal.astro';
+import { aimTrainerTool } from '../data/tool-defs';
+import '../styles/content.css';
+import '../styles/instrument.css';
+
+// Authored SEO (NEW-TOOL.md §4) — primary keywords: "aim trainer",
+// "aim trainer online". No "| ReflexLab" suffix, deliberately.
+const TITLE = 'Aim Trainer - Free Online Aim Test & Mouse Accuracy Practice';
+const DESCRIPTION =
+  'Free online aim trainer. Hit 30 targets as fast and accurately as you can to earn one aim score, get a rank, and track your progress. No download needed.';
+
+const entry = await getEntry('tools', 'aim-trainer');
+if (!entry) throw new Error('Missing tools/aim-trainer content entry');
+const { Content } = await render(entry);
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: entry.data.faq.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
+};
+
+// Checklist shows the climb worst-first.
+const checklistRanks = [...(aimTrainerTool.ranks ?? [])].reverse();
+
+// Button-face glyphs for the style picker. Kept in sync with TARGET_SVGS in
+// src/scripts/aim-trainer.ts — same geometry at 22px, drawn in currentColor.
+const STYLE_OPTIONS = [
+  { value: 'bullseye', label: 'Bullseye' },
+  { value: 'dot', label: 'Dot' },
+  { value: 'ring', label: 'Ring' },
+  { value: 'reticle', label: 'Reticle' },
+];
+
+// Target paint palette. Reuses hues the design system already owns — see the
+// Target-Paint Exception in DESIGN.md §2. Hold Red is deliberately absent:
+// red means wait/error sitewide.
+const COLOR_OPTIONS = [
+  { value: 'green', label: 'Green', hex: '#22c55e' },
+  { value: 'white', label: 'White', hex: '#fafafa' },
+  { value: 'blue', label: 'Blue', hex: '#3b82f6' },
+  { value: 'violet', label: 'Violet', hex: '#a855f7' },
+  { value: 'amber', label: 'Amber', hex: '#f59e0b' },
+];
+---
+
+<BaseLayout title={TITLE} description={DESCRIPTION} path="/aim-trainer" topbarLabel="Aim Trainer">
+  <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+
+  <button slot="controls" type="button" class="ctl" id="sound-toggle" aria-label="Toggle sound">
+    <span class="ctl-icon" id="sound-icon-on">
+      <Icon name="ph:speaker-high" width={18} height={18} aria-hidden="true" />
+    </span>
+    <span class="ctl-icon" id="sound-icon-off" hidden>
+      <Icon name="ph:speaker-slash" width={18} height={18} aria-hidden="true" />
+    </span>
+  </button>
+  <button slot="controls" type="button" class="ctl" id="reset-btn" aria-label="Reset all data">
+    <Icon name="ph:trash" width={18} height={18} aria-hidden="true" />
+    <span>Reset</span>
+  </button>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Aim Trainer</h1>
+      <p class="hero-subtitle">
+        Hit 30 targets as fast and accurately as you can. One score for speed and precision. See
+        where you rank.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== TEST ========== -->
+  <section id="test-section" class="test-section">
+    <div class="test-card">
+      <div class="settings-panel">
+        <div class="setting-group">
+          <span class="setting-label" id="style-label">Target style</span>
+          <div class="btn-group" id="style-group" role="group" aria-labelledby="style-label">
+            {
+              STYLE_OPTIONS.map((opt) => (
+                <button
+                  type="button"
+                  class:list={['btn-option', 'style-option', { active: opt.value === 'bullseye' }]}
+                  data-value={opt.value}
+                  aria-label={`${opt.label} target style`}
+                  title={opt.label}
+                >
+                  {opt.value === 'bullseye' && (
+                    <svg viewBox="0 0 100 100" width="22" height="22" aria-hidden="true">
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="45"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="9"
+                      />
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="27"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="9"
+                      />
+                      <circle cx="50" cy="50" r="10" fill="currentColor" />
+                    </svg>
+                  )}
+                  {opt.value === 'dot' && (
+                    <svg viewBox="0 0 100 100" width="22" height="22" aria-hidden="true">
+                      <circle cx="50" cy="50" r="48" fill="currentColor" />
+                    </svg>
+                  )}
+                  {opt.value === 'ring' && (
+                    <svg viewBox="0 0 100 100" width="22" height="22" aria-hidden="true">
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="43"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="10"
+                      />
+                      <circle cx="50" cy="50" r="7" fill="currentColor" />
+                    </svg>
+                  )}
+                  {opt.value === 'reticle' && (
+                    <svg viewBox="0 0 100 100" width="22" height="22" aria-hidden="true">
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="38"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="7"
+                      />
+                      <line x1="50" y1="2" x2="50" y2="26" stroke="currentColor" stroke-width="7" />
+                      <line
+                        x1="50"
+                        y1="74"
+                        x2="50"
+                        y2="98"
+                        stroke="currentColor"
+                        stroke-width="7"
+                      />
+                      <line x1="2" y1="50" x2="26" y2="50" stroke="currentColor" stroke-width="7" />
+                      <line
+                        x1="74"
+                        y1="50"
+                        x2="98"
+                        y2="50"
+                        stroke="currentColor"
+                        stroke-width="7"
+                      />
+                      <circle cx="50" cy="50" r="6" fill="currentColor" />
+                    </svg>
+                  )}
+                </button>
+              ))
+            }
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <span class="setting-label" id="color-label">Target color</span>
+          <div class="btn-group" id="color-group" role="group" aria-labelledby="color-label">
+            {
+              COLOR_OPTIONS.map((opt) => (
+                <button
+                  type="button"
+                  class:list={['btn-option', 'color-option', { active: opt.value === 'green' }]}
+                  data-value={opt.value}
+                  aria-label={`${opt.label} targets`}
+                  title={opt.label}
+                >
+                  <span
+                    class="color-swatch"
+                    style={`background-color: ${opt.hex}`}
+                    aria-hidden="true"
+                  />
+                </button>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="aim-area"
+        class="test-area state-idle"
+        tabindex="0"
+        role="button"
+        aria-label="Aim trainer arena. Press Enter or Space to begin, then click each target as fast as you can until you have hit all 30."
+      >
+        <!-- Default content (idle) -->
+        <div class="test-area-content" id="aim-content-default">
+          <p class="test-hint" id="aim-hint">
+            Click each target as it appears. Misses count against your accuracy.
+          </p>
+          <p class="test-status" id="aim-status" aria-live="off">
+            <span id="aim-status-text">Hit the target to start</span>
+          </p>
+          <!-- The starter target: hitting it starts the clock, so every run's
+               first flick begins from a known cursor position. The script
+               paints it from the style/color settings, making it the live
+               preview of both. -->
+          <div class="aim-target aim-starter" id="aim-starter"></div>
+          <p class="test-instruction" id="aim-instruction">30 targets · one run · one score</p>
+        </div>
+
+        <!-- Live HUD (running) -->
+        <div class="aim-hud" id="aim-hud" hidden aria-hidden="true">
+          <span><strong id="aim-hits" class="readout">0</strong>/30</span>
+          <span class="aim-hud-sep">·</span>
+          <span><strong id="aim-acc" class="readout">100</strong>%</span>
+          <span class="aim-hud-sep">·</span>
+          <span><strong id="aim-time" class="readout">0.0</strong>s</span>
+        </div>
+
+        <!-- Results content (session complete) -->
+        <div class="test-area-results" id="aim-results" hidden>
+          <div class="main-result-card">
+            <p class="result-heading">Your aim score</p>
+            <div class="result-time-row">
+              <span class="result-time readout" id="aim-final">0</span>
+              <span class="rank-badge" id="aim-rank-label">Advanced</span>
+            </div>
+            <p class="aim-result-meta" id="aim-result-meta">30 targets in 0.0s · 0ms avg</p>
+            <!-- The score's working, shown so the number explains itself:
+                 speed × accuracy, with this run's values. The script fills the
+                 spans; the shown equation multiplies out to the exact score. -->
+            <p class="aim-formula">
+              <span class="readout" id="aim-calc-tps">0.00</span> targets/s ×{' '}
+              <span class="readout" id="aim-calc-acc">0.0</span>% accuracy ={' '}
+              <span class="readout" id="aim-calc-score">0</span>
+            </p>
+            <p class="aim-best-flag" id="aim-best-flag" hidden>
+              <span aria-hidden="true">🏆</span> New best!
+            </p>
+          </div>
+
+          <p class="result-message" id="aim-message">Clean run. Go again and push the pace.</p>
+
+          <button class="btn btn-try-again" id="aim-try-again" type="button">Try Again</button>
+        </div>
+
+        <!-- Screen-reader live announcements (start + final result only) -->
+        <p class="visually-hidden" id="aim-announce" aria-live="assertive"></p>
+      </div>
+
+      <!-- Run progress bar: fills as targets fall -->
+      <div class="aim-progress-track" role="presentation">
+        <div class="aim-progress-fill" id="aim-progress-fill"></div>
+      </div>
+    </div>
+
+    <ResetModal message="your best aim score, session history, and achieved ranks" />
+
+    <ProgressWidgets
+      bestTitle="Best Score"
+      bestSubtitle="Your highest aim score"
+      bestEmpty="Complete a run to set your best score."
+      avgTitle="Average Score"
+      avgNoun="runs"
+      avgEmpty="Complete a run to see your average."
+      chartDescription="Aim score across your last runs"
+      chartEmpty="Complete a run to see your trend graph"
+      historyEmpty="Complete a run to see your history"
+      ranks={checklistRanks}
+    />
+  </section>
+
+  <Content />
+
+  <RelatedTools current="/aim-trainer" />
+</BaseLayout>
+
+<script>
+  import '../scripts/aim-trainer';
+</script>
+
+<style>
+  /* --- Top-bar controls (slot content, styled by the page) ---------------- */
+
+  .ctl {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+  }
+
+  .ctl:hover {
+    background-color: var(--panel-hover);
+    color: var(--ink-primary);
+  }
+
+  .ctl.muted {
+    color: var(--ink-muted);
+  }
+
+  .ctl-icon {
+    display: inline-flex;
+  }
+
+  /* --- Hero ----------------------------------------------------------------- */
+
+  .hero-section {
+    padding: var(--space-xl) 0 var(--space-md);
+    text-align: center;
+  }
+
+  .hero-content {
+    max-width: 600px;
+    margin-inline: auto;
+  }
+
+  .hero-title {
+    margin-block-end: var(--space-md);
+    font-size: var(--text-display-size);
+    font-weight: var(--text-display-weight);
+    line-height: var(--text-display-lh);
+    letter-spacing: var(--text-display-ls);
+  }
+
+  .hero-subtitle {
+    font-size: 1.125rem;
+    color: var(--ink-secondary);
+  }
+
+  /* --- Test card --------------------------------------------------------------- */
+
+  .test-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-block: var(--space-md) var(--space-2xl);
+  }
+
+  .test-card {
+    display: flex;
+    width: 100%;
+    max-width: 960px;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-2xl);
+    background-color: var(--panel-02);
+  }
+
+  .settings-panel {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-xl);
+    padding-block-end: var(--space-lg);
+    border-block-end: 1px solid var(--line-subtle);
+  }
+
+  .setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .setting-label {
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    color: var(--ink-secondary);
+  }
+
+  .btn-group {
+    display: flex;
+    gap: var(--space-sm);
+  }
+
+  .btn-option {
+    min-width: 44px;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    text-align: center;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  .btn-option:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-muted);
+    color: var(--ink-primary);
+  }
+
+  /* Active option reads as a recessed, illuminated key — green border is the
+     sanctioned "active" use. */
+  .btn-option.active {
+    background-color: var(--chassis-black);
+    border-color: var(--signal-green);
+    color: var(--ink-primary);
+  }
+
+  .btn-option.active:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--signal-green);
+  }
+
+  /* Style/color option faces sit centered; glyphs inherit currentColor so the
+     picker itself stays ink-toned (the paint choice lives on the swatches). */
+  .style-option,
+  .color-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .style-option svg {
+    display: block;
+  }
+
+  .color-swatch {
+    display: block;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--line);
+  }
+
+  /* --- Test area (instrument face) --------------------------------------------- */
+
+  /* Taller than the other tools' 340px face (user decision): an aim arena is
+     the play space itself, so it earns more vertical room. */
+  .test-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 480px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition:
+      background-color var(--duration-base) var(--ease),
+      border-color var(--duration-base) var(--ease),
+      box-shadow var(--duration-base) var(--ease);
+  }
+
+  .test-area:focus-visible {
+    outline: 2px solid var(--signal-green);
+    outline-offset: 3px;
+  }
+
+  .test-area.state-idle {
+    background-color: var(--panel-03);
+    border: 2px solid var(--line);
+  }
+
+  .test-area.state-idle:hover {
+    border-color: var(--ink-secondary);
+  }
+
+  /* Running: green border + glow mark the live state (sanctioned "active"),
+     but the arena floor stays dark so the target paint owns the surface. */
+  .test-area.state-aim-running {
+    background-color: var(--panel-03);
+    border: 2px solid var(--signal-green);
+    box-shadow:
+      0 0 20px rgb(34 197 94 / 20%),
+      0 0 40px rgb(34 197 94 / 20%);
+    cursor: crosshair;
+  }
+
+  .test-area.state-session-complete {
+    background-color: var(--panel-03);
+    border: 2px solid var(--line);
+    cursor: default;
+  }
+
+  /* Session complete: border + glow adopt the achieved rank — the trophy
+     frame, the Rank-Only Colour Rule's licensed surface. */
+  .test-area.state-session-complete.rank-elite {
+    border-color: var(--rank-elite);
+    box-shadow:
+      0 0 20px rgb(168 85 247 / 20%),
+      0 0 40px rgb(168 85 247 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-pro {
+    border-color: var(--rank-pro);
+    box-shadow:
+      0 0 20px rgb(34 197 94 / 20%),
+      0 0 40px rgb(34 197 94 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-advanced {
+    border-color: var(--rank-advanced);
+    box-shadow:
+      0 0 20px rgb(59 130 246 / 20%),
+      0 0 40px rgb(59 130 246 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-intermediate {
+    border-color: var(--rank-intermediate);
+    box-shadow:
+      0 0 20px rgb(245 158 11 / 20%),
+      0 0 40px rgb(245 158 11 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-beginner {
+    border-color: var(--rank-beginner);
+    box-shadow:
+      0 0 20px rgb(144 144 153 / 20%),
+      0 0 40px rgb(144 144 153 / 10%);
+  }
+
+  .test-area-content {
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 var(--space-lg);
+    text-align: center;
+  }
+
+  .test-hint {
+    margin-block-end: var(--space-lg);
+    font-size: var(--text-label-size);
+    font-style: italic;
+    color: var(--ink-muted);
+  }
+
+  .test-status {
+    margin-block-end: var(--space-lg);
+    font-size: var(--text-headline-size);
+    font-weight: var(--text-headline-weight);
+  }
+
+  .test-instruction {
+    margin-block-start: var(--space-lg);
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+  }
+
+  /* --- Targets ------------------------------------------------------------------ */
+  /* Runtime-created (and runtime-painted) nodes, so :global throughout. The
+     element itself is the hitbox: a circle via border-radius, which browsers
+     respect for pointer hit-testing. Every style's SVG is drawn to the full
+     viewBox, so the visible outer edge sits on the hitbox edge. */
+
+  .test-area :global(.aim-target) {
+    z-index: 2;
+    border-radius: var(--radius-full);
+    cursor: crosshair;
+  }
+
+  .test-area :global(.aim-target.spawned) {
+    position: absolute;
+    transform: translate(-50%, -50%);
+  }
+
+  .test-area :global(.aim-target svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* Hit feedback: a ghost of the target pops and fades. Spawned after the
+     timestamp is taken, so it can animate freely. */
+  .test-area :global(.aim-pop) {
+    position: absolute;
+    z-index: 1;
+    border-radius: var(--radius-full);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: aim-pop 0.18s ease-out forwards;
+  }
+
+  @keyframes aim-pop {
+    0% {
+      opacity: 0.9;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(1.6);
+    }
+  }
+
+  /* Miss feedback: a small ring where the click landed, so the user sees the
+     miss registered. Ink-toned — not red (red means error/wait sitewide, and
+     a miss is information, not an alarm). */
+  .test-area :global(.aim-miss) {
+    position: absolute;
+    z-index: 1;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--ink-muted);
+    border-radius: var(--radius-full);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: aim-miss 0.25s ease-out forwards;
+  }
+
+  @keyframes aim-miss {
+    0% {
+      opacity: 0.8;
+      transform: translate(-50%, -50%) scale(0.6);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+  }
+
+  /* --- Live HUD ----------------------------------------------------------------- */
+
+  .aim-hud {
+    position: absolute;
+    top: var(--space-md);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+  }
+
+  .aim-hud strong {
+    font-weight: 700;
+    color: var(--ink-primary);
+  }
+
+  .aim-hud-sep {
+    color: var(--ink-muted);
+  }
+
+  /* --- Results ------------------------------------------------------------------ */
+
+  .test-area-results {
+    z-index: 1;
+    width: 100%;
+    padding: var(--space-lg);
+    text-align: center;
+  }
+
+  .main-result-card {
+    margin-block-end: var(--space-lg);
+    padding: var(--space-xl) var(--space-2xl);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-01);
+  }
+
+  .result-heading {
+    margin-block-end: var(--space-sm);
+    color: var(--ink-secondary);
+  }
+
+  .result-time-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  .result-time-row .rank-badge {
+    align-self: center;
+  }
+
+  .result-time {
+    font-size: var(--text-readout-size);
+    font-weight: var(--text-readout-weight);
+    line-height: var(--text-readout-lh);
+  }
+
+  .rank-badge {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: capitalize;
+  }
+
+  .rank-badge.elite {
+    background-color: rgb(168 85 247 / 20%);
+    border: 1px solid rgb(168 85 247 / 30%);
+    color: var(--rank-elite);
+  }
+
+  .rank-badge.pro {
+    background-color: rgb(34 197 94 / 20%);
+    border: 1px solid rgb(34 197 94 / 30%);
+    color: var(--rank-pro);
+  }
+
+  .rank-badge.advanced {
+    background-color: rgb(59 130 246 / 20%);
+    border: 1px solid rgb(59 130 246 / 30%);
+    color: var(--rank-advanced);
+  }
+
+  .rank-badge.intermediate {
+    background-color: rgb(245 158 11 / 20%);
+    border: 1px solid rgb(245 158 11 / 30%);
+    color: var(--rank-intermediate);
+  }
+
+  .rank-badge.beginner {
+    background-color: rgb(144 144 153 / 20%);
+    border: 1px solid rgb(144 144 153 / 30%);
+    color: var(--rank-beginner);
+  }
+
+  .aim-result-meta {
+    margin-block-start: var(--space-sm);
+    font-size: var(--text-label-size);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-secondary);
+  }
+
+  /* The equation line: how the score was reached, in this run's numbers. */
+  .aim-formula {
+    margin-block-start: var(--space-sm);
+    padding-block-start: var(--space-sm);
+    border-block-start: 1px solid var(--line-subtle);
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+  }
+
+  .aim-formula .readout {
+    font-weight: 600;
+    color: var(--ink-secondary);
+  }
+
+  .aim-best-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-block-start: var(--space-md);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-full);
+    background-color: rgb(34 197 94 / 10%);
+    color: var(--signal-green); /* "your best" — sanctioned */
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    animation: best-pop 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes best-pop {
+    0% {
+      opacity: 0;
+      transform: translateY(6px) scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .result-message {
+    margin-block-end: var(--space-lg);
+    color: var(--ink-secondary);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  /* Try-Again is the white "reset the loop" invert, distinct from the green
+     go-signal (DESIGN.md §5 Buttons). */
+  .btn-try-again {
+    min-width: 160px;
+    background-color: var(--ink-primary);
+    border-color: var(--ink-primary);
+    color: var(--chassis-black);
+  }
+
+  .btn-try-again:hover {
+    background-color: var(--ink-secondary);
+    border-color: var(--ink-secondary);
+  }
+
+  /* --- Run progress bar ---------------------------------------------------------- */
+
+  .aim-progress-track {
+    width: 100%;
+    height: 6px;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-full);
+    background-color: var(--panel-03);
+    overflow: hidden;
+  }
+
+  .aim-progress-fill {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background-color: var(--signal-green);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--duration-fast) var(--ease);
+    will-change: transform;
+  }
+
+  /* --- Responsive --------------------------------------------------------------------- */
+
+  @media (max-width: 992px) {
+    /* Settings drop below the test area so the surface leads on smaller
+       screens, matching the other tools. */
+    .settings-panel {
+      order: 3;
+      padding-block: var(--space-lg) 0;
+      border-block-end: none;
+      border-block-start: 1px solid var(--line-subtle);
+      flex-wrap: wrap;
+      gap: var(--space-md) var(--space-xl);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero-title {
+      font-size: 2rem;
+    }
+
+    .hero-subtitle {
+      font-size: var(--text-body-size);
+    }
+
+    .test-card {
+      padding: var(--space-md);
+    }
+
+    .test-area {
+      min-height: 400px;
+    }
+
+    .settings-panel {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-md);
+    }
+
+    .btn-group {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .btn-option {
+      flex: 1;
+      min-height: 44px;
+      padding: var(--space-sm);
+    }
+
+    .main-result-card {
+      padding: var(--space-lg);
+    }
+
+    .result-time {
+      font-size: 3rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .aim-best-flag {
+      animation: none;
+    }
+
+    .test-area :global(.aim-pop),
+    .test-area :global(.aim-miss) {
+      display: none;
+    }
+  }
+</style>

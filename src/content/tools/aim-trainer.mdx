@@ -1,0 +1,426 @@
+---
+faq:
+  - question: 'What is a good aim trainer score?'
+    answer: 'On this aim trainer, most people score between 100 and 160 on their first few runs, which lands in the Intermediate tier. A score above 160 is above average, 220+ is fast, precise aiming, and 300+ takes the kind of flick speed and accuracy you see from experienced FPS players. Your score improves fast in the first week of practice.'
+  - question: 'How is the aim score calculated?'
+    answer: 'Score = targets per second × accuracy × 100. Hit 30 targets in 15 seconds at 90% accuracy and you get 2.0 targets per second × 0.90 × 100 = 180. Speed and precision both count: misses drag the accuracy term down, and slow, careful aiming drags the speed term down. The best scores come from clean, fast flicks.'
+  - question: 'Why is there only one mode?'
+    answer: 'One mode means one benchmark. Aim trainers with flick, grid, and spider modes produce scores you cannot compare, and a rank in one mode says nothing about another. This test uses a single standardized format (30 targets, one at a time, fixed sizing and spawn distances) so your score means the same thing every run and your rank tracks one number.'
+  - question: 'Does mouse sensitivity affect my aim score?'
+    answer: 'Yes, a lot. A sensitivity that is too high causes overshooting and misses; too low slows your flicks. Most FPS players aim best somewhere in the range of 25 to 50 cm of mousepad travel per full 360° turn in-game, which maps to a moderate desktop sensitivity. If you overshoot targets here, lower your sensitivity or your DPI and give yourself a few runs to adjust.'
+  - question: 'Can I use the aim trainer on mobile?'
+    answer: 'Yes. Tapping targets works the same way as clicking them. Keep in mind that tapping a touchscreen and aiming a mouse use different skills, so compare touch scores with touch scores and mouse scores with mouse scores. Your history is stored per browser, so a phone and a desktop keep separate records anyway.'
+  - question: 'Do the target style and color change the difficulty?'
+    answer: 'No. Style and color are cosmetic. Every style (bullseye, dot, ring, reticle) is drawn to the same outer diameter, and the clickable hitbox is identical for all of them. Pick whatever you find easiest to see; your scores stay comparable across all of the options.'
+  - question: 'Are aim trainer scores comparable between devices?'
+    answer: 'Within one device and browser, yes: the arena layout, target sizing, and spawn distances are fixed, so every run measures the same task. Between devices, treat comparisons as rough. Screen size, mouse DPI, and display refresh rate all shift results, which is true of every aim trainer. Your personal best and trend are tracked per browser, so your progress always compares like with like.'
+  - question: 'How is my data stored?'
+    answer: 'Your browser stores everything (best score, run history, trend, achieved ranks, and settings) locally using localStorage. Nothing reaches any server, so your results stay private on your device.'
+---
+
+<section id="what-is" class="info-section">
+  <div class="container">
+    <h2>What is an aim trainer?</h2>
+
+      An aim trainer is a tool for practicing and measuring mouse aim: how fast and how precisely
+      you can move your cursor to a target and click it. This one gives you 30 targets, one at a
+      time. Hit them all as fast as you can, and your hits, misses, and time become one aim score.
+
+      Aim is the core mechanical skill in shooters, and it responds well to focused practice. A few
+      short runs a day sharpen your flicks faster than hours of matches, because you spend every
+      second of a run aiming.
+
+      Aim combines two things this site measures separately: how fast you react and how fast you
+      click. Test the first with the <a href="/">reaction time test</a> and the second with the{' '}
+      <a href="/cps">clicks per second test</a>.
+
+  </div>
+</section>
+
+<section id="one-score" class="info-section alt-bg">
+  <div class="container">
+    <h2>One mode, one score</h2>
+
+      Most aim trainers offer a menu of modes: flick shots, grid shot, spider shot, tracking. Each
+      mode produces its own score on its own scale, so none of them tells you how good your aim is
+      overall.
+
+      This test takes the opposite approach. One standardized format, fixed for every run: 30
+      targets, one on screen at a time, consistent target sizing, and spawn distances held within a
+      set band so every run demands about the same amount of cursor travel. Because the task never
+      changes, your score means the same thing tomorrow, and your trend graph tracks real
+      improvement.
+
+      The whole formula fits in one line:
+
+    <div class="note">
+      <strong>Score = targets per second × accuracy × 100.</strong> Hit 30 targets in 15 seconds at
+      90% accuracy: 2.0 × 0.90 × 100 = 180. Spraying clicks costs you accuracy, and slow,
+      cautious aim costs you speed. Clean, fast flicks win.
+    </div>
+
+  </div>
+</section>
+
+<section id="how-it-works" class="info-section">
+  <div class="container">
+    <h2>How this aim trainer works</h2>
+    <ol class="steps-list section-content">
+      <li>
+        <strong>Pick your target</strong>
+
+          Choose a target style (bullseye, dot, ring, or reticle) and a color. Both are cosmetic:
+          every style has the same hitbox, so pick what your eyes track best. Your browser
+          remembers the choice.
+
+      </li>
+      <li>
+        <strong>Hit the starting target</strong>
+
+          Click the center target to begin. The clock starts on that click, so every run measures
+          your first flick from the same known cursor position.
+
+      </li>
+      <li>
+        <strong>Hit 30 targets</strong>
+
+          Targets appear one at a time at a controlled distance from the last one. Click each as
+          fast as you can. Clicks that land inside the arena but off the target count as misses.
+
+      </li>
+      <li>
+        <strong>Read your score</strong>
+
+          After the 30th hit, the test locks and shows your aim score, accuracy, average time per
+          target, and a rank from Beginner to Elite. Beat your best to see the "New best!" flag.
+
+      </li>
+      <li>
+        <strong>Run it again</strong>
+
+          Your best score, average, trend graph, achieved ranks, and run history are saved locally
+          so you can watch your aim sharpen over days and weeks.
+
+      </li>
+    </ol>
+    <div class="note">
+      <strong>Note:</strong> The keyboard can start and step through a run as an accessibility
+      path, but only a pointer measures aim. Compare mouse scores with mouse scores and touch with
+      touch.
+    </div>
+
+  </div>
+</section>
+
+<section id="good-score" class="info-section alt-bg">
+  <div class="container">
+    <h2>What is a good aim score?</h2>
+
+      A good score on this aim trainer is anything above 160. Most people land between 100 and 160
+      on their first runs, which works out to roughly 600 to 700 milliseconds per target at 85%
+      accuracy. Scores fall into five tiers:
+
+    <div class="rank-table">
+      <div class="rank-row elite">
+        <span class="rank-name">Elite</span>
+        <span class="rank-range">300+</span>
+        <span class="rank-desc">Exceptional. Sub-350ms flicks with near-perfect accuracy.</span>
+      </div>
+      <div class="rank-row pro">
+        <span class="rank-name">Pro</span>
+        <span class="rank-range">220–299</span>
+        <span class="rank-desc">Fast, precise aim. Experienced FPS-player territory.</span>
+      </div>
+      <div class="rank-row advanced">
+        <span class="rank-name">Advanced</span>
+        <span class="rank-range">160–219</span>
+        <span class="rank-desc">Above average. Quick flicks with few misses.</span>
+      </div>
+      <div class="rank-row intermediate">
+        <span class="rank-name">Intermediate</span>
+        <span class="rank-range">100–159</span>
+        <span class="rank-desc">The typical range for most people.</span>
+      </div>
+      <div class="rank-row beginner">
+        <span class="rank-name">Beginner</span>
+        <span class="rank-range">Under 100</span>
+        <span class="rank-desc">Room to grow. Sensitivity tuning helps a lot here.</span>
+      </div>
+    </div>
+
+      For a feel of the math: 500ms per target at 92% accuracy scores 184 (Advanced), 400ms at 95%
+      scores 226 (Pro), and cracking 300 takes roughly 320ms per target at 97%. Speed without
+      accuracy stalls out fast; a 10% miss rate costs more than it saves.
+
+      This test isn't a scientific measurement, but the format never changes, which makes it a
+      reliable benchmark for your aim and a way to track improvement.
+
+  </div>
+</section>
+
+<section id="tracking" class="info-section">
+  <div class="container">
+    <h2>Track your aim progress</h2>
+
+      ReflexLab tracks your best score, run history, trend graph, and rank badges. Your browser
+      stores all of it; we never see your results.
+
+    <div class="tips-grid grid-2x2 section-content">
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🏆
+        </span>
+        <h3>Best Score</h3>
+
+          ReflexLab saves your highest aim score and shows it beside every new result. Beat it and
+          the number updates on the spot.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          📈
+        </span>
+        <h3>Trend Graph</h3>
+
+          View a graph of your aim score across your last 20 runs. See at a glance whether your
+          practice is paying off.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          📋
+        </span>
+        <h3>Run History</h3>
+
+          A log of recent runs shows your score, the rank you hit, and when each run happened, so
+          you can review your sessions.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🎯
+        </span>
+        <h3>Ranks Achieved</h3>
+
+          Track which tiers you've reached. Once you hit a rank it stays checked off until you
+          reset. Aim to unlock all five.
+
+      </div>
+    </div>
+    <div class="note">
+      <strong>Privacy note:</strong> All your data is stored locally in your browser using
+      localStorage. We don't collect, transmit, or store your results. Use the Reset button in the
+      toolbar to clear everything.
+    </div>
+
+  </div>
+</section>
+
+<section id="tips" class="info-section alt-bg">
+  <div class="container">
+    <h2>How to improve your aim</h2>
+    <div class="tips-grid section-content">
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🖱️
+        </span>
+        <h3>Tune your sensitivity</h3>
+
+          Overshooting targets means your sensitivity is too high; dragging to reach them means
+          too low. Adjust in small steps and give each setting a few runs before judging it.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          💪
+        </span>
+        <h3>Aim with your arm</h3>
+
+          Use your arm for the big movement and your wrist and fingers for the final correction.
+          Wrist-only aiming caps your range and tires faster.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🔥
+        </span>
+        <h3>Warm up first</h3>
+
+          Do two or three throwaway runs before your real attempt. Cold hands flick slow, and a
+          short warm-up lifts both your speed and your accuracy.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🧘
+        </span>
+        <h3>Stay relaxed</h3>
+
+          A death grip on the mouse ruins fine control. Loosen your grip, drop your shoulder, and
+          let the flick stop itself instead of forcing it.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🎯
+        </span>
+        <h3>Accuracy before speed</h3>
+
+          Misses cost more than slow hits. Aim to hit every target at a comfortable pace first,
+          then push the pace while holding your accuracy above 90%.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          📅
+        </span>
+        <h3>Practice in short sessions</h3>
+
+          Ten focused minutes a day beats an hour once a week. Aim is a motor skill; your gains
+          come from frequent, rested repetitions, and they compound over weeks.
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section id="factors" class="info-section">
+  <div class="container">
+    <h2>Factors that affect your aim score</h2>
+    <div class="factors-list section-content">
+      <div class="factor">
+        <h3>Mouse sensitivity & DPI</h3>
+
+          The single biggest factor you control. High sensitivity produces fast, wild flicks;
+          low sensitivity produces slow, exact ones. Your best score sits at the setting where you
+          can stop on the target in one motion.
+
+      </div>
+      <div class="factor">
+        <h3>Hardware</h3>
+
+          A mouse with a good sensor and high polling rate tracks fast flicks without skipping. A
+          high-refresh monitor shows the target sooner and your cursor position more often, which
+          tightens your corrections.
+
+      </div>
+      <div class="factor">
+        <h3>Screen and arena size</h3>
+
+          Target sizes and spawn distances scale with the arena, so runs on the same screen are
+          comparable. A larger screen means more physical mouse travel per target, which is why
+          cross-device comparisons are rough for every aim trainer.
+
+      </div>
+      <div class="factor">
+        <h3>Technique</h3>
+
+          Flicking (one fast motion plus a micro-correction) beats dragging the cursor. Good
+          aimers also reset their eyes to the next likely spawn area instead of admiring the hit.
+
+      </div>
+      <div class="factor">
+        <h3>Fatigue & focus</h3>
+
+          Aim degrades before you notice it. Tired eyes track worse and tired forearms overshoot.
+          If your trend graph dips at the end of a session, that's your signal to stop.
+
+      </div>
+      <div class="factor">
+        <h3>Input device</h3>
+
+          Mouse, touchpad, and touchscreen are different skills with different ceilings. Pick one
+          and track it; switching devices mid-week makes your trend graph lie to you.
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section id="faq" class="info-section alt-bg">
+  <div class="container">
+    <h2>Aim trainer FAQ</h2>
+    <div class="faq-list section-content">
+      <details class="faq-item">
+        <summary>What is a good aim trainer score?</summary>
+
+          Most people score between 100 and 160 on their first few runs, which lands in
+          Intermediate. Above 160 is above average, 220+ is fast and precise, and 300+ takes the
+          flick speed and accuracy of an experienced FPS player. Expect fast improvement in your
+          first week.
+
+      </details>
+      <details class="faq-item">
+        <summary>How is the aim score calculated?</summary>
+
+          Score = targets per second × accuracy × 100. Hit 30 targets in 15 seconds at 90%
+          accuracy and you get 2.0 × 0.90 × 100 = 180. Misses drag the accuracy term down, and
+          slow, careful aiming drags the speed term down. The best scores come from clean, fast
+          flicks.
+
+      </details>
+      <details class="faq-item">
+        <summary>Why is there only one mode?</summary>
+
+          One mode means one benchmark. Multi-mode trainers produce scores you can't compare
+          across modes. This test fixes the format (30 targets, one at a time, fixed sizing and
+          spawn distances) so your score means the same thing every run and your rank tracks one
+          number.
+
+      </details>
+      <details class="faq-item">
+        <summary>Does mouse sensitivity affect my aim score?</summary>
+
+          Yes, a lot. Too high causes overshooting; too low slows your flicks. If you overshoot
+          targets here, lower your sensitivity or DPI and give yourself a few runs to adjust
+          before judging the change.
+
+      </details>
+      <details class="faq-item">
+        <summary>Can I use the aim trainer on mobile?</summary>
+
+          Yes, tapping targets works the same as clicking. Tapping a touchscreen and aiming a
+          mouse are different skills though, so compare touch scores with touch scores. Your
+          history is stored per browser, so separate devices keep separate records anyway.
+
+      </details>
+      <details class="faq-item">
+        <summary>Do the target style and color change the difficulty?</summary>
+
+          No. Every style (bullseye, dot, ring, reticle) is drawn to the same outer diameter and
+          shares an identical clickable hitbox. Color is paint. Pick whatever you see best; scores
+          stay comparable across all the options.
+
+      </details>
+      <details class="faq-item">
+        <summary>Are scores comparable between devices?</summary>
+
+          On the same device and browser, yes. Between devices, treat comparisons as rough: screen
+          size, mouse DPI, and refresh rate all shift results, on every aim trainer. Your best and
+          trend are per browser, so your own progress always compares like with like.
+
+      </details>
+      <details class="faq-item">
+        <summary>How is my data stored?</summary>
+
+          Your browser stores everything (best score, run history, trend, achieved ranks, and
+          settings) locally using localStorage. Nothing reaches any server, so your results stay
+          private on your device.
+
+      </details>
+    </div>
+
+  </div>
+</section>
+
+<section class="disclaimer-section">
+  <div class="container">
+    <div class="disclaimer">
+      <strong>Disclaimer:</strong> This aim trainer is for entertainment and personal tracking.
+      Results are affected by your mouse, screen, browser performance, and technique. Take breaks
+      during long practice sessions; if your hand or wrist hurts, stop and rest.
+    </div>
+  </div>
+</section>

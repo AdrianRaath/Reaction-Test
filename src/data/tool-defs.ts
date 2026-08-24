@@ -172,6 +172,58 @@ export const visualMemoryTool = defineTool({
 });
 
 /**
+ * Aim trainer. Higher is better.
+ *
+ * One standardized mode (user decision — no flick/grid/spider variants): 30
+ * one-at-a-time targets, and a single composite score so the site has one aim
+ * benchmark instead of per-mode scores.
+ *
+ *   score = 100 × (targets per second) × (accuracy fraction)
+ *
+ * The linear accuracy term is what makes the number honest: spam-clicking
+ * gains a little speed but pays for every miss, and slow perfect aim craters
+ * the rate term. Secondary metrics are context only.
+ *
+ * Thresholds are provisional pending playtesting. They assume ~600–700 ms per
+ * flick at ~85% accuracy for a first-timer (≈120), landing most new players
+ * in Intermediate — the same shape as the CPS table.
+ */
+export const aimTrainerTool = defineTool({
+  id: 'aim-trainer',
+  metrics: {
+    score: {
+      label: 'Aim score',
+      direction: 'higher-is-better',
+      format: (v) => String(Math.round(v)),
+      primary: true,
+    },
+    accuracy: {
+      label: 'Accuracy',
+      direction: 'higher-is-better',
+      unit: '%',
+      format: (v) => v.toFixed(1),
+    },
+    avgMs: {
+      label: 'Avg time per target',
+      direction: 'lower-is-better',
+      unit: 'ms',
+    },
+    misses: {
+      label: 'Misses',
+      direction: 'lower-is-better',
+    },
+  },
+  ranks: [
+    { id: 'elite', name: 'Elite', threshold: 300, rangeLabel: '300+' },
+    { id: 'pro', name: 'Pro', threshold: 220, rangeLabel: '220–299' },
+    { id: 'advanced', name: 'Advanced', threshold: 160, rangeLabel: '160–219' },
+    { id: 'intermediate', name: 'Intermediate', threshold: 100, rangeLabel: '100–159' },
+    { id: 'beginner', name: 'Beginner', threshold: 0, rangeLabel: 'Under 100' },
+  ],
+  maxHistory: 20,
+});
+
+/**
  * Spacebar speed. Higher is better.
  *
  * The one click-family tool that does NOT share the CPS rank table (user
