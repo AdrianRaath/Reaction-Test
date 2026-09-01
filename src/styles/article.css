@@ -403,6 +403,141 @@
   transform: translateY(0);
 }
 
+/* --- Markdown-authored bodies -------------------------------------------------------
+   The revamped guides author sections as markdown headings (so the TOC rail
+   can extract them) instead of the legacy <section class="article-section">
+   wrappers. These rules give bare h2/h3/ul the same treatment. */
+
+.article-content > h2 {
+  margin-block: var(--space-2xl) var(--space-lg);
+  font-size: var(--text-headline-size);
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.article-content > h3 {
+  margin-block: var(--space-xl) var(--space-sm);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+/* Anchor targets land below the sticky top bar. */
+.article-content h2,
+.article-content h3 {
+  scroll-margin-block-start: calc(var(--topbar-height) + var(--space-lg));
+}
+
+.article-content ul:not([class]) {
+  margin-block-end: var(--space-lg);
+  padding-inline-start: 0;
+  list-style: none;
+}
+
+.article-content ul:not([class]) li {
+  position: relative;
+  padding-inline-start: var(--space-xl);
+  margin-block-end: var(--space-sm);
+  color: var(--ink-secondary);
+}
+
+.article-content ul:not([class]) li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0.6em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--signal-green);
+}
+
+/* --- Header meta (updated date) --------------------------------------------------- */
+
+.article-meta {
+  margin-block-start: var(--space-md);
+  font-size: var(--text-label-size);
+  color: var(--ink-muted);
+}
+
+/* --- Citations & sources ------------------------------------------------------------
+   Numbered footnote style: superscripts in the prose link to the Sources
+   list at the end of the article. */
+
+sup.cite {
+  line-height: 0;
+  font-size: 0.75em;
+}
+
+/* Scoped under .article-content to outrank the article link underline. */
+.article-content sup.cite a {
+  padding-inline: 1px;
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+
+.article-content sup.cite a:hover {
+  color: var(--ink-primary);
+}
+
+.article-content ol.sources-list {
+  margin-block-end: var(--space-lg);
+  padding-inline-start: 1.25rem;
+  font-size: var(--text-label-size);
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+
+.article-content ol.sources-list li {
+  margin-block-end: var(--space-sm);
+  scroll-margin-block-start: calc(var(--topbar-height) + var(--space-lg));
+}
+
+.article-content ol.sources-list a {
+  color: var(--ink-secondary);
+}
+
+/* MDX wraps li content in <p>; keep entries compact and in the list's ink. */
+.article-content ol.sources-list li p {
+  margin-block-end: 0;
+  color: inherit;
+}
+
+/* --- Guide figures ------------------------------------------------------------------
+   Shared chassis for the static chart components in src/components/guides/.
+   Plot-specific styles stay scoped in each component. */
+
+.guide-figure {
+  margin-block: var(--space-xl);
+  padding: var(--space-lg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background-color: var(--panel-02);
+}
+
+.guide-figure-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.guide-figure .guide-figure-title {
+  font-size: var(--text-title-size);
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.guide-figure .guide-figure-sub {
+  font-size: var(--text-label-size);
+  color: var(--ink-muted);
+}
+
+.guide-figure .guide-figure-source {
+  margin-block: var(--space-md) 0;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
 /* --- Responsive --------------------------------------------------------------------- */
 
 @media (max-width: 768px) {

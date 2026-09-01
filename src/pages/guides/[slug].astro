@@ -1,5 +1,6 @@
 ---
 import { getCollection, render } from 'astro:content';
+import TocSidebar from '../../components/guides/TocSidebar.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import '../../styles/article.css';
 
@@ -12,33 +13,86 @@ export async function getStaticPaths() {
 }
 
 const { guide } = Astro.props;
-const { Content } = await render(guide);
+const { Content, headings } = await render(guide);
+
+const site = Astro.site ?? new URL('https://reflexlab.co');
+const path = `/guides/${guide.id}`;
+const canonical = new URL(path, site).href;
+
+const updated = new Date(guide.data.dateModified).toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+
+// Article JSON-LD. Attribution is publisher-level (the site), deliberately —
+// no personal byline anywhere on ReflexLab.
+const articleLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: guide.data.title,
+  description: guide.data.description,
+  mainEntityOfPage: { '@type': 'WebPage', '@id': canonical },
+  datePublished: guide.data.datePublished,
+  dateModified: guide.data.dateModified,
+  author: { '@type': 'Organization', name: 'ReflexLab', url: site.href },
+  publisher: {
+    '@type': 'Organization',
+    name: 'ReflexLab',
+    url: site.href,
+    logo: { '@type': 'ImageObject', url: new URL('/assets/reflex-favicon.png', site).href },
+  },
+  image: new URL('/assets/reflex-og.png', site).href,
+};
+
+// FAQPage JSON-LD, from frontmatter — same pattern as the tools collection.
+const faqLd = guide.data.faq && {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: guide.data.faq.map((f) => ({
+    '@type': 'Question',
+    name: f.question,
+    acceptedAnswer: { '@type': 'Answer', text: f.answer },
+  })),
+};
 ---
 
 <BaseLayout
   title={guide.data.pageTitle}
   description={guide.data.description}
-  path={`/guides/${guide.id}`}
+  path={path}
   ogType="article"
   topbarLabel="Guides"
 >
-  <article class="article-container">
-    <header class="article-header">
-      <nav class="breadcrumbs" aria-label="Breadcrumb">
-        <a href="/">Home</a>
-        <span class="breadcrumbs-separator">/</span>
-        <a href="/guides">Guides</a>
-        <span class="breadcrumbs-separator">/</span>
-        <span class="breadcrumbs-current">{guide.data.title}</span>
-      </nav>
-      <h1 class="article-title">{guide.data.title}</h1>
-      <p class="article-subtitle">{guide.data.subtitle}</p>
-    </header>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(articleLd)} />
+    {faqLd && <script is:inline type="application/ld+json" set:html={JSON.stringify(faqLd)} />}
+  </Fragment>
 
-    <div class="article-content">
-      <Content />
-    </div>
-  </article>
+  <div class="guide-layout">
+    <article class="article-container">
+      <header class="article-header">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <a href="/">Home</a>
+          <span class="breadcrumbs-separator">/</span>
+          <a href="/guides">Guides</a>
+          <span class="breadcrumbs-separator">/</span>
+          <span class="breadcrumbs-current">{guide.data.title}</span>
+        </nav>
+        <h1 class="article-title">{guide.data.title}</h1>
+        <p class="article-subtitle">{guide.data.subtitle}</p>
+        <p class="article-meta">
+          Updated <time datetime={guide.data.dateModified}>{updated}</time>
+        </p>
+      </header>
+
+      <div class="article-content">
+        <Content />
+      </div>
+    </article>
+
+    <TocSidebar headings={headings} />
+  </div>
 
   <section class="disclaimer-section">
     <div class="container">
@@ -52,6 +106,22 @@ const { Content } = await render(guide);
 </BaseLayout>
 
 <style>
+  /* Single column by default; on wide viewports the TOC rail joins the grid.
+     The rail is part of the main column's layout — the shell's reserved
+     right rail (ads, §4.2) stays untouched. */
+  .guide-layout {
+    display: block;
+  }
+
+  @media (min-width: 1100px) {
+    .guide-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 720px) 200px;
+      justify-content: center;
+      column-gap: var(--space-2xl);
+    }
+  }
+
   .disclaimer-section {
     padding: var(--space-xl) 0 0;
     border-block-start: 1px solid var(--line-subtle);

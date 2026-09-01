@@ -1,0 +1,116 @@
+---
+/**
+ * Sustained wakefulness read as blood-alcohol equivalence, after Dawson &
+ * Reid (1997). Three documented anchor points, drawn as bars.
+ *
+ * Deliberately neutral: no signal or rank colour. The numbers carry the
+ * weight (Monospace-Numerals Rule applies — the values are measurements).
+ * Static HTML/CSS — guides ship zero JS.
+ */
+const MAX_PCT = 0.1;
+
+const rows = [
+  { hours: '17 h awake', pct: 0.05, note: 'the legal driving limit in much of Europe' },
+  { hours: '22 h awake', pct: 0.08, note: 'the legal driving limit in most US states' },
+  { hours: '24 h awake', pct: 0.1, note: 'over the limit in every US state' },
+];
+
+const width = (pct: number) => ((pct / MAX_PCT) * 100).toFixed(0);
+const label = (pct: number) => pct.toFixed(2) + '%';
+---
+
+<figure
+  class="guide-figure"
+  aria-label="Performance impairment from staying awake, expressed as blood alcohol equivalence. 17 hours awake matches 0.05 percent, the legal driving limit in much of Europe. 22 hours matches 0.08 percent, the legal driving limit in most US states. 24 hours matches 0.10 percent, over the limit in every US state."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title">Hours awake, read as blood alcohol</span>
+    <span class="guide-figure-sub">Measured impairment equivalence in adults kept awake</span>
+  </figcaption>
+
+  <div class="si-rows" aria-hidden="true">
+    {
+      rows.map((r) => (
+        <div class="si-row">
+          <span class="si-hours">{r.hours}</span>
+          <div class="si-track">
+            <div class="si-bar" style={`width: ${width(r.pct)}%`} />
+            <span class="si-value">{label(r.pct)} BAC</span>
+          </div>
+          <span class="si-note">{r.note}</span>
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="guide-figure-source">
+    Source: Dawson &amp; Reid (1997), <em>Nature</em>.
+  </p>
+</figure>
+
+<style>
+  .si-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    margin-block-start: var(--space-lg);
+  }
+
+  .si-row {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    column-gap: var(--space-md);
+    row-gap: 2px;
+    align-items: center;
+  }
+
+  .si-hours {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  .si-track {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    /* Leave room for the value label at full bar width. */
+    padding-inline-end: 84px;
+  }
+
+  .si-bar {
+    height: 14px;
+    border-radius: 0 4px 4px 0;
+    background-color: var(--ink-secondary);
+  }
+
+  .si-value {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  .si-note {
+    grid-column: 2;
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  @media (max-width: 560px) {
+    .si-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .si-note {
+      grid-column: 1;
+    }
+
+    .si-track {
+      padding-inline-end: 76px;
+    }
+  }
+</style>

@@ -1,0 +1,229 @@
+---
+/**
+ * Reaction-time benchmark bands — the site's rank tiers drawn as a scale,
+ * with markers for the lab-measured average and the typical online median.
+ *
+ * Rank hues are licensed here: the figure charts the rank bands themselves,
+ * the same telemetry the rank badge carries (DESIGN.md, Rank-Only Colour
+ * Rule). Every band is also labeled by name and range, so identity never
+ * rides on colour alone.
+ *
+ * Static HTML/CSS — guides ship zero JS. Thresholds mirror
+ * `src/data/tool-defs.ts`; if the rank table ever moves, move this with it.
+ */
+const AXIS_MIN = 100;
+const AXIS_MAX = 450;
+const SPAN = AXIS_MAX - AXIS_MIN;
+
+const bands = [
+  { name: 'Elite', from: 100, to: 150, range: 'under 150', color: 'var(--rank-elite)' },
+  { name: 'Pro', from: 150, to: 200, range: '150–199', color: 'var(--rank-pro)' },
+  { name: 'Advanced', from: 200, to: 250, range: '200–249', color: 'var(--rank-advanced)' },
+  { name: 'Intermediate', from: 250, to: 350, range: '250–349', color: 'var(--rank-intermediate)' },
+  { name: 'Beginner', from: 350, to: 450, range: '350+', color: 'var(--rank-beginner)' },
+];
+
+const markers = [
+  { at: 218, label: 'lab average', value: '≈218 ms', row: 'high' },
+  { at: 273, label: 'typical online median', value: '≈273 ms', row: 'low' },
+];
+
+const pct = (ms: number) => (((ms - AXIS_MIN) / SPAN) * 100).toFixed(1);
+---
+
+<figure
+  class="guide-figure"
+  aria-label="Reaction time rank bands in milliseconds. Elite: under 150. Pro: 150 to 199. Advanced: 200 to 249. Intermediate: 250 to 349. Beginner: 350 and above. The lab-measured average for young adults is about 218 milliseconds; the typical online test median is about 273 milliseconds."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title">Where scores land</span>
+    <span class="guide-figure-sub">ReflexLab rank bands for a session average, in milliseconds</span
+    >
+  </figcaption>
+
+  <div class="bb-plot">
+    <div class="bb-annotations" aria-hidden="true">
+      {
+        markers.map((m) => (
+          <div class={`bb-marker bb-marker--${m.row}`} style={`inset-inline-start: ${pct(m.at)}%`}>
+            <span class="bb-marker-label">
+              {m.label} <span class="bb-marker-value">{m.value}</span>
+            </span>
+            <span class="bb-marker-line" />
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="bb-scale" aria-hidden="true">
+      {
+        bands.map((b) => (
+          <div class="bb-band" style={`flex-grow: ${b.to - b.from}; --band: ${b.color}`} />
+        ))
+      }
+    </div>
+
+    <div class="bb-labels" aria-hidden="true">
+      {
+        bands.map((b) => (
+          <div class="bb-label" style={`flex-grow: ${b.to - b.from}; --band: ${b.color}`}>
+            <span class="bb-label-name">{b.name}</span>
+            <span class="bb-label-range">{b.range}</span>
+          </div>
+        ))
+      }
+    </div>
+
+    <ul class="bb-legend" aria-hidden="true">
+      {
+        bands.map((b) => (
+          <li style={`--band: ${b.color}`}>
+            <span class="bb-legend-swatch" />
+            <span class="bb-legend-name">{b.name}</span>
+            <span class="bb-legend-range">{b.range} ms</span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+
+  <p class="guide-figure-source">
+    Lab average: Woods et al. (2015), young adults on optimized equipment. Online median: large
+    public web datasets, which include device delay.
+  </p>
+</figure>
+
+<style>
+  .bb-plot {
+    margin-block-start: var(--space-lg);
+  }
+
+  /* --- Markers ----------------------------------------------------------- */
+
+  .bb-annotations {
+    position: relative;
+    height: 64px;
+  }
+
+  .bb-marker {
+    position: absolute;
+    inset-block-end: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translateX(-50%);
+  }
+
+  .bb-marker-label {
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: var(--ink-secondary);
+  }
+
+  .bb-marker-value {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  .bb-marker-line {
+    width: 1px;
+    background-color: var(--line);
+    margin-block-start: 4px;
+  }
+
+  .bb-marker--high .bb-marker-line {
+    height: 40px;
+  }
+
+  .bb-marker--low .bb-marker-line {
+    height: 16px;
+  }
+
+  /* --- Bands ------------------------------------------------------------- */
+
+  .bb-scale {
+    display: flex;
+    gap: 2px;
+  }
+
+  .bb-band {
+    flex-basis: 0;
+    height: 18px;
+    border-radius: 4px;
+    background-color: color-mix(in srgb, var(--band) 22%, transparent);
+  }
+
+  .bb-labels {
+    display: flex;
+    gap: 2px;
+    margin-block-start: var(--space-sm);
+  }
+
+  .bb-label {
+    flex-basis: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .bb-label-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--band);
+  }
+
+  .bb-label-range {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--ink-muted);
+  }
+
+  /* --- Mobile legend fallback -------------------------------------------- */
+
+  .bb-legend {
+    display: none;
+  }
+
+  @media (max-width: 560px) {
+    .bb-labels {
+      display: none;
+    }
+
+    .bb-legend {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+      margin: var(--space-md) 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .bb-legend li {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .bb-legend-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      background-color: color-mix(in srgb, var(--band) 60%, transparent);
+    }
+
+    .bb-legend-name {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--band);
+    }
+
+    .bb-legend-range {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--ink-muted);
+    }
+  }
+</style>

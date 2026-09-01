@@ -1,0 +1,85 @@
+---
+/**
+ * "On this page" rail for long-form guides. Renders only when a guide has
+ * enough sections to be worth navigating, and only on wide viewports — on
+ * mobile the article simply scrolls.
+ *
+ * Headings come from `render()`'s markdown extraction, so only
+ * markdown-authored `##` sections appear here. Static, no scrollspy: guides
+ * ship zero JS.
+ */
+interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+}
+
+const { headings } = Astro.props;
+const items = headings.filter((h) => h.depth === 2);
+---
+
+{
+  items.length >= 3 && (
+    <aside class="toc-rail">
+      <nav aria-label="On this page">
+        <p class="toc-title">On this page</p>
+        <ul>
+          {items.map((h) => (
+            <li>
+              <a href={`#${h.slug}`}>{h.text}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </aside>
+  )
+}
+
+<style>
+  .toc-rail {
+    display: none;
+  }
+
+  @media (min-width: 1100px) {
+    .toc-rail {
+      display: block;
+    }
+
+    nav {
+      position: sticky;
+      inset-block-start: calc(var(--topbar-height) + var(--space-xl));
+      padding-block: var(--space-2xl);
+    }
+
+    .toc-title {
+      margin-block-end: var(--space-md);
+      font-size: 0.6875rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+
+    ul {
+      margin: 0;
+      padding-inline-start: var(--space-md);
+      border-inline-start: 1px solid var(--line-subtle);
+      list-style: none;
+    }
+
+    li {
+      margin-block-end: var(--space-sm);
+    }
+
+    a {
+      display: block;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      color: var(--ink-muted);
+      text-decoration: none;
+      transition: color var(--duration-fast) var(--ease);
+    }
+
+    a:hover {
+      color: var(--ink-primary);
+    }
+  }
+</style>

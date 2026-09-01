@@ -28,6 +28,14 @@ const guides = defineCollection({
     snippet: z.string(),
     /** Position on the guides index. */
     order: z.number(),
+    /** ISO dates for the Article JSON-LD and the visible "Updated" line.
+     *  dateModified moves only when the content changes, not on re-deploys. */
+    datePublished: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    dateModified: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    /** Source for FAQPage JSON-LD, same pattern as the tools collection.
+     *  The visible FAQ lives in the body; keep the two worded identically
+     *  for guides. Optional — a guide with no FAQ simply emits no schema. */
+    faq: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
   }),
 });
 

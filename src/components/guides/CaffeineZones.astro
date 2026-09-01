@@ -1,0 +1,186 @@
+---
+/**
+ * The caffeine dose window for reaction-time benefit. The effective range is
+ * from the McLellan et al. (2016) review; the two dose markers are from the
+ * Rogers et al. (2024) esports trial, where both doses improved aim and
+ * reaction time and neither beat the other.
+ *
+ * Neutral fills only — no signal colour. Static HTML/CSS, zero JS.
+ */
+const AXIS_MAX = 400;
+
+const zones = [
+  { from: 0, to: 40, kind: 'outside', label: '' },
+  { from: 40, to: 300, kind: 'window', label: 'improves reaction time' },
+  { from: 300, to: 400, kind: 'outside', label: '' },
+];
+
+const markers = [
+  { at: 83, label: '1 mg/kg', value: '≈83 mg' },
+  { at: 250, label: '3 mg/kg', value: '≈250 mg' },
+];
+
+const ticks = [
+  { at: 0, label: '0', edge: 'start' },
+  { at: 40, label: '40', edge: '' },
+  { at: 300, label: '300', edge: '' },
+  { at: 400, label: '400+', edge: 'end' },
+];
+
+const pct = (mg: number) => ((mg / AXIS_MAX) * 100).toFixed(1);
+---
+
+<figure
+  class="guide-figure"
+  aria-label="Caffeine doses from 40 to 300 milligrams improve reaction time, vigilance, and attention. In a 2024 esports trial, a dose of about 83 milligrams and a dose of about 250 milligrams both improved aim and reaction time, with no difference between them."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title">The caffeine window</span>
+    <span class="guide-figure-sub"
+      >Doses with a measured reaction-time benefit, in mg of caffeine</span
+    >
+  </figcaption>
+
+  <div class="cz-plot" aria-hidden="true">
+    <div class="cz-annotations">
+      {
+        markers.map((m) => (
+          <div class="cz-marker" style={`inset-inline-start: ${pct(m.at)}%`}>
+            <span class="cz-marker-label">
+              {m.label} <span class="cz-marker-value">{m.value}</span>
+            </span>
+            <span class="cz-marker-line" />
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="cz-scale">
+      {
+        zones.map((z) => (
+          <div class={`cz-zone cz-zone--${z.kind}`} style={`flex-grow: ${z.to - z.from}`}>
+            {z.label && <span class="cz-zone-label">{z.label}</span>}
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="cz-ticks">
+      {
+        ticks.map((t) => (
+          <span
+            class={`cz-tick ${t.edge ? `cz-tick--${t.edge}` : ''}`}
+            style={`inset-inline-start: ${pct(t.at)}%`}
+          >
+            {t.label}
+          </span>
+        ))
+      }
+    </div>
+  </div>
+
+  <p class="guide-figure-source">
+    Window: McLellan et al. (2016). Dose markers: Rogers et al. (2024); both doses improved aim and
+    reaction time, with no difference between them.
+  </p>
+</figure>
+
+<style>
+  .cz-plot {
+    margin-block-start: var(--space-lg);
+  }
+
+  .cz-annotations {
+    position: relative;
+    height: 40px;
+  }
+
+  .cz-marker {
+    position: absolute;
+    inset-block-end: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translateX(-50%);
+  }
+
+  .cz-marker-label {
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: var(--ink-secondary);
+  }
+
+  .cz-marker-value {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  .cz-marker-line {
+    width: 1px;
+    height: 14px;
+    margin-block-start: 4px;
+    background-color: var(--line);
+  }
+
+  .cz-scale {
+    display: flex;
+    gap: 2px;
+  }
+
+  .cz-zone {
+    flex-basis: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    border-radius: 4px;
+  }
+
+  .cz-zone--outside {
+    background-color: var(--panel-03);
+  }
+
+  .cz-zone--window {
+    background-color: color-mix(in srgb, var(--ink-secondary) 16%, transparent);
+  }
+
+  .cz-zone-label {
+    white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ink-primary);
+  }
+
+  /* Below ~360px the window is too narrow for an in-zone label; the source
+     line and surrounding prose carry the meaning instead. */
+  @media (max-width: 360px) {
+    .cz-zone-label {
+      display: none;
+    }
+  }
+
+  .cz-ticks {
+    position: relative;
+    height: 20px;
+    margin-block-start: 4px;
+  }
+
+  .cz-tick {
+    position: absolute;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--ink-muted);
+  }
+
+  .cz-tick--start {
+    transform: none;
+  }
+
+  .cz-tick--end {
+    inset-inline-start: auto !important;
+    inset-inline-end: 0;
+    transform: none;
+  }
+</style>
