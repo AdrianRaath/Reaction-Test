@@ -1,0 +1,105 @@
+---
+/**
+ * Two weeks of chronic sleep restriction, after Van Dongen et al. (2003):
+ * 14 consecutive nights at 8 h / 6 h / 4 h in bed, performance on a
+ * sustained-attention task (PVT).
+ *
+ * A statement figure on purpose: the abstract states outcomes and an
+ * equivalence, not per-dose bar values — so no invented bar lengths.
+ * Severity is colour-coded per the Guide-Figure Data Encodings rule
+ * (DESIGN.md) and every row is also labeled in text. Values wear mono
+ * (Monospace-Numerals Rule). Static HTML/CSS, zero JS.
+ */
+const rows = [
+  {
+    dose: '8 h',
+    color: 'color-mix(in srgb, var(--ink-muted) 70%, transparent)',
+    outcome: 'Held steady: no significant rise in attention lapses across the two weeks.',
+  },
+  {
+    dose: '6 h',
+    color: 'var(--caution-amber)',
+    outcome: 'Deficits equivalent to up to two nights without any sleep at all.',
+  },
+  {
+    dose: '4 h',
+    color: 'var(--hold-red)',
+    outcome: 'The steepest decline of the three doses, still worsening at day 14.',
+  },
+];
+---
+
+<figure
+  class="guide-figure"
+  aria-label="Fourteen consecutive nights at three sleep doses. Eight hours a night: no significant rise in attention lapses. Six hours a night: deficits equivalent to up to two nights without any sleep. Four hours a night: the steepest decline, still worsening at day 14."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">🛌</span>Two weeks on short sleep</span
+    >
+    <span class="guide-figure-sub"
+      >14 consecutive nights at each dose, measured on a sustained-attention task</span
+    >
+  </figcaption>
+
+  <div class="sd-rows" aria-hidden="true">
+    {
+      rows.map((r) => (
+        <div class="sd-row">
+          <span class="sd-dose">{r.dose}</span>
+          <span class="sd-marker" style={`background-color: ${r.color}`} />
+          <span class="sd-outcome">{r.outcome}</span>
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="guide-figure-source">
+    Source: Van Dongen et al. (2003), <em>Sleep</em>. Subjects' own sleepiness ratings barely moved;
+    they were largely unaware of the decline.
+  </p>
+</figure>
+
+<style>
+  .sd-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-block-start: var(--space-lg);
+  }
+
+  .sd-row {
+    display: grid;
+    grid-template-columns: 3.25rem 12px minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: var(--space-md);
+  }
+
+  .sd-dose {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  .sd-marker {
+    align-self: center;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  .sd-outcome {
+    font-size: var(--text-label-size);
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
+  @media (max-width: 560px) {
+    .sd-row {
+      grid-template-columns: 2.75rem 10px minmax(0, 1fr);
+      column-gap: var(--space-sm);
+    }
+  }
+</style>

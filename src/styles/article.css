@@ -307,6 +307,9 @@
 .tip-content strong {
   display: block;
   margin-block-end: var(--space-xs);
+  /* Explicit size: MDX-authored tips wrap the strong in a label-size <p>;
+     legacy tips have it as a direct child. Keep both identical. */
+  font-size: var(--text-body-size);
   color: var(--ink-primary);
 }
 
