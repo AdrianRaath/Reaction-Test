@@ -452,12 +452,61 @@
   background-color: var(--signal-green);
 }
 
-/* --- Header meta (updated date) --------------------------------------------------- */
+/* --- Header eyebrow & meta --------------------------------------------------------- */
+
+.article-eyebrow {
+  margin-block-end: var(--space-md);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+}
+
+/* The emoji is the eyebrow's colour point; keep it legible at label size. */
+.article-eyebrow span {
+  margin-inline-end: var(--space-xs);
+  font-size: 0.9375rem;
+  letter-spacing: normal;
+}
 
 .article-meta {
   margin-block-start: var(--space-md);
   font-size: var(--text-label-size);
   color: var(--ink-muted);
+}
+
+/* The meta row's separator dot is the header's brand-green accent
+   (maintainer-sanctioned micro-use — see DESIGN.md, One Signal Rule). */
+.article-meta-sep {
+  margin-inline: var(--space-xs);
+  color: var(--signal-green);
+  font-size: 1.25em;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Measured figures in the meta row wear the readout face. */
+.article-meta-num {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--ink-secondary);
+}
+
+/* --- Intro callout ------------------------------------------------------------------
+   The guide intro takes the callout treatment: a rationed green structural
+   accent above the fold, reusing the callout-box vocabulary. */
+
+.article-intro-callout {
+  margin-block-end: var(--space-xl);
+  padding: var(--space-lg) var(--space-xl);
+  border-inline-start: 4px solid var(--signal-green);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background-color: var(--panel-03);
+}
+
+.article-intro-callout p {
+  margin-block-end: 0;
 }
 
 /* --- Citations & sources ------------------------------------------------------------
@@ -476,8 +525,9 @@ sup.cite {
   text-decoration: none;
 }
 
+/* Green on hover: an interactive "active" use, sanctioned. */
 .article-content sup.cite a:hover {
-  color: var(--ink-primary);
+  color: var(--signal-green);
 }
 
 .article-content ol.sources-list {
@@ -525,6 +575,12 @@ sup.cite {
   font-size: var(--text-title-size);
   font-weight: 600;
   color: var(--ink-primary);
+}
+
+/* Widget-title emoji vocabulary (DESIGN.md, Iconography): decorative,
+   aria-hidden, always beside a text title. */
+.guide-figure .guide-figure-emoji {
+  margin-inline-end: var(--space-sm);
 }
 
 .guide-figure .guide-figure-sub {

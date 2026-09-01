@@ -180,9 +180,11 @@ A closed set of five telemetry colors, used **only** on rank badges and the matc
 - **Ink Disabled** (`#52525b`): Disabled controls only.
 
 ### Named Rules
-**The One Signal Rule.** Signal Green and Hold Red are the game's language — go and wait. They may only ever mean that. Never fill a card, a header, or a decorative shape with either. If green appears somewhere that doesn't mean *go / active / your best*, delete it.
+**The One Signal Rule.** Signal Green and Hold Red are the game's language — go and wait. They may only ever mean that. Never fill a card, a header, or a decorative shape with either. If green appears somewhere that doesn't mean *go / active / your best*, delete it. One licensed micro-exception: the green separator dot in a guide header's meta row — a single glyph-sized brand accent, maintainer-sanctioned.
 
 **The Rank-Only Color Rule.** The five rank hues (violet / green / blue / amber / gray) are licensed for rank badges, the results-border glow, and guide figures that chart the rank bands themselves (each band also labeled by name, so identity never rides on color alone) — nowhere else. The rest of the interface is black, zinc-gray, and one green. This is what separates ReflexLab from the RGB-gamer lane: color is telemetry, not upholstery.
+
+**Guide-Figure Data Encodings.** Inside a guide figure, color may encode data semantics the system already owns: a green tint for a measured-benefit zone (*go*), amber where side effects or severity rise (*soft warning*), and Hold Red for a danger-level reading — the same ramp the `status-*` classes in `article.css` have always used for data contexts. Data semantics only, never decoration, and every colored zone or bar is also labeled in text.
 
 **The Target-Paint Exception.** Inside a tool's test arena, a game target the user aims at is game content, not chrome, and its paint may be user-selected — like the emoji vocabulary, it sits outside the One Signal Rule and the Rank-Only Color Rule. The palette is still closed: Signal Green (the default — a target means *act now*), White (`#fafafa`), Blue (`#3b82f6`), Violet (`#a855f7`), and Amber (`#f59e0b`) — hues the system already owns, no new ones. **Hold Red is excluded**: red means *wait / error* sitewide and must never mark a thing the user is asked to click. The exception covers target paint only — never buttons, cards, text, or any other surface — and paint choices must stay cosmetic: identical hitbox, identical sizing, identical scoring.
 

@@ -3,16 +3,33 @@
  * Sustained wakefulness read as blood-alcohol equivalence, after Dawson &
  * Reid (1997). Three documented anchor points, drawn as bars.
  *
- * Deliberately neutral: no signal or rank colour. The numbers carry the
- * weight (Monospace-Numerals Rule applies — the values are measurements).
+ * Bars carry a severity ramp (amber → red): the series is escalating
+ * impairment, and colour encodes that data semantics — the same ramp the
+ * status classes in article.css already use for data contexts (DESIGN.md,
+ * guide-figure data encodings). Values stay mono (Monospace-Numerals Rule).
  * Static HTML/CSS — guides ship zero JS.
  */
 const MAX_PCT = 0.1;
 
 const rows = [
-  { hours: '17 h awake', pct: 0.05, note: 'the legal driving limit in much of Europe' },
-  { hours: '22 h awake', pct: 0.08, note: 'the legal driving limit in most US states' },
-  { hours: '24 h awake', pct: 0.1, note: 'over the limit in every US state' },
+  {
+    hours: '17 h awake',
+    pct: 0.05,
+    color: 'var(--caution-amber)',
+    note: 'the legal driving limit in much of Europe',
+  },
+  {
+    hours: '22 h awake',
+    pct: 0.08,
+    color: 'color-mix(in srgb, var(--caution-amber) 55%, var(--hold-red))',
+    note: 'the legal driving limit in most US states',
+  },
+  {
+    hours: '24 h awake',
+    pct: 0.1,
+    color: 'var(--hold-red)',
+    note: 'over the limit in every US state',
+  },
 ];
 
 const width = (pct: number) => ((pct / MAX_PCT) * 100).toFixed(0);
@@ -24,7 +41,10 @@ const label = (pct: number) => pct.toFixed(2) + '%';
   aria-label="Performance impairment from staying awake, expressed as blood alcohol equivalence. 17 hours awake matches 0.05 percent, the legal driving limit in much of Europe. 22 hours matches 0.08 percent, the legal driving limit in most US states. 24 hours matches 0.10 percent, over the limit in every US state."
 >
   <figcaption class="guide-figure-head">
-    <span class="guide-figure-title">Hours awake, read as blood alcohol</span>
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">😴</span>Hours awake, read as blood
+      alcohol</span
+    >
     <span class="guide-figure-sub">Measured impairment equivalence in adults kept awake</span>
   </figcaption>
 
@@ -34,7 +54,7 @@ const label = (pct: number) => pct.toFixed(2) + '%';
         <div class="si-row">
           <span class="si-hours">{r.hours}</span>
           <div class="si-track">
-            <div class="si-bar" style={`width: ${width(r.pct)}%`} />
+            <div class="si-bar" style={`width: ${width(r.pct)}%; background-color: ${r.color}`} />
             <span class="si-value">{label(r.pct)} BAC</span>
           </div>
           <span class="si-note">{r.note}</span>
@@ -82,7 +102,6 @@ const label = (pct: number) => pct.toFixed(2) + '%';
   .si-bar {
     height: 14px;
     border-radius: 0 4px 4px 0;
-    background-color: var(--ink-secondary);
   }
 
   .si-value {

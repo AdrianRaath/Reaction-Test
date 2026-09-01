@@ -5,14 +5,18 @@
  * Rogers et al. (2024) esports trial, where both doses improved aim and
  * reaction time and neither beat the other.
  *
- * Neutral fills only — no signal colour. Static HTML/CSS, zero JS.
+ * Zone colours encode data semantics the system owns (DESIGN.md,
+ * guide-figure data encodings): a green tint for the measured-benefit
+ * window (go), an amber tint where side effects rise (soft warning), and a
+ * neutral fill below threshold. Every zone is also labeled in text.
+ * Static HTML/CSS, zero JS.
  */
 const AXIS_MAX = 400;
 
 const zones = [
-  { from: 0, to: 40, kind: 'outside', label: '' },
+  { from: 0, to: 40, kind: 'under', label: '' },
   { from: 40, to: 300, kind: 'window', label: 'improves reaction time' },
-  { from: 300, to: 400, kind: 'outside', label: '' },
+  { from: 300, to: 400, kind: 'tail', label: 'side effects rise' },
 ];
 
 const markers = [
@@ -32,10 +36,12 @@ const pct = (mg: number) => ((mg / AXIS_MAX) * 100).toFixed(1);
 
 <figure
   class="guide-figure"
-  aria-label="Caffeine doses from 40 to 300 milligrams improve reaction time, vigilance, and attention. In a 2024 esports trial, a dose of about 83 milligrams and a dose of about 250 milligrams both improved aim and reaction time, with no difference between them."
+  aria-label="Caffeine doses from 40 to 300 milligrams improve reaction time, vigilance, and attention; past 300 milligrams side effects rise. In a 2024 esports trial, a dose of about 83 milligrams and a dose of about 250 milligrams both improved aim and reaction time, with no difference between them."
 >
   <figcaption class="guide-figure-head">
-    <span class="guide-figure-title">The caffeine window</span>
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">☕</span>The caffeine window</span
+    >
     <span class="guide-figure-sub"
       >Doses with a measured reaction-time benefit, in mg of caffeine</span
     >
@@ -120,7 +126,7 @@ const pct = (mg: number) => ((mg / AXIS_MAX) * 100).toFixed(1);
     width: 1px;
     height: 14px;
     margin-block-start: 4px;
-    background-color: var(--line);
+    background-color: var(--ink-muted);
   }
 
   .cz-scale {
@@ -137,12 +143,16 @@ const pct = (mg: number) => ((mg / AXIS_MAX) * 100).toFixed(1);
     border-radius: 4px;
   }
 
-  .cz-zone--outside {
+  .cz-zone--under {
     background-color: var(--panel-03);
   }
 
   .cz-zone--window {
-    background-color: color-mix(in srgb, var(--ink-secondary) 16%, transparent);
+    background-color: color-mix(in srgb, var(--signal-green) 18%, transparent);
+  }
+
+  .cz-zone--tail {
+    background-color: color-mix(in srgb, var(--caution-amber) 15%, transparent);
   }
 
   .cz-zone-label {
@@ -152,8 +162,19 @@ const pct = (mg: number) => ((mg / AXIS_MAX) * 100).toFixed(1);
     color: var(--ink-primary);
   }
 
-  /* Below ~360px the window is too narrow for an in-zone label; the source
-     line and surrounding prose carry the meaning instead. */
+  .cz-zone--tail .cz-zone-label {
+    font-size: 0.6875rem;
+    color: var(--ink-secondary);
+  }
+
+  /* The tail is narrow; drop its label first, then the window's. The source
+     line and surrounding prose carry the meaning either way. */
+  @media (max-width: 560px) {
+    .cz-zone--tail .cz-zone-label {
+      display: none;
+    }
+  }
+
   @media (max-width: 360px) {
     .cz-zone-label {
       display: none;

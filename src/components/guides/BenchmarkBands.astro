@@ -36,7 +36,9 @@ const pct = (ms: number) => (((ms - AXIS_MIN) / SPAN) * 100).toFixed(1);
   aria-label="Reaction time rank bands in milliseconds. Elite: under 150. Pro: 150 to 199. Advanced: 200 to 249. Intermediate: 250 to 349. Beginner: 350 and above. The lab-measured average for young adults is about 218 milliseconds; the typical online test median is about 273 milliseconds."
 >
   <figcaption class="guide-figure-head">
-    <span class="guide-figure-title">Where scores land</span>
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">📊</span>Where scores land</span
+    >
     <span class="guide-figure-sub">ReflexLab rank bands for a session average, in milliseconds</span
     >
   </figcaption>
@@ -128,7 +130,7 @@ const pct = (ms: number) => (((ms - AXIS_MIN) / SPAN) * 100).toFixed(1);
 
   .bb-marker-line {
     width: 1px;
-    background-color: var(--line);
+    background-color: var(--ink-muted);
     margin-block-start: 4px;
   }
 

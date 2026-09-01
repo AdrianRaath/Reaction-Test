@@ -70,6 +70,7 @@ const items = headings.filter((h) => h.depth === 2);
     }
 
     a {
+      position: relative;
       display: block;
       font-size: 0.8125rem;
       line-height: 1.4;
@@ -78,8 +79,21 @@ const items = headings.filter((h) => h.depth === 2);
       transition: color var(--duration-fast) var(--ease);
     }
 
-    a:hover {
+    a:hover,
+    a:focus-visible {
       color: var(--ink-primary);
+    }
+
+    /* Echoes the sidebar's 2px green active bar: green marking the link
+       you're about to activate, laid over the rail hairline. */
+    a:hover::before,
+    a:focus-visible::before {
+      content: '';
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: calc(-1 * var(--space-md) - 1px);
+      width: 2px;
+      background-color: var(--signal-green);
     }
   }
 </style>

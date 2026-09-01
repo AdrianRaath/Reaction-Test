@@ -25,6 +25,14 @@ const updated = new Date(guide.data.dateModified).toLocaleDateString('en-US', {
   day: 'numeric',
 });
 
+// Read time at ~200 wpm, derived from the raw body so it never drifts from
+// the content.
+const words = (guide.body ?? '')
+  .replace(/<[^>]*>/g, ' ')
+  .split(/\s+/)
+  .filter(Boolean).length;
+const minutes = Math.max(1, Math.round(words / 200));
+
 // Article JSON-LD. Attribution is publisher-level (the site), deliberately —
 // no personal byline anywhere on ReflexLab.
 const articleLd = {
@@ -79,10 +87,16 @@ const faqLd = guide.data.faq && {
           <span class="breadcrumbs-separator">/</span>
           <span class="breadcrumbs-current">{guide.data.title}</span>
         </nav>
+        <p class="article-eyebrow">
+          {guide.data.emoji && <span aria-hidden="true">{guide.data.emoji}</span>}
+          Guide
+        </p>
         <h1 class="article-title">{guide.data.title}</h1>
         <p class="article-subtitle">{guide.data.subtitle}</p>
         <p class="article-meta">
           Updated <time datetime={guide.data.dateModified}>{updated}</time>
+          <span class="article-meta-sep" aria-hidden="true">·</span>
+          <span class="article-meta-num">{minutes}</span> min read
         </p>
       </header>
 
@@ -97,9 +111,8 @@ const faqLd = guide.data.faq && {
   <section class="disclaimer-section">
     <div class="container">
       <p class="disclaimer">
-        <strong>Disclaimer:</strong> This reaction time test is for entertainment and personal tracking
-        purposes. Results are affected by your device's hardware, browser performance, and network conditions.
-        For scientific or medical assessments, please use calibrated laboratory equipment.
+        <strong>Disclaimer:</strong> Guides share general information about human performance, not medical
+        advice. Measured reaction times vary with your device, browser, and testing conditions.
       </p>
     </div>
   </section>

@@ -28,6 +28,9 @@ const guides = defineCollection({
     snippet: z.string(),
     /** Position on the guides index. */
     order: z.number(),
+    /** Topical emoji for the header eyebrow — the sanctioned emoji icon
+     *  vocabulary (DESIGN.md, Iconography). One per guide, subject-matched. */
+    emoji: z.string().optional(),
     /** ISO dates for the Article JSON-LD and the visible "Updated" line.
      *  dateModified moves only when the content changes, not on re-deploys. */
     datePublished: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
