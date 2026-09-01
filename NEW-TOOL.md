@@ -8,7 +8,8 @@ reconsider — the engine (`src/engine/`) is shared, fully unit-tested, and
 tool-agnostic.
 
 Companion docs: `REVAMP.md` (architecture, §3), `DESIGN.md` (visual contract),
-`PRODUCT.md` (what the site is).
+`PRODUCT.md` (what the site is), `NEW-GUIDE.md` (the guide counterpart to this
+doc).
 
 ---
 
