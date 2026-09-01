@@ -1,6 +1,7 @@
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
+import { guideCategoryIds } from './data/guide-categories';
 
 /**
  * Content collections (REVAMP.md §5).
@@ -28,9 +29,10 @@ const guides = defineCollection({
     snippet: z.string(),
     /** Position on the guides index. */
     order: z.number(),
-    /** Topical emoji for the header eyebrow — the sanctioned emoji icon
-     *  vocabulary (DESIGN.md, Iconography). One per guide, subject-matched. */
-    emoji: z.string().optional(),
+    /** Guide category id — resolved against src/data/guide-categories.ts,
+     *  which owns each category's display name and emoji. Renders as the
+     *  header eyebrow tag; later groups the /guides hub. */
+    category: z.enum(guideCategoryIds),
     /** ISO dates for the Article JSON-LD and the visible "Updated" line.
      *  dateModified moves only when the content changes, not on re-deploys. */
     datePublished: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import TocSidebar from '../../components/guides/TocSidebar.astro';
+import { guideCategories } from '../../data/guide-categories';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import '../../styles/article.css';
 
@@ -14,6 +15,7 @@ export async function getStaticPaths() {
 
 const { guide } = Astro.props;
 const { Content, headings } = await render(guide);
+const category = guideCategories[guide.data.category];
 
 const site = Astro.site ?? new URL('https://reflexlab.co');
 const path = `/guides/${guide.id}`;
@@ -88,8 +90,8 @@ const faqLd = guide.data.faq && {
           <span class="breadcrumbs-current">{guide.data.title}</span>
         </nav>
         <p class="article-eyebrow">
-          {guide.data.emoji && <span aria-hidden="true">{guide.data.emoji}</span>}
-          Guide
+          <span aria-hidden="true">{category.emoji}</span>
+          {category.name}
         </p>
         <h1 class="article-title">{guide.data.title}</h1>
         <p class="article-subtitle">{guide.data.subtitle}</p>

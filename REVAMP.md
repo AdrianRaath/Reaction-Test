@@ -152,6 +152,11 @@ scannable, realistically somewhere past a dozen or fifteen entries. Grouping
 can be added later as a purely presentational field without disturbing stored
 data or URLs, so there is no cost to deferring it.
 
+*Guides* do carry a category (`src/data/guide-categories.ts`, rendered as the
+guide header's eyebrow tag and eventually grouping the /guides hub) — that is
+a content-side taxonomy and does not touch this decision: the tool registry
+and sidebar stay flat.
+
 ### 3.4 Routing and information architecture
 
 **Decided: the reaction test stays at `/`.**
