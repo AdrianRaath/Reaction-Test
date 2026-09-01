@@ -476,14 +476,14 @@
   color: var(--ink-muted);
 }
 
-/* The meta row's separator dot is the header's brand-green accent
-   (maintainer-sanctioned micro-use — see DESIGN.md, One Signal Rule). */
+/* Meta-row divider: the site's hairline vocabulary, turned vertical. */
 .article-meta-sep {
-  margin-inline: var(--space-xs);
-  color: var(--signal-green);
-  font-size: 1.25em;
-  font-weight: 700;
-  line-height: 1;
+  display: inline-block;
+  width: 1px;
+  height: 1em;
+  margin-inline: var(--space-sm);
+  vertical-align: -0.15em;
+  background-color: var(--line);
 }
 
 /* Measured figures in the meta row wear the readout face. */

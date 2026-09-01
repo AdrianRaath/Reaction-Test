@@ -180,7 +180,7 @@ A closed set of five telemetry colors, used **only** on rank badges and the matc
 - **Ink Disabled** (`#52525b`): Disabled controls only.
 
 ### Named Rules
-**The One Signal Rule.** Signal Green and Hold Red are the game's language — go and wait. They may only ever mean that. Never fill a card, a header, or a decorative shape with either. If green appears somewhere that doesn't mean *go / active / your best*, delete it. One licensed micro-exception: the green separator dot in a guide header's meta row — a single glyph-sized brand accent, maintainer-sanctioned.
+**The One Signal Rule.** Signal Green and Hold Red are the game's language — go and wait. They may only ever mean that. Never fill a card, a header, or a decorative shape with either. If green appears somewhere that doesn't mean *go / active / your best*, delete it.
 
 **The Rank-Only Color Rule.** The five rank hues (violet / green / blue / amber / gray) are licensed for rank badges, the results-border glow, and guide figures that chart the rank bands themselves (each band also labeled by name, so identity never rides on color alone) — nowhere else. The rest of the interface is black, zinc-gray, and one green. This is what separates ReflexLab from the RGB-gamer lane: color is telemetry, not upholstery.
 
