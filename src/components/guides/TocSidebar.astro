@@ -1,19 +1,39 @@
 ---
 /**
- * "On this page" rail for long-form guides. Renders only when a guide has
- * enough sections to be worth navigating, and only on wide viewports — on
- * mobile the article simply scrolls.
+ * "On this page" rail for long-form guides — a scaled-down sibling of the
+ * app sidebar: same group-label typography, same 2px green active bar, same
+ * short-label discipline (headings are written for reading flow; nav labels
+ * are written for a 200px column).
  *
- * Headings come from `render()`'s markdown extraction, so only
- * markdown-authored `##` sections appear here. Static, no scrollspy: guides
- * ship zero JS.
+ * Labels: a heading's TOC entry is its text up to the first colon (the part
+ * after a colon is a dek and stays in the article), with the leading "N."
+ * pulled into an aligned marker gutter. `labels` (from guide frontmatter's
+ * `tocLabels`, keyed by heading slug) overrides any entry that is still too
+ * long without a colon.
+ *
+ * The scrollspy is the one deliberate exception to guides shipping zero JS:
+ * a dependency-free inline script, well under 1KB, that marks the section
+ * under the reading line with aria-current. With JS off the rail degrades to
+ * this same static list.
+ *
+ * Renders only when a guide has enough sections to be worth navigating, and
+ * only on wide viewports — on mobile the article simply scrolls.
  */
 interface Props {
   headings: { depth: number; slug: string; text: string }[];
+  labels?: Record<string, string>;
 }
 
-const { headings } = Astro.props;
-const items = headings.filter((h) => h.depth === 2);
+const { headings, labels } = Astro.props;
+
+const items = headings
+  .filter((h) => h.depth === 2)
+  .map((h) => {
+    const numbered = h.text.match(/^(\d+)\.\s*(.*)$/);
+    const num = numbered?.[1];
+    const trimmed = (numbered ? numbered[2] : h.text).split(':')[0].trim();
+    return { slug: h.slug, num, title: labels?.[h.slug] ?? trimmed };
+  });
 ---
 
 {
@@ -22,16 +42,65 @@ const items = headings.filter((h) => h.depth === 2);
       <nav aria-label="On this page">
         <p class="toc-title">On this page</p>
         <ul>
-          {items.map((h) => (
-            <li>
-              <a href={`#${h.slug}`}>{h.text}</a>
+          {items.map((it) => (
+            <li class:list={['toc-item', { 'toc-item--numbered': Boolean(it.num) }]}>
+              <a href={`#${it.slug}`}>
+                {it.num && (
+                  <span class="toc-num" aria-hidden="true">
+                    {it.num}
+                  </span>
+                )}
+                {it.title}
+              </a>
             </li>
           ))}
         </ul>
+        <a class="toc-top" href="#main-content">
+          ↑ Back to top
+        </a>
       </nav>
     </aside>
   )
 }
+
+<script is:inline>
+  // Scrollspy: mark the section under the reading line. Sub-1KB, no
+  // dependencies; the rail is a plain list without it.
+  (() => {
+    const nav = document.querySelector('.toc-rail nav');
+    if (!nav) return;
+    const pairs = Array.from(nav.querySelectorAll('ul a[href^="#"]'))
+      .map((a) => [document.getElementById(decodeURIComponent(a.hash.slice(1))), a])
+      .filter(([h]) => h);
+    if (!pairs.length) return;
+    let current = null;
+    const update = () => {
+      let pick = null;
+      for (const [h, a] of pairs) {
+        // 130px ≈ the sticky top bar plus the headings' scroll margin.
+        if (h.getBoundingClientRect().top <= 130) pick = a;
+        else break;
+      }
+      if (pick !== current) {
+        if (current) current.removeAttribute('aria-current');
+        if (pick) pick.setAttribute('aria-current', 'location');
+        current = pick;
+      }
+    };
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        update();
+      });
+    };
+    addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('resize', onScroll, { passive: true });
+    update();
+  })();
+</script>
 
 <style>
   .toc-rail {
@@ -41,12 +110,15 @@ const items = headings.filter((h) => h.depth === 2);
   @media (min-width: 1100px) {
     .toc-rail {
       display: block;
+      /* Lines the rail title up with the article eyebrow (container padding
+         + breadcrumb row), not the breadcrumbs. */
+      padding-block-start: 5.75rem;
     }
 
     nav {
       position: sticky;
       inset-block-start: calc(var(--topbar-height) + var(--space-xl));
-      padding-block: var(--space-2xl);
+      padding-block-end: var(--space-2xl);
     }
 
     .toc-title {
@@ -69,31 +141,64 @@ const items = headings.filter((h) => h.depth === 2);
       margin-block-end: var(--space-sm);
     }
 
+    /* Tier boundaries: a breath before the numbered run and after it, so the
+       rail reads framing / the methods / appendix. */
+    .toc-item--numbered + .toc-item:not(.toc-item--numbered),
+    .toc-item:not(.toc-item--numbered) + .toc-item--numbered {
+      margin-block-start: var(--space-md);
+    }
+
     a {
       position: relative;
-      display: block;
+      display: flex;
+      gap: 0.375rem;
       font-size: 0.8125rem;
-      line-height: 1.4;
+      line-height: 1.35;
       color: var(--ink-muted);
       text-decoration: none;
       transition: color var(--duration-fast) var(--ease);
     }
 
+    .toc-num {
+      flex-shrink: 0;
+      inline-size: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.6875rem;
+      line-height: 1.6;
+      color: var(--ink-muted);
+    }
+
     a:hover,
-    a:focus-visible {
+    a:focus-visible,
+    a[aria-current='location'] {
       color: var(--ink-primary);
     }
 
-    /* Echoes the sidebar's 2px green active bar: green marking the link
-       you're about to activate, laid over the rail hairline. */
+    /* The sidebar's 2px green active bar, scaled to the rail: laid over the
+       hairline for the current section, previewed on hover. */
     a:hover::before,
-    a:focus-visible::before {
+    a:focus-visible::before,
+    a[aria-current='location']::before {
       content: '';
       position: absolute;
       inset-block: 0;
       inset-inline-start: calc(-1 * var(--space-md) - 1px);
       width: 2px;
       background-color: var(--signal-green);
+    }
+
+    .toc-top {
+      display: inline-block;
+      margin-block-start: var(--space-lg);
+      font-size: 0.75rem;
+      color: var(--ink-muted);
+      text-decoration: none;
+      transition: color var(--duration-fast) var(--ease);
+    }
+
+    .toc-top:hover,
+    .toc-top:focus-visible {
+      color: var(--ink-primary);
     }
   }
 </style>

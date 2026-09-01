@@ -35,6 +35,9 @@ const guides = defineCollection({
      *  dateModified moves only when the content changes, not on re-deploys. */
     datePublished: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     dateModified: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    /** TOC label overrides, keyed by heading slug — for headings still too
+     *  long for the 200px rail after the automatic colon-trim. */
+    tocLabels: z.record(z.string(), z.string()).optional(),
     /** Source for FAQPage JSON-LD, same pattern as the tools collection.
      *  The visible FAQ lives in the body; keep the two worded identically
      *  for guides. Optional — a guide with no FAQ simply emits no schema. */
