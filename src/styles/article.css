@@ -17,10 +17,17 @@
 
 .breadcrumbs {
   display: flex;
+  /* Crumbs wrap as whole items onto a new line — never mid-text. A crumb
+     breaks internally only if it is wider than the full row on its own. */
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs) var(--space-sm);
   margin-block-end: var(--space-lg);
   font-size: var(--text-label-size);
+}
+
+.breadcrumbs a {
+  white-space: nowrap;
 }
 
 .breadcrumbs a {
@@ -597,6 +604,17 @@ sup.cite {
 /* --- Responsive --------------------------------------------------------------------- */
 
 @media (max-width: 768px) {
+  /* The desktop top padding doubles up with the shell's own main padding on
+     a phone — reclaim the viewport for content. */
+  .article-container {
+    padding-block-start: var(--space-lg);
+  }
+
+  /* Narrower columns can't afford the callout's full inline padding. */
+  .article-intro-callout {
+    padding: var(--space-md) var(--space-lg);
+  }
+
   .article-title {
     font-size: 2rem;
   }

@@ -55,6 +55,18 @@ const articleLd = {
   image: new URL('/assets/reflex-og.png', site).href,
 };
 
+// BreadcrumbList JSON-LD, mirroring the visible trail. The current page
+// carries no `item` URL, per Google's structured-data guidance.
+const breadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: site.href },
+    { '@type': 'ListItem', position: 2, name: 'Guides', item: new URL('/guides', site).href },
+    { '@type': 'ListItem', position: 3, name: guide.data.title },
+  ],
+};
+
 // FAQPage JSON-LD, from frontmatter — same pattern as the tools collection.
 const faqLd = guide.data.faq && {
   '@context': 'https://schema.org',
@@ -76,6 +88,7 @@ const faqLd = guide.data.faq && {
 >
   <Fragment slot="head">
     <script is:inline type="application/ld+json" set:html={JSON.stringify(articleLd)} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)} />
     {faqLd && <script is:inline type="application/ld+json" set:html={JSON.stringify(faqLd)} />}
   </Fragment>
 
