@@ -1,0 +1,105 @@
+---
+/**
+ * What a 400 mg caffeine dose does to the night, by timing — after Drake,
+ * Roehrs, Shambroom & Roth (2013): 400 mg at 0, 3, or 6 hours before
+ * habitual bedtime, sleep measured objectively at home.
+ *
+ * A statement figure, like SleepDebt: the study reports significance and a
+ * magnitude for the 6-hour condition, not per-condition bar values — so
+ * outcomes are stated, severity is colour-coded per the Guide-Figure Data
+ * Encodings rule (DESIGN.md), and every row is labeled in text. Static
+ * HTML/CSS, zero JS.
+ */
+const rows = [
+  {
+    timing: '0 h',
+    color: 'var(--hold-red)',
+    outcome: 'Taken at lights-out: the night is significantly disrupted.',
+  },
+  {
+    timing: '3 h',
+    color: 'var(--hold-red)',
+    outcome: 'Taken three hours before bed: still significantly disrupted.',
+  },
+  {
+    timing: '6 h',
+    color: 'var(--caution-amber)',
+    outcome:
+      'Taken six hours before bed: over an hour of measured sleep lost, and the sleepers did not notice.',
+  },
+];
+---
+
+<figure
+  class="guide-figure"
+  aria-label="A 400 milligram caffeine dose disrupts sleep at every tested timing. Taken at bedtime or three hours before bed, sleep is significantly disrupted. Taken six hours before bed, over an hour of measured sleep is lost, and the sleepers did not notice the loss."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">🌙</span>400 mg, hours before bed</span
+    >
+    <span class="guide-figure-sub"
+      >Objectively measured sleep after one 400 mg dose at three timings</span
+    >
+  </figcaption>
+
+  <div class="csc-rows" aria-hidden="true">
+    {
+      rows.map((r) => (
+        <div class="csc-row">
+          <span class="csc-timing">{r.timing}</span>
+          <span class="csc-marker" style={`background-color: ${r.color}`} />
+          <span class="csc-outcome">{r.outcome}</span>
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="guide-figure-source">
+    Source: Drake et al. (2013), <em>Journal of Clinical Sleep Medicine</em>.
+  </p>
+</figure>
+
+<style>
+  .csc-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-block-start: var(--space-lg);
+  }
+
+  .csc-row {
+    display: grid;
+    grid-template-columns: 3.25rem 12px minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: var(--space-md);
+  }
+
+  .csc-timing {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  .csc-marker {
+    align-self: center;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  .csc-outcome {
+    font-size: var(--text-label-size);
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
+  @media (max-width: 560px) {
+    .csc-row {
+      grid-template-columns: 2.75rem 10px minmax(0, 1fr);
+      column-gap: var(--space-sm);
+    }
+  }
+</style>

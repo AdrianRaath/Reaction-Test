@@ -59,6 +59,13 @@ word is written:
   equipment padding the number" rather than making anyone faster). This is
   deliberate positioning against content-farm competitors — never trade it
   for a rounder claim.
+- **The dek answers the H1.** The subtitle stays on the page's core subject
+  and previews the answer to the question the title asks — never a list of
+  the article's ingredients with the subject missing. Test: does the dek
+  mention the thing the H1 is about? "What speeds you up, what doesn't, and
+  by how much" passes. "The dose, the timing, and the sleep it costs" failed
+  (caught in review): reaction time had vanished from it. The same test
+  applies to the `snippet`.
 - **Never** "Key Takeaways" boxes (the most recognizable AI-content trope),
   never padded sections, never filler tips ("stay hydrated").
 
