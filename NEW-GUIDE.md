@@ -161,6 +161,9 @@ The filename is the live URL slug — pick it once, never rename it.
 - **Never put `{/* */}` JSX comments in MDX** — prettier's markdown pass
   rewrites the asterisks (`{/_ _/}`) and the build fails with a cryptic
   parser error. Authoring notes go in component comments or this doc.
+- **Quote any frontmatter value containing `: `** (a colon plus space, common
+  in descriptions) — unquoted it breaks the YAML parse with a js-yaml stack
+  trace that never names the file or field.
 
 ## Step 3 — Figures (`src/components/guides/`)
 

@@ -1,6 +1,7 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { guideCategories } from '../data/guide-categories';
 
 // The one deliberate URL change in the migration (§7): the live site served
 // /guides/ (trailing slash); this page lives at /guides and vercel.json 301s
@@ -25,6 +26,10 @@ const DESCRIPTION =
     {
       guides.map((guide) => (
         <a href={`/guides/${guide.id}`} class="guide-card">
+          <p class="guide-card-eyebrow">
+            <span aria-hidden="true">{guideCategories[guide.data.category].emoji}</span>
+            {guideCategories[guide.data.category].name}
+          </p>
           <h2 class="guide-card-title">{guide.data.title}</h2>
           <p class="guide-card-snippet">{guide.data.snippet}</p>
           <span class="guide-card-link">
@@ -105,6 +110,22 @@ const DESCRIPTION =
     background-color: var(--panel-hover);
     border-color: var(--ink-muted);
     transform: translateY(-2px);
+  }
+
+  /* Mirrors .article-eyebrow on the guide page — same tag, smaller stage. */
+  .guide-card-eyebrow {
+    margin-block-end: var(--space-sm);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-secondary);
+  }
+
+  .guide-card-eyebrow span {
+    margin-inline-end: var(--space-xs);
+    font-size: 0.875rem;
+    letter-spacing: normal;
   }
 
   .guide-card-title {

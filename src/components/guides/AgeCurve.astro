@@ -1,0 +1,124 @@
+---
+/**
+ * Mean simple reaction time by age group, from Woods et al. (2015),
+ * Experiment 1: 1,469 adults on optimized lab equipment. The takeaway is in
+ * the title: the whole adult spread is about 21 ms.
+ *
+ * Single-series magnitude chart: neutral bars from a zero baseline (no
+ * truncated axis — the smallness of the differences IS the story), values in
+ * mono (Monospace-Numerals Rule), the fastest band emphasized by brightness,
+ * never colour. Static HTML/CSS, zero JS.
+ */
+const AXIS_MAX = 260;
+
+const rows = [
+  { band: '18–24', ms: 218, fastest: true },
+  { band: '25–31', ms: 221, fastest: false },
+  { band: '32–38', ms: 225, fastest: false },
+  { band: '39–45', ms: 228, fastest: false },
+  { band: '46–51', ms: 234, fastest: false },
+  { band: '52–58', ms: 236, fastest: false },
+  { band: '59–65', ms: 239, fastest: false },
+];
+
+const width = (ms: number) => ((ms / AXIS_MAX) * 100).toFixed(1);
+---
+
+<figure
+  class="guide-figure"
+  aria-label="Mean simple reaction time by age group, lab-measured. Ages 18 to 24: 218 milliseconds, the fastest group. 25 to 31: 221. 32 to 38: 225. 39 to 45: 228. 46 to 51: 234. 52 to 58: 236. 59 to 65: 239 milliseconds. The whole spread across four decades is about 21 milliseconds."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">🎂</span>Four decades, twenty-one
+      milliseconds</span
+    >
+    <span class="guide-figure-sub"
+      >Mean simple reaction time by age group, lab-measured (1,469 adults)</span
+    >
+  </figcaption>
+
+  <div class="ac-rows" aria-hidden="true">
+    {
+      rows.map((r) => (
+        <div class="ac-row">
+          <span class="ac-band">{r.band}</span>
+          <div class="ac-track">
+            <div
+              class:list={['ac-bar', { 'ac-bar--fastest': r.fastest }]}
+              style={`width: ${width(r.ms)}%`}
+            />
+            <span class="ac-value">{r.ms} ms</span>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="guide-figure-source">
+    Source: Woods et al. (2015), <em>Frontiers in Human Neuroscience</em>. Slowing averages roughly
+    0.5 ms per year of age.
+  </p>
+</figure>
+
+<style>
+  .ac-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-lg);
+  }
+
+  .ac-row {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    column-gap: var(--space-md);
+    align-items: center;
+  }
+
+  .ac-band {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  .ac-track {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    /* Room for the value label at full bar width. */
+    padding-inline-end: 58px;
+  }
+
+  .ac-bar {
+    height: 12px;
+    border-radius: 0 4px 4px 0;
+    background-color: color-mix(in srgb, var(--ink-secondary) 55%, transparent);
+  }
+
+  /* The fastest band, emphasized by brightness — not colour. */
+  .ac-bar--fastest {
+    background-color: var(--ink-primary);
+  }
+
+  .ac-value {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 560px) {
+    .ac-row {
+      grid-template-columns: 3rem minmax(0, 1fr);
+      column-gap: var(--space-sm);
+    }
+
+    .ac-track {
+      padding-inline-end: 52px;
+    }
+  }
+</style>
