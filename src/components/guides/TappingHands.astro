@@ -1,0 +1,164 @@
+---
+/**
+ * Mean tapping rate by age band and hand, from Teismann et al. (2022),
+ * Table 3: 610 right-handed adults in the population-based BiDirect Study,
+ * 10-second trials on a force sensor. The takeaway is in the title: swapping
+ * to the other hand costs more speed than the two decades between the
+ * youngest and oldest bands.
+ *
+ * Two series, so a legend is present; identity rides on brightness and a
+ * fixed order (dominant hand always first), never hue. Neutral fills from a
+ * zero baseline, values in mono (Monospace-Numerals Rule), two decimals as
+ * published because the differences are small. Static HTML/CSS, zero JS.
+ */
+const AXIS_MAX = 6;
+
+const rows = [
+  { ages: '37–50', dominant: 5.34, other: 4.91 },
+  { ages: '50–60', dominant: 5.24, other: 4.77 },
+  { ages: '60–70', dominant: 4.97, other: 4.45 },
+];
+
+const width = (rate: number) => ((rate / AXIS_MAX) * 100).toFixed(1);
+---
+
+<figure
+  class="guide-figure"
+  aria-label="Average taps per second by age and hand, 610 right-handed adults, 10-second trials. Ages 37 to 50: dominant hand 5.34, other hand 4.91. Ages 50 to 60: dominant 5.24, other 4.77. Ages 60 to 70: dominant 4.97, other 4.45. Switching hands costs about 0.4 to 0.5 taps per second; the dominant hand loses about 0.37 between the youngest and oldest age bands."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">✋</span>The hand gap is wider than the
+      age gap</span
+    >
+    <span class="guide-figure-sub"
+      >Average taps per second by age, 610 right-handed adults, 10-second trials</span
+    >
+  </figcaption>
+
+  <ul class="th-legend" aria-hidden="true">
+    <li><span class="th-swatch th-swatch--dominant"></span>Dominant hand</li>
+    <li><span class="th-swatch th-swatch--other"></span>Other hand</li>
+  </ul>
+
+  <div class="th-groups" aria-hidden="true">
+    {
+      rows.map((r) => (
+        <div class="th-group">
+          <span class="th-ages">{r.ages}</span>
+          <div class="th-bars">
+            <div class="th-track">
+              <div class="th-bar th-bar--dominant" style={`width: ${width(r.dominant)}%`} />
+              <span class="th-value">{r.dominant.toFixed(2)}</span>
+            </div>
+            <div class="th-track">
+              <div class="th-bar th-bar--other" style={`width: ${width(r.other)}%`} />
+              <span class="th-value th-value--other">{r.other.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="guide-figure-source">
+    Source: Teismann et al. (2022), <em>Frontiers in Neurology</em>, BiDirect Study. Ages in years.
+  </p>
+</figure>
+
+<style>
+  .th-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-lg);
+    margin: var(--space-md) 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.75rem;
+    color: var(--ink-secondary);
+  }
+
+  .th-legend li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .th-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  .th-groups {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-block-start: var(--space-md);
+  }
+
+  .th-group {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    column-gap: var(--space-md);
+    align-items: center;
+  }
+
+  .th-ages {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  .th-bars {
+    display: flex;
+    flex-direction: column;
+    /* The 2px surface gap between adjacent bars. */
+    gap: 2px;
+  }
+
+  .th-track {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    /* Room for the value label at full bar width. */
+    padding-inline-end: 40px;
+  }
+
+  .th-bar {
+    height: 10px;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .th-bar--dominant,
+  .th-swatch--dominant {
+    background-color: var(--ink-primary);
+  }
+
+  .th-bar--other,
+  .th-swatch--other {
+    background-color: color-mix(in srgb, var(--ink-secondary) 55%, transparent);
+  }
+
+  .th-value {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  .th-value--other {
+    font-weight: 400;
+    color: var(--ink-secondary);
+  }
+
+  @media (max-width: 560px) {
+    .th-group {
+      grid-template-columns: 3rem minmax(0, 1fr);
+      column-gap: var(--space-sm);
+    }
+  }
+</style>

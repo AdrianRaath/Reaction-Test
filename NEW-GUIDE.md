@@ -81,7 +81,13 @@ figures can honestly say.
   corrected to what the studies say — never sourced as-is.
 - **Never cite a source whose exact title and author list you haven't
   confirmed.** Fetch the paper's page; "et al." is fine, guessed names are
-  not.
+  not. PMC and PubMed pages block automated fetches (captcha / HTTP 203);
+  read the record through the Europe PMC REST API
+  (`/europepmc/webservices/rest/PMC…/fullTextXML`) or NCBI E-utilities
+  (`efetch`) instead, which return the same title, authors, and tables.
+- **When a figure compares separate studies, say so** — name each sample
+  on its row and in the source line, and state in the prose what the
+  comparison can't separate (the device from the population, say).
 - **Citations are numbered footnotes:** `<sup class="cite"><a
 href="#source-N">N</a></sup>` in prose, numbered by first appearance,
   resolving to a `## Sources` section:
@@ -96,6 +102,9 @@ href="#source-N">N</a></sup>` in prose, numbered by first appearance,
   </ol>
   ```
 
+- **Two sources on one claim share one superscript**, comma-separated:
+  `<sup class="cite"><a href="#source-5">5</a>,<a href="#source-8">8</a></sup>`.
+  Two adjacent superscripts render as "58".
 - **No decorative citations** — every source is load-bearing for a specific
   claim. The reference guide carries ten; treat that as the ceiling, not a
   target.
@@ -106,8 +115,10 @@ href="#source-N">N</a></sup>` in prose, numbered by first appearance,
 
 Every guide declares one `category` in frontmatter, validated against the
 registry. The registry owns each category's display name and emoji (rendered
-as the header eyebrow; later, the /guides hub grouping). Existing ids:
-`reaction-time` ⚡, `click-speed` 🖱️, `memory-cognition` 🧠.
+as the header eyebrow; later, the /guides hub grouping) and its `measure`
+noun, which completes the page disclaimer ("Measured click speeds vary with
+your device…"). Existing ids: `reaction-time` ⚡, `click-speed` 🖱️,
+`memory-cognition` 🧠.
 
 A new category is **one registry entry** — never an ad-hoc string in
 frontmatter. This is content-side taxonomy only; the tool registry and
@@ -188,6 +199,10 @@ are load-bearing, not decorative.
 - **Labels must survive narrow widths**: hide or restructure below the width
   where they'd collide or clip (legend fallback, dropped zone labels) —
   never `overflow: hidden` on a label.
+- **Rank-band figures reuse `RankScale.astro`** — the shared plot (bands,
+  markers, legend fallback via container query). A new tool's figure is a
+  thin wrapper owning its data, caption, and source (`BenchmarkBands`,
+  `CpsBands`); pass `tight` when the narrowest band can't hold its name.
 - An `aria-label` on the figure carries the data for screen readers; the
   surrounding prose states the key numbers regardless.
 
@@ -207,7 +222,7 @@ From `[slug].astro` + the registry, with zero per-guide work:
   script is the **one sanctioned exception** to guides shipping zero JS —
   don't add more.
 - Sitemap entry (priority 0.7), canonical, OG/Twitter tags, GA, the guides
-  index card, and the guide-appropriate disclaimer.
+  index card, and the disclaimer (worded from the category's `measure`).
 
 ---
 

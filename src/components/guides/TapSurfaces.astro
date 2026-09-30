@@ -1,0 +1,131 @@
+---
+/**
+ * Dominant-hand tapping rate on three surfaces, from three separate studies,
+ * all using 10-second trials: Heaton et al. (2021) on the clinical tapping
+ * key (49.47 taps per 10 s), Teismann et al. (2022) on a force sensor (5.34
+ * Hz, right-handers aged 37 to 50), Byun et al. (2018) on a computer
+ * keyboard (72.0 taps per 10 s).
+ *
+ * The samples differ, so each row names its own and the source line says
+ * so: the chart brackets the answer rather than isolating the device.
+ * Single-series magnitude chart: neutral bars from a zero baseline, the
+ * fastest emphasized by brightness, never colour. Values in mono
+ * (Monospace-Numerals Rule). Static HTML/CSS, zero JS.
+ */
+const AXIS_MAX = 8;
+
+const rows = [
+  { surface: 'Tapping key', rate: 4.9, note: 'Clinical tapping test, 183 adults aged 19 to 60' },
+  { surface: 'Force sensor', rate: 5.3, note: '157 adults aged 37 to 50' },
+  { surface: 'Keyboard key', rate: 7.2, note: '72 adults, average age 40', fastest: true },
+];
+
+const width = (rate: number) => ((rate / AXIS_MAX) * 100).toFixed(1);
+---
+
+<figure
+  class="guide-figure"
+  aria-label="Average taps per second with the dominant hand in 10-second trials, from three separate studies. Clinical tapping key: 4.9, from 183 adults aged 19 to 60. Force sensor: 5.3, from 157 adults aged 37 to 50. Computer keyboard key: 7.2, from 72 adults with an average age of 40."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">📊</span>Five to seven, depending on the
+      key</span
+    >
+    <span class="guide-figure-sub"
+      >Average dominant-hand taps per second in 10-second trials, three separate studies</span
+    >
+  </figcaption>
+
+  <div class="ts-rows" aria-hidden="true">
+    {
+      rows.map((r) => (
+        <div class="ts-row">
+          <span class="ts-surface">{r.surface}</span>
+          <div class="ts-track">
+            <div
+              class:list={['ts-bar', { 'ts-bar--fastest': r.fastest }]}
+              style={`width: ${width(r.rate)}%`}
+            />
+            <span class="ts-value">{r.rate.toFixed(1)}/s</span>
+          </div>
+          <span class="ts-note">{r.note}</span>
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="guide-figure-source">
+    Sources: Heaton et al. (2021), Teismann et al. (2022), Byun et al. (2018). Each study tested a
+    different group of adults.
+  </p>
+</figure>
+
+<style>
+  .ts-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-block-start: var(--space-lg);
+  }
+
+  .ts-row {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    column-gap: var(--space-md);
+    row-gap: 2px;
+    align-items: center;
+  }
+
+  .ts-surface {
+    font-size: 0.8125rem;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  .ts-track {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    /* Room for the value label at full bar width. */
+    padding-inline-end: 44px;
+  }
+
+  .ts-bar {
+    height: 12px;
+    border-radius: 0 4px 4px 0;
+    background-color: color-mix(in srgb, var(--ink-secondary) 55%, transparent);
+  }
+
+  /* The fastest surface, emphasized by brightness — not colour. */
+  .ts-bar--fastest {
+    background-color: var(--ink-primary);
+  }
+
+  .ts-value {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  .ts-note {
+    grid-column: 2;
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  /* Phone widths: the row label moves above its bar so the bar keeps a
+     readable length. */
+  @media (max-width: 560px) {
+    .ts-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ts-note {
+      grid-column: 1;
+    }
+  }
+</style>

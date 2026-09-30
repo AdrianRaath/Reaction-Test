@@ -1,0 +1,242 @@
+---
+/**
+ * The plot inside a rank-band figure: a tool's rank tiers drawn as a linear
+ * scale, with labeled markers for reference readings above it. Shared by
+ * BenchmarkBands (reaction time) and CpsBands (click speed); each of those
+ * owns its data, caption, and source line.
+ *
+ * Rank hues are licensed here: the plot charts the rank bands themselves,
+ * the same telemetry the rank badge carries (DESIGN.md, Rank-Only Colour
+ * Rule). Every band is also labeled by name and range, so identity never
+ * rides on colour alone.
+ *
+ * Band widths are proportional to the axis, so a narrow band's label needs
+ * room. Below a container width the in-band labels give way to a stacked
+ * legend; `tight` raises that threshold for scales whose narrowest band
+ * can't hold its name at typical desktop widths. Static HTML/CSS, zero JS.
+ */
+interface Band {
+  name: string;
+  from: number;
+  to: number;
+  range: string;
+  color: string;
+}
+
+interface Marker {
+  at: number;
+  label: string;
+  value: string;
+  /** 'high' draws the longer leader line, so two labels can stack. */
+  row: 'high' | 'low';
+}
+
+interface Props {
+  bands: Band[];
+  markers: Marker[];
+  min: number;
+  max: number;
+  /** Unit suffix for the stacked legend's ranges. */
+  unit: string;
+  tight?: boolean;
+}
+
+const { bands, markers, min, max, unit, tight = false } = Astro.props;
+
+const pct = (v: number) => (((v - min) / (max - min)) * 100).toFixed(1);
+---
+
+<div class:list={['rs-plot', { 'rs-plot--tight': tight }]}>
+  <div class="rs-annotations" aria-hidden="true">
+    {
+      markers.map((m) => (
+        <div class={`rs-marker rs-marker--${m.row}`} style={`inset-inline-start: ${pct(m.at)}%`}>
+          <span class="rs-marker-label">
+            {m.label} <span class="rs-marker-value">{m.value}</span>
+          </span>
+          <span class="rs-marker-line" />
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="rs-scale" aria-hidden="true">
+    {
+      bands.map((b) => (
+        <div class="rs-band" style={`flex-grow: ${b.to - b.from}; --band: ${b.color}`} />
+      ))
+    }
+  </div>
+
+  <div class="rs-labels" aria-hidden="true">
+    {
+      bands.map((b) => (
+        <div class="rs-label" style={`flex-grow: ${b.to - b.from}; --band: ${b.color}`}>
+          <span class="rs-label-name">{b.name}</span>
+          <span class="rs-label-range">{b.range}</span>
+        </div>
+      ))
+    }
+  </div>
+
+  <ul class="rs-legend" aria-hidden="true">
+    {
+      bands.map((b) => (
+        <li style={`--band: ${b.color}`}>
+          <span class="rs-legend-swatch" />
+          <span class="rs-legend-name">{b.name}</span>
+          <span class="rs-legend-range">
+            {b.range} {unit}
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+</div>
+
+<style>
+  .rs-plot {
+    container-type: inline-size;
+    margin-block-start: var(--space-lg);
+  }
+
+  /* --- Markers ----------------------------------------------------------- */
+
+  .rs-annotations {
+    position: relative;
+    height: 64px;
+  }
+
+  .rs-marker {
+    position: absolute;
+    inset-block-end: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translateX(-50%);
+  }
+
+  .rs-marker-label {
+    white-space: nowrap;
+    font-size: 0.75rem;
+    color: var(--ink-secondary);
+  }
+
+  .rs-marker-value {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  .rs-marker-line {
+    width: 1px;
+    background-color: var(--ink-muted);
+    margin-block-start: 4px;
+  }
+
+  .rs-marker--high .rs-marker-line {
+    height: 40px;
+  }
+
+  .rs-marker--low .rs-marker-line {
+    height: 16px;
+  }
+
+  /* --- Bands ------------------------------------------------------------- */
+
+  .rs-scale {
+    display: flex;
+    gap: 2px;
+  }
+
+  .rs-band {
+    flex-basis: 0;
+    height: 18px;
+    border-radius: 4px;
+    background-color: color-mix(in srgb, var(--band) 22%, transparent);
+  }
+
+  .rs-labels {
+    display: flex;
+    gap: 2px;
+    margin-block-start: var(--space-sm);
+  }
+
+  .rs-label {
+    flex-basis: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .rs-label-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--band);
+  }
+
+  .rs-label-range {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--ink-muted);
+  }
+
+  /* --- Stacked legend fallback ------------------------------------------- */
+
+  .rs-legend {
+    display: none;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin: var(--space-md) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rs-legend li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .rs-legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background-color: color-mix(in srgb, var(--band) 60%, transparent);
+  }
+
+  .rs-legend-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--band);
+  }
+
+  .rs-legend-range {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  /* 478px of plot is what a 560px phone viewport leaves inside the figure. */
+  @container (max-width: 478px) {
+    .rs-labels {
+      display: none;
+    }
+
+    .rs-legend {
+      display: flex;
+    }
+  }
+
+  @container (max-width: 620px) {
+    .rs-plot--tight .rs-labels {
+      display: none;
+    }
+
+    .rs-plot--tight .rs-legend {
+      display: flex;
+    }
+  }
+</style>

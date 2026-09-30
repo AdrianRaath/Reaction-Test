@@ -1,0 +1,50 @@
+---
+/**
+ * Click-speed benchmark bands — the rank tiers shared by the CPS, Kohi, and
+ * right click tests drawn as a scale, with markers for the lab tapping
+ * average and the keyboard-key result. The plot lives in RankScale.
+ *
+ * Higher is better here, so the scale runs Beginner → Elite left to right.
+ * The axis starts at 3 rather than 0 so the 1-CPS Advanced band keeps
+ * usable width; `tight` hands the labels to the stacked legend sooner.
+ *
+ * Static HTML/CSS — guides ship zero JS. Thresholds mirror cpsTool,
+ * kohiTool, and rightClickTool in `src/data/tool-defs.ts`; if those rank
+ * tables move, move this with them. (The spacebar test ranks differently.)
+ */
+import RankScale from './RankScale.astro';
+
+const bands = [
+  { name: 'Beginner', from: 3, to: 4, range: 'under 4', color: 'var(--rank-beginner)' },
+  { name: 'Intermediate', from: 4, to: 7, range: '4–6.9', color: 'var(--rank-intermediate)' },
+  { name: 'Advanced', from: 7, to: 8, range: '7–7.9', color: 'var(--rank-advanced)' },
+  { name: 'Pro', from: 8, to: 10, range: '8–9.9', color: 'var(--rank-pro)' },
+  { name: 'Elite', from: 10, to: 12, range: '10+', color: 'var(--rank-elite)' },
+];
+
+const markers = [
+  { at: 7.2, label: 'keyboard key', value: '≈7.2', row: 'high' as const },
+  { at: 5, label: 'lab average', value: '≈5', row: 'low' as const },
+];
+---
+
+<figure
+  class="guide-figure"
+  aria-label="Click speed rank bands in clicks per second, used by the CPS, Kohi, and right click tests. Beginner: under 4. Intermediate: 4 to 6.9. Advanced: 7 to 7.9. Pro: 8 to 9.9. Elite: 10 and above. Lab studies put one-finger tapping at about 5 per second, inside Intermediate. One study measured about 7.2 on a keyboard key, inside Advanced."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">📊</span>Where click scores land</span
+    >
+    <span class="guide-figure-sub"
+      >ReflexLab rank bands for the CPS, Kohi, and right click tests, in clicks per second</span
+    >
+  </figcaption>
+
+  <RankScale bands={bands} markers={markers} min={3} max={12} unit="CPS" tight />
+
+  <p class="guide-figure-source">
+    Lab average: finger-tapping studies by Heaton et al. (2021) and Teismann et al. (2022). Keyboard
+    key: Byun et al. (2018). Both count taps on a key, not mouse clicks.
+  </p>
+</figure>
