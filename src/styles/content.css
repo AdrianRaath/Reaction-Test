@@ -132,6 +132,13 @@
   border-block-end: none;
 }
 
+/* Milestone tables (visual memory, F1 start) carry a word label where rank
+   tables carry a tier name, so the label column gets room for "Quick off the
+   line" and the threshold column shrinks to fit "< 400 ms". */
+.rank-table-milestones .rank-row {
+  grid-template-columns: 160px 96px 1fr;
+}
+
 .rank-row .rank-name {
   font-weight: 700;
 }
@@ -290,7 +297,8 @@
 /* --- Responsive --------------------------------------------------------------- */
 
 @media (max-width: 768px) {
-  .rank-row {
+  .rank-row,
+  .rank-table-milestones .rank-row {
     grid-template-columns: 1fr;
     gap: var(--space-xs);
     text-align: center;
