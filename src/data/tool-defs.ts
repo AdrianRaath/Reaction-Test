@@ -258,3 +258,45 @@ export const spacebarTool = defineTool({
   ],
   maxHistory: 20,
 });
+
+/**
+ * F1 reaction time test. Lower is better.
+ *
+ * The race-start light sequence: five lights one second apart, a random hold
+ * (0.2–3 s, the range F1.com describes; the FIA regulations leave it to the
+ * starter), then lights-out. The test measures lights-out to input.
+ *
+ * Milestones, not ranks (maintainer decision 2026-10-07): no published sample
+ * measures ordinary people on a lights-OFF task with this hold window. The
+ * nearest numbers come from three different conditions (lab onset norms ~231
+ * ms, an offset penalty of 30–70 ms from a 12-person study, and browser
+ * latency on top), which is not a basis for banding every score. Checkpoints
+ * claim nothing about where the population sits. "Under 150 ms" is near-
+ * unreachable on purpose.
+ *
+ * Thresholds are the "at least this good" value: 'Under 400 ms' is met by
+ * 399 ms, not 400.
+ */
+export const f1ReactionTool = defineTool({
+  id: 'f1-reaction-time',
+  metrics: {
+    ms: {
+      label: 'Start reaction time',
+      direction: 'lower-is-better',
+      unit: 'ms',
+      primary: true,
+    },
+    jumpStarts: {
+      label: 'Jump starts',
+      direction: 'lower-is-better',
+    },
+  },
+  milestones: [
+    { id: 'under-400', name: 'Under 400 ms', threshold: 399, detail: 'Clean start' },
+    { id: 'under-300', name: 'Under 300 ms', threshold: 299, detail: 'Quick off the line' },
+    { id: 'under-250', name: 'Under 250 ms', threshold: 249, detail: 'Sharp' },
+    { id: 'under-200', name: 'Under 200 ms', threshold: 199, detail: 'Driver territory' },
+    { id: 'under-150', name: 'Under 150 ms', threshold: 149, detail: 'Almost nobody' },
+  ],
+  maxHistory: 20,
+});

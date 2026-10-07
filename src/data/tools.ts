@@ -83,6 +83,13 @@ export const tools: Tool[] = [
     icon: 'ph:target',
     blurb: 'Hit 30 targets fast and clean. One score for speed and accuracy.',
   },
+  {
+    href: '/f1-reaction-time-test',
+    name: 'F1 Reaction Time Test',
+    navLabel: 'F1 Start Test',
+    icon: 'ph:flag-checkered',
+    blurb: 'Five red lights, then lights out. React like a race start and get your time in ms.',
+  },
 ];
 
 /**

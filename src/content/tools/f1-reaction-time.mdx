@@ -1,0 +1,371 @@
+---
+faq:
+  - question: 'Is this the official F1 reaction time test?'
+    answer: 'No. ReflexLab is an independent site with no connection to Formula 1, the FIA, or any team. This test copies the start-light sequence the sporting regulations describe, because the sequence is what makes the test interesting, and nothing more.'
+  - question: 'What is the average F1 driver reaction time at a race start?'
+    answer: 'F1.com says drivers launch about 0.2 seconds after the lights go out, and a McLaren performance coach puts a typical start reaction between 0.2 and 0.3 seconds. Both figures time the lights going out to a physical action in the car, either the clutch paddle reaching its bite point or the car moving, so they are not the same measurement as a mouse click on this page.'
+  - question: 'Why is my time slower here than on the regular reaction time test?'
+    answer: 'Two reasons. Reacting to a light going out is slower than reacting to a light coming on; one study measured the gap at 32 to 71 milliseconds. And the hold after the fifth light is short and unpredictable, which gives you less time to prepare than a plain test does. Compare your F1 scores with your other F1 scores.'
+  - question: 'Why did I get a jump start?'
+    answer: 'You clicked or pressed Space while at least one light was still lit. The attempt is voided, the session counts the jump start, and you go again. If it happens on a light coming on, you are guessing the hold rather than reacting to lights out.'
+  - question: 'How long do the lights stay on?'
+    answer: "One second between each light, so the fifth comes on four seconds after the first. The hold after that is random, anywhere from 0.2 to 3 seconds. F1.com describes that window for real race starts; the FIA regulations only say the hold is at the starter's discretion."
+  - question: 'Does the F1 reaction time test work on mobile?'
+    answer: 'Yes. Tap the test area to start, then tap when the lights go out. Touch screens add latency compared with a desktop mouse, so compare phone scores with phone scores.'
+  - question: 'How is my data stored?'
+    answer: 'Your browser stores everything (best start, session history, trend, milestones, and settings) locally using localStorage. Nothing reaches any server, so your results stay private on your device and will not sync across browsers.'
+---
+
+<section id="what-is" class="info-section">
+  <div class="container">
+    <h2>What is an F1 reaction time test?</h2>
+
+      An F1 reaction time test copies the start of a Grand Prix. Five red lights come on one
+      second apart. They hold. They go out. The moment they go dark you click, and ReflexLab
+      reports the gap in milliseconds.
+
+      The sequence follows the
+      <a href="https://api.fia.com/system/files/documents/fia_2026_f1_regulations_-_section_b_sporting_-_iss_07_-_2026-06-25.pdf" rel="noopener">FIA sporting regulations</a>:
+      one second between each light, then lights out at the starter's discretion.
+      <a href="https://www.formula1.com/en/latest/article.rapid-decisions-driver-skills-and-intricate-procedures-why-race-starts-are.3uziERC5iPE5EYOPRmerXU.html" rel="noopener">F1.com</a>
+      puts the hold at a random 0.2 to 3 seconds, and that is the window this test uses.
+
+      This is an independent practice tool with no official standing. It copies the sequence
+      because the sequence is the point: the fixed four-second ramp invites you to guess, and the
+      random hold punishes the guess. If you want the plain version with no ramp, take the
+      <a href="/">reaction time test</a>.
+
+  </div>
+</section>
+
+<section id="how-it-works" class="info-section alt-bg">
+  <div class="container">
+    <h2>How this F1 reaction time test works</h2>
+    <ol class="steps-list section-content">
+      <li>
+        <strong>Choose your settings</strong>
+
+          Pick how many starts make a session (1, 3, 5, or 10) and whether you react with a mouse
+          click or the spacebar. Your choices save automatically.
+
+      </li>
+      <li>
+        <strong>Start the sequence</strong>
+
+          Click the test area or press Space. The first light comes on at once, then one more every
+          second until all five are lit.
+
+      </li>
+      <li>
+        <strong>Hold</strong>
+
+          After the fifth light, nothing happens for somewhere between 0.2 and 3 seconds. Keep
+          still. Any input while a light is lit is a jump start.
+
+      </li>
+      <li>
+        <strong>Lights out</strong>
+
+          All five go dark at once. Click or hit Space as fast as you can. The timer runs from the
+          lights going out to your input.
+
+      </li>
+      <li>
+        <strong>Review your session</strong>
+
+          After the last start you see every time, your session average, and whether you set a new
+          best. Milestones and your trend graph update below the test.
+
+      </li>
+    </ol>
+    <div class="note">
+      <strong>Jump starts:</strong> moving before the lights go out voids that start and you run it
+      again. The session summary counts how many you made. There is no other penalty, which is
+      more lenient than the stewards.
+    </div>
+
+  </div>
+</section>
+
+<section id="good-score" class="info-section">
+  <div class="container">
+    <h2>What is a good F1 reaction time?</h2>
+
+      We found no published study that measures people on a lights-out test with this hold
+      window, so this page does not claim an average. Three things the research does say:
+
+    <ul class="section-content">
+      <li>
+        In a lab test of 1,469 adults aged 18 to 65, simple reaction time to a light coming on
+        averaged 231 milliseconds, with most people within about 27 milliseconds of that
+        (<a href="https://www.frontiersin.org/articles/10.3389/fnhum.2015.00131/full" rel="noopener">Woods et al., 2015</a>).
+      </li>
+      <li>
+        Reacting to a light going out is slower than reacting to one coming on. One study measured
+        the gap at 32 to 71 milliseconds, with the biggest penalty after the shortest wait
+        (<a href="https://www.journals.vu.lt/psichologija/article/view/2623" rel="noopener">Sokolova et al., 2013</a>).
+      </li>
+      <li>
+        Your display, browser, and mouse add latency on top of all of that.
+      </li>
+    </ul>
+
+      So expect your number here to sit above your score on the
+      <a href="/">plain reaction time test</a>. The milestones below are checkpoints, not a verdict
+      on where you sit in the population.
+
+    <div class="rank-table">
+      <div class="rank-row">
+        <span class="rank-name">Almost nobody</span>
+        <span class="rank-range">Under 150 ms</span>
+        <span class="rank-desc">Three standard deviations under the lab average, on a slower task, through a browser.</span>
+      </div>
+      <div class="rank-row">
+        <span class="rank-name">Driver territory</span>
+        <span class="rank-range">Under 200 ms</span>
+        <span class="rank-desc">The figure quoted for race starts, measured a different way. See below.</span>
+      </div>
+      <div class="rank-row">
+        <span class="rank-name">Sharp</span>
+        <span class="rank-range">Under 250 ms</span>
+        <span class="rank-desc">Around the lab average for a light coming on, before the lights-out penalty.</span>
+      </div>
+      <div class="rank-row">
+        <span class="rank-name">Quick off the line</span>
+        <span class="rank-range">Under 300 ms</span>
+        <span class="rank-desc">A clean reaction on ordinary hardware with the lights-out penalty paid.</span>
+      </div>
+      <div class="rank-row">
+        <span class="rank-name">Clean start</span>
+        <span class="rank-range">Under 400 ms</span>
+        <span class="rank-desc">You waited for the lights and reacted to them. Most hesitation lands above this.</span>
+      </div>
+    </div>
+
+    <h3>How fast are F1 drivers off the line?</h3>
+
+      F1.com says drivers launch about 0.2 seconds after the lights go out. Jon Malvern, a
+      performance coach at McLaren, puts a typical start reaction
+      <a href="https://www.mclaren.com/racing/team/carlos-sainz-lando-norris-reaction-time/" rel="noopener">between 0.2 and 0.3 seconds</a>.
+      The fastest widely reported start is Valtteri Bottas at the 2017 Austrian Grand Prix: 0.201
+      seconds from lights out to the car moving, a figure the FIA measured after rivals suspected
+      a jump start
+      (<a href="https://www.motorsportmagazine.com/articles/single-seaters/f1/2017-austrian-grand-prix/" rel="noopener">Motor Sport Magazine</a>).
+
+      Those numbers measure something different from a click. The reaction time shown on race
+      broadcasts runs from lights out to the driver dropping the clutch paddle to its bite point,
+      according to Rob Smedley, who led the system's development for F1. The 2017 figure ran to the
+      car moving. Both include a physical action in a car, with the driver's hands already loaded
+      on the paddle. A 230 on this page and a 0.23 on the broadcast are two different clocks.
+      Treat the driver figures as a reference point, not a scoreboard.
+
+  </div>
+</section>
+
+<section id="jump-starts" class="info-section alt-bg">
+  <div class="container">
+    <h2>Jump starts, here and on the grid</h2>
+
+      Here, any click or key press while a light is lit is a jump start. The attempt is voided,
+      the counter ticks up, and you go again. Guessing the hold is the usual cause: with a window
+      anywhere from 0.2 to 3 seconds, a guess lands early more often than it lands fast.
+
+      On the grid the regulations are stricter. A car has to stay stationary from the third light
+      until the lights go out, and a transponder on the car detects movement over a small,
+      undisclosed distance. The stewards can hand out a five or ten second penalty, a drive-through,
+      or a stop-and-go. The tolerance stays secret so teams cannot tune their launches to sit just
+      inside it.
+
+  </div>
+</section>
+
+<section id="tracking" class="info-section">
+  <div class="container">
+    <h2>Track your F1 start times</h2>
+
+      ReflexLab saves your best start, session history, trend graph, and milestones. Your browser
+      keeps all of it; we never see your results.
+
+    <div class="tips-grid grid-2x2 section-content">
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🏆
+        </span>
+        <h3>Best Start</h3>
+
+          Your fastest session average, shown beside every new result. Beat it and the number
+          updates on the spot.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          📈
+        </span>
+        <h3>Trend Graph</h3>
+
+          Your average across your last 20 sessions, plotted. One fast session is luck. A line
+          that slopes down is practice.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          📋
+        </span>
+        <h3>Session History</h3>
+
+          Each session's average and when you ran it, so you can see whether late-night sessions
+          or a new mouse moved the number.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🎯
+        </span>
+        <h3>Milestones</h3>
+
+          Five checkpoints from under 400 ms down to under 150 ms. Once you clear one it stays
+          cleared until you reset your data.
+
+      </div>
+    </div>
+    <div class="note">
+      <strong>Privacy note:</strong> All your data is stored locally in your browser using
+      localStorage. We don't collect, transmit, or store any of your results on external servers.
+      Use the Reset button in the toolbar to clear all saved data if needed.
+    </div>
+
+  </div>
+</section>
+
+<section id="tips" class="info-section alt-bg">
+  <div class="container">
+    <h2>How to get a faster start</h2>
+    <div class="tips-grid grid-2x2 section-content">
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🎯
+        </span>
+        <h3>Watch the lamps</h3>
+
+          The lamps going dark are the signal. Fix your eyes on the gantry, not on the text below
+          it, and keep your finger resting on the button.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          ⏱️
+        </span>
+        <h3>Don't guess the hold</h3>
+
+          The hold is random inside a 0.2 to 3 second window. A guess that lands early costs you
+          the whole start. Wait for the lights and take the honest number.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🖥️
+        </span>
+        <h3>Cut hardware lag</h3>
+
+          A 60 Hz screen can add up to 16 ms before you see the lights go out, and a wireless mouse
+          in power-saving mode adds more. Faster hardware does not make you quicker. It stops your
+          equipment padding the number.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          😴
+        </span>
+        <h3>Sleep and caffeine</h3>
+
+          <a href="/guides/how-sleep-affects-reaction-time">A short night</a> slows reaction time
+          more than any setting on this page can recover, and
+          <a href="/guides/how-caffeine-affects-reaction-time">caffeine</a> buys some of it back
+          for a few hours.
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section id="faq" class="info-section">
+  <div class="container">
+    <h2>F1 reaction time test FAQ</h2>
+    <div class="faq-list section-content">
+      <details class="faq-item">
+        <summary>Is this the official F1 reaction time test?</summary>
+
+          No. ReflexLab is an independent site with no connection to Formula 1, the FIA, or any
+          team. This test copies the start-light sequence the sporting regulations describe,
+          because the sequence is what makes the test interesting, and nothing more.
+
+      </details>
+      <details class="faq-item">
+        <summary>What is the average F1 driver reaction time at a race start?</summary>
+
+          F1.com says drivers launch about 0.2 seconds after the lights go out, and a McLaren
+          performance coach puts a typical start reaction between 0.2 and 0.3 seconds. Both figures
+          time the lights going out to a physical action in the car, either the clutch paddle
+          reaching its bite point or the car moving, so they are not the same measurement as a
+          mouse click on this page.
+
+      </details>
+      <details class="faq-item">
+        <summary>Why is my time slower here than on the regular reaction time test?</summary>
+
+          Two reasons. Reacting to a light going out is slower than reacting to a light coming on;
+          one study measured the gap at 32 to 71 milliseconds. And the hold after the fifth light
+          is short and unpredictable, which gives you less time to prepare than a plain test does.
+          Compare your F1 scores with your other F1 scores.
+
+      </details>
+      <details class="faq-item">
+        <summary>Why did I get a jump start?</summary>
+
+          You clicked or pressed Space while at least one light was still lit. The attempt is
+          voided, the session counts the jump start, and you go again. If it happens on a light
+          coming on, you are guessing the hold rather than reacting to lights out.
+
+      </details>
+      <details class="faq-item">
+        <summary>How long do the lights stay on?</summary>
+
+          One second between each light, so the fifth comes on four seconds after the first. The
+          hold after that is random, anywhere from 0.2 to 3 seconds. F1.com describes that window
+          for real race starts; the FIA regulations only say the hold is at the starter's
+          discretion.
+
+      </details>
+      <details class="faq-item">
+        <summary>Does the F1 reaction time test work on mobile?</summary>
+
+          Yes. Tap the test area to start, then tap when the lights go out. Touch screens add
+          latency compared with a desktop mouse, so compare phone scores with phone scores.
+
+      </details>
+      <details class="faq-item">
+        <summary>How is my data stored?</summary>
+
+          Your browser stores everything (best start, session history, trend, milestones, and
+          settings) locally using localStorage. Nothing reaches any server, so your results stay
+          private on your device and will not sync across browsers.
+
+      </details>
+    </div>
+
+  </div>
+</section>
+
+<section class="disclaimer-section">
+  <div class="container">
+    <div class="disclaimer">
+      <strong>Disclaimer:</strong> ReflexLab is an independent site and is not associated in any way
+      with the Formula 1 companies, the FIA, or any team or driver. F1, FORMULA ONE, FORMULA 1, FIA
+      FORMULA ONE WORLD CHAMPIONSHIP, GRAND PRIX and related marks are trade marks of Formula One
+      Licensing B.V. This test is for entertainment and personal tracking. Results depend on your
+      hardware, browser, and display; for scientific or medical assessment, use calibrated
+      laboratory equipment.
+    </div>
+  </div>
+</section>
