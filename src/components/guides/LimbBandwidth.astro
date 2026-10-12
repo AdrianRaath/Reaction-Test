@@ -1,0 +1,119 @@
+---
+/**
+ * Pointing throughput by limb, from Balakrishnan & MacKenzie (1997): 10
+ * adults, a one-dimensional Fitts task on a tablet, each limb isolated by a
+ * custom splint (finger, wrist, forearm) plus two stylus conditions. Values
+ * are the bandwidths printed in the paper's results figure.
+ *
+ * The takeaway is the tie: wrist and forearm did not differ significantly,
+ * so those two bars are emphasized by brightness, never colour. Neutral bars
+ * from a zero baseline, values in mono (Monospace-Numerals Rule). Static
+ * HTML/CSS, zero JS.
+ */
+const AXIS_MAX = 5;
+
+const rows = [
+  { limb: 'Index finger alone', bps: 2.96, tie: false },
+  { limb: 'Wrist', bps: 4.08, tie: true },
+  { limb: 'Forearm', bps: 4.14, tie: true },
+  { limb: 'Stylus, wrist motion', bps: 4.2, tie: false },
+  { limb: 'Stylus, thumb and index pinch', bps: 4.47, tie: false },
+];
+
+const width = (bps: number) => ((bps / AXIS_MAX) * 100).toFixed(1);
+---
+
+<figure
+  class="guide-figure"
+  aria-label="Pointing throughput in bits per second by limb, 10 adults in a lab pointing test, higher is better. Index finger alone: 2.96. Wrist: 4.08. Forearm: 4.14. Wrist and forearm showed no significant difference. Stylus moved by the wrist: 4.20. Stylus pinched between thumb and index finger: 4.47, the highest."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">💪</span>Wrist and forearm tied; a lone
+      finger came last</span
+    >
+    <span class="guide-figure-sub"
+      >Pointing throughput in bits per second, higher is better (10 adults)</span
+    >
+  </figcaption>
+
+  <div class="lb-rows" aria-hidden="true">
+    {
+      rows.map((r) => (
+        <div class="lb-row">
+          <span class="lb-limb">{r.limb}</span>
+          <div class="lb-track">
+            <div
+              class:list={['lb-bar', { 'lb-bar--tie': r.tie }]}
+              style={`width: ${width(r.bps)}%`}
+            />
+            <span class="lb-value">{r.bps.toFixed(2)}</span>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="guide-figure-source">
+    Source: Balakrishnan &amp; MacKenzie (1997), CHI. Splints isolated each limb on a drawing
+    tablet; the study tested no mouse.
+  </p>
+</figure>
+
+<style>
+  .lb-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-block-start: var(--space-lg);
+  }
+
+  .lb-row {
+    display: grid;
+    grid-template-columns: 11.5rem minmax(0, 1fr);
+    column-gap: var(--space-md);
+    row-gap: 2px;
+    align-items: center;
+  }
+
+  .lb-limb {
+    font-size: 0.8125rem;
+    color: var(--ink-primary);
+  }
+
+  .lb-track {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    /* Room for the value label at full bar width. */
+    padding-inline-end: 36px;
+  }
+
+  .lb-bar {
+    height: 12px;
+    border-radius: 0 4px 4px 0;
+    background-color: color-mix(in srgb, var(--ink-secondary) 55%, transparent);
+  }
+
+  /* The tied pair, emphasized by brightness — not colour. */
+  .lb-bar--tie {
+    background-color: var(--ink-primary);
+  }
+
+  .lb-value {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  /* Phone widths: the row label moves above its bar so the bar keeps a
+     readable length. */
+  @media (max-width: 560px) {
+    .lb-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

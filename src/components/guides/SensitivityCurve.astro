@@ -1,0 +1,156 @@
+---
+/**
+ * Mean completion time for a first-person flick to a static target at six
+ * mouse sensitivities, from Boudaoud, Spjut & Kim (2023): 13 regular FPS
+ * players. The paper prints no per-condition table; these values were read
+ * from the overall curve in its completion-time figure (±0.005 s), and the
+ * source line says so.
+ *
+ * The 20–80 cm/360 rows sit inside a green-tinted zone: the measured-benefit
+ * encoding from DESIGN.md (guide-figure data encodings), labeled in text.
+ * Inside the zone the paper found no significant difference between
+ * settings. Neutral bars from a zero baseline, values in mono
+ * (Monospace-Numerals Rule). Static HTML/CSS, zero JS.
+ */
+const AXIS_MAX = 0.7;
+
+/** Ordered low sensitivity (long slide) to high (short flick). */
+const rows = [
+  { cm: 160, s: 0.581 },
+  { cm: 80, s: 0.521 },
+  { cm: 40, s: 0.501 },
+  { cm: 20, s: 0.518 },
+  { cm: 10, s: 0.568 },
+  { cm: 5, s: 0.627 },
+];
+
+const groups = [
+  { band: false, rows: rows.filter((r) => r.cm > 80) },
+  { band: true, rows: rows.filter((r) => r.cm >= 20 && r.cm <= 80) },
+  { band: false, rows: rows.filter((r) => r.cm < 20) },
+];
+
+const width = (s: number) => ((s / AXIS_MAX) * 100).toFixed(1);
+---
+
+<figure
+  class="guide-figure"
+  aria-label="Mean time to hit a static target at six mouse sensitivities, 13 FPS players. 160 centimeters per 360-degree turn: 0.58 seconds. 80 centimeters: 0.52 seconds. 40 centimeters: 0.50 seconds, the fastest. 20 centimeters: 0.52 seconds. 10 centimeters: 0.57 seconds. 5 centimeters: 0.63 seconds. Times from 20 to 80 centimeters showed no significant difference. Values read from the study's chart."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">🖱️</span>Slower at both ends, fastest in
+      the middle</span
+    >
+    <span class="guide-figure-sub"
+      >Mean time to hit a static target, by sensitivity in cm per 360° turn (13 FPS players)</span
+    >
+  </figcaption>
+
+  <div class="sc-plot" aria-hidden="true">
+    <span class="sc-end">Low sensitivity, long slide</span>
+    {
+      groups.map((g) => (
+        <div class:list={['sc-group', { 'sc-band': g.band }]}>
+          {g.band && <span class="sc-band-label">Fastest range: no significant difference</span>}
+          {g.rows.map((r) => (
+            <div class="sc-row">
+              <span class="sc-cm">{r.cm} cm</span>
+              <div class="sc-track">
+                <div class="sc-bar" style={`width: ${width(r.s)}%`} />
+                <span class="sc-value">{r.s.toFixed(2)} s</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))
+    }
+    <span class="sc-end">High sensitivity, short flick</span>
+  </div>
+
+  <p class="guide-figure-source">
+    Source: Boudaoud, Spjut &amp; Kim (2023), <em>IEEE Transactions on Games</em>. We read the
+    values from the paper's chart.
+  </p>
+</figure>
+
+<style>
+  .sc-plot,
+  .sc-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .sc-plot {
+    margin-block-start: var(--space-lg);
+  }
+
+  .sc-end {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  /* The zone bleeds into the figure padding by the same amount it pads its
+     rows, so the label column stays aligned with the rows outside it. */
+  .sc-band {
+    margin-inline: calc(var(--space-sm) * -1);
+    padding: var(--space-sm);
+    border-radius: 6px;
+    background-color: color-mix(in srgb, var(--signal-green) 14%, transparent);
+  }
+
+  .sc-band-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ink-primary);
+  }
+
+  .sc-row {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr);
+    column-gap: var(--space-md);
+    align-items: center;
+  }
+
+  .sc-cm {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  .sc-track {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    /* Room for the value label at full bar width. */
+    padding-inline-end: 52px;
+  }
+
+  .sc-bar {
+    height: 12px;
+    border-radius: 0 4px 4px 0;
+    background-color: color-mix(in srgb, var(--ink-secondary) 55%, transparent);
+  }
+
+  .sc-value {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 560px) {
+    .sc-row {
+      grid-template-columns: 3.5rem minmax(0, 1fr);
+      column-gap: var(--space-sm);
+    }
+
+    .sc-track {
+      padding-inline-end: 46px;
+    }
+  }
+</style>

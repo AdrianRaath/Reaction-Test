@@ -19,6 +19,7 @@ export const guideCategories = {
   'reaction-time': { name: 'Reaction Time', emoji: '⚡', measure: 'reaction times' },
   'click-speed': { name: 'Click Speed', emoji: '🖱️', measure: 'click speeds' },
   'memory-cognition': { name: 'Memory & Cognition', emoji: '🧠', measure: 'memory scores' },
+  aim: { name: 'Aim', emoji: '🎯', measure: 'aim scores' },
 } as const;
 
 export type GuideCategoryId = keyof typeof guideCategories;

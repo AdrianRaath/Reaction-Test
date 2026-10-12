@@ -1,0 +1,152 @@
+---
+/**
+ * Mean score per one-minute round at 12 frame rates, from Tokey et al.
+ * (2026): 44 players in a custom shooter on a monitor fixed at 500 Hz, so
+ * render frame rate varied and refresh rate did not. The 7 f/s value is read
+ * from the paper's score chart; each later value adds the adjacent-pair mean
+ * differences from its Table 2. Rounded to the nearest 10 because the anchor
+ * is chart-read, and the source line says so.
+ *
+ * The 60–500 f/s rows sit in a neutral zone labeled in text. Neutral, not
+ * green: a plateau is not a measured-benefit zone (DESIGN.md, guide-figure
+ * data encodings). Bars from a zero baseline, values in mono
+ * (Monospace-Numerals Rule). Static HTML/CSS, zero JS.
+ */
+const AXIS_MAX = 2400;
+
+const rows = [
+  { fps: 7, score: 670 },
+  { fps: 15, score: 1360 },
+  { fps: 30, score: 1810 },
+  { fps: 45, score: 2050 },
+  { fps: 60, score: 2080 },
+  { fps: 75, score: 2100 },
+  { fps: 90, score: 2040 },
+  { fps: 120, score: 2120 },
+  { fps: 165, score: 2060 },
+  { fps: 240, score: 2090 },
+  { fps: 360, score: 2110 },
+  { fps: 500, score: 2100 },
+];
+
+const groups = [
+  { plateau: false, rows: rows.filter((r) => r.fps < 60) },
+  { plateau: true, rows: rows.filter((r) => r.fps >= 60) },
+];
+
+const width = (score: number) => ((score / AXIS_MAX) * 100).toFixed(1);
+---
+
+<figure
+  class="guide-figure"
+  aria-label="Mean score per one-minute round in a test shooter at 12 frame rates, 44 players. 7 frames per second: about 670. 15: 1,360. 30: 1,810. 45: 2,050. 60: 2,080. 75: 2,100. 90: 2,040. 120: 2,120. 165: 2,060. 240: 2,090. 360: 2,110. 500: 2,100. Scores climbed up to about 60 frames per second and held flat from 60 to 500."
+>
+  <figcaption class="guide-figure-head">
+    <span class="guide-figure-title"
+      ><span class="guide-figure-emoji" aria-hidden="true">🖥️</span>Scores held flat from 60 to 500
+      frames a second</span
+    >
+    <span class="guide-figure-sub"
+      >Mean score per one-minute round in a test shooter, by frames per second (44 players)</span
+    >
+  </figcaption>
+
+  <div class="fr-plot" aria-hidden="true">
+    {
+      groups.map((g) => (
+        <div class:list={['fr-group', { 'fr-plateau': g.plateau }]}>
+          {g.plateau && <span class="fr-plateau-label">Flat from 60 to 500 f/s</span>}
+          {g.rows.map((r) => (
+            <div class="fr-row">
+              <span class="fr-fps">{r.fps}</span>
+              <div class="fr-track">
+                <div class="fr-bar" style={`width: ${width(r.score)}%`} />
+                <span class="fr-value">{r.score.toLocaleString('en-US')}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="guide-figure-source">
+    Source: Tokey et al. (2026),{' '}
+    <em>ACM Transactions on Multimedia Computing, Communications, and Applications</em>. We read the
+    7 f/s value from the paper's chart and added its reported differences for the rest, rounded to
+    the nearest 10.
+  </p>
+</figure>
+
+<style>
+  .fr-plot,
+  .fr-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .fr-plot {
+    margin-block-start: var(--space-lg);
+  }
+
+  /* The zone bleeds into the figure padding by the same amount it pads its
+     rows, so the label column stays aligned with the rows above it. */
+  .fr-plateau {
+    margin-inline: calc(var(--space-sm) * -1);
+    padding: var(--space-sm);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background-color: var(--panel-03);
+  }
+
+  .fr-plateau-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ink-primary);
+  }
+
+  .fr-row {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    column-gap: var(--space-md);
+    align-items: center;
+  }
+
+  .fr-fps {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--ink-primary);
+    text-align: end;
+  }
+
+  .fr-track {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    /* Room for the value label at full bar width. */
+    padding-inline-end: 44px;
+  }
+
+  .fr-bar {
+    height: 10px;
+    border-radius: 0 4px 4px 0;
+    background-color: color-mix(in srgb, var(--ink-secondary) 55%, transparent);
+  }
+
+  .fr-value {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 560px) {
+    .fr-row {
+      grid-template-columns: 2rem minmax(0, 1fr);
+      column-gap: var(--space-sm);
+    }
+  }
+</style>

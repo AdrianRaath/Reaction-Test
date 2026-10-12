@@ -1,0 +1,202 @@
+---
+title: How to Improve Your Aim on PC
+pageTitle: How to Improve Your Aim on PC | ReflexLab
+description: 'How to improve your aim on PC, from the research: the mouse sensitivity range that tested fastest, when frame rate stops helping, and what aim training proves.'
+subtitle: What sharpens your aim on PC, what doesn't, and where the gains stop
+snippet: 'Mouse sensitivity, frame rate, arm or wrist, and aim trainers: what studies of FPS players found each one does for your aim, and where the gains stop.'
+order: 6
+category: aim
+datePublished: '2026-10-12'
+dateModified: '2026-10-12'
+tocLabels:
+  aim-is-a-trade-between-speed-and-accuracy: Speed and accuracy
+faq:
+  - question: What is the best mouse sensitivity for aim?
+    answer: In the one controlled study we found, 13 FPS players hit static targets fastest anywhere from 20 to 80 cm per 360-degree turn, with no significant difference inside that range. Lower and higher settings were both slower. Pros lean toward the low end, but their settings vary up to eightfold within a single game, so measure your own cm/360 and test inside the range.
+  - question: Does a higher refresh rate improve aim?
+    answer: Moving from 60 to 144 Hz does. In a study of 101 players, that switch raised shooting accuracy by about two percentage points. Between 144 and 360 Hz, accuracy showed no significant difference, and players failed to detect the switch in most conditions. A faster screen helps by cutting delay, so hold a steady 60 frames a second or more before you buy one.
+  - question: Does aim training work?
+    answer: It improves the drill you train. In one randomized study, 10 minutes a day for five days cut time to kill on a flick drill by 6 to 9%. We found no controlled study showing that aim-trainer gains carry over to real matches, so use a trainer to sharpen and measure your mechanics, and play matches for positioning and timing.
+  - question: Should I aim with my wrist or my arm?
+    answer: The research splits. In a 2021 study, 8 pros rotated at the elbow about three times as much as at the wrist, and a 2024 study from the same lab found pros used their wrist 20% more than amateurs. In lab pointing tests the wrist and forearm tied, and the index finger alone came last. A lower sensitivity puts the big movements on your arm, so settle your sensitivity first.
+---
+
+import FrameRatePlateau from '../../components/guides/FrameRatePlateau.astro';
+import LimbBandwidth from '../../components/guides/LimbBandwidth.astro';
+import SensitivityCurve from '../../components/guides/SensitivityCurve.astro';
+
+<div class="article-intro article-intro-callout">
+  Researchers have timed how mouse sensitivity, frame rate, and arm technique change how fast
+  players hit a target. A mid-range sensitivity and a steady 60 frames a second paid off in their
+  tests. A 360 Hz monitor added little over 144 Hz, pro sensitivities vary up to eightfold within a
+  single game, and we found no controlled study showing that aim-trainer gains carry into real
+  matches.
+</div>
+
+## Aim is a trade between speed and accuracy
+
+In 1954 the psychologist Paul Fitts described the rule behind your flicks: the farther away and the smaller the target, the longer you take to hit it, and the more you rush, the more you miss. Researchers fold speed and accuracy into one number, throughput, measured in bits per second. A higher throughput means faster hits at the same accuracy.<sup class="cite"><a href="#source-1">1</a></sup>
+
+In five mouse studies from four research groups that followed the same ISO pointing test, mice scored 3.7 to 4.9 bits per second. Touchpads in the same review scored 1.0 to 2.9.<sup class="cite"><a href="#source-1">1</a></sup> If you aim on a laptop touchpad, plug in a mouse before you change anything else.
+
+The <a href="/aim-trainer">Aim Trainer</a> scores the same trade: targets per second multiplied by accuracy. Before you touch a setting, run it five times and note your average. That number is your baseline, and you can test each change below against it.
+
+One limit applies to browser aim tests, ours included. In a browser you move a cursor across a fixed screen. In a shooter your mouse turns the camera, and the researchers behind the sensitivity study in section 1 treat the two as separate control problems with different units.<sup class="cite"><a href="#source-2">2</a></sup> A browser score still tracks your hand, your mouse, and your consistency, and those are what you want a baseline to measure.
+
+## 1. Sensitivity: aim for the middle range
+
+Players compare sensitivity across games in centimeters per 360: the distance you slide the mouse to turn a full circle in the game. A low sensitivity needs a long slide, and a high one needs a short flick.
+
+In what its authors call the first user study of mouse sensitivity in first-person aiming, a team at NVIDIA tested 13 regular FPS players at six settings from 5 to 160 cm/360. The players flicked to static targets. Their times bottomed out between 20 and 80 cm/360, and inside that range the differences between settings fell short of significance.<sup class="cite"><a href="#source-2">2</a></sup>
+
+<SensitivityCurve />
+
+Both ends cost you time. At 5 cm/360 the players took about 25% longer per target than at 40, and their hit rate dropped. At 160 cm/360 they kept their accuracy but took about 16% longer, because each turn needed a long slide. The authors trace the pattern to a trade-off: low settings slow your turns, and high settings cost precision and add corrective movements.<sup class="cite"><a href="#source-2">2</a></sup>
+
+Pros do lean low. In a 2021 study of 8 professional players and 8 amateurs, the pros set their in-game sensitivity less than half as high and swept about three times as much mousepad, 1,479 cm² against 473.<sup class="cite"><a href="#source-3">3</a></sup> The pros disagree with each other, though. Professional settings vary up to eightfold within a single game,<sup class="cite"><a href="#source-2">2</a></sup> so copying one player's number drops you at a random point in that spread.
+
+Changing your setting carries less risk than the muscle-memory warnings claim. The NVIDIA players cycled through settings across a 32-fold range, then returned to their own setting, and as a group they showed no significant loss of speed. The authors encourage players to experiment.<sup class="cite"><a href="#source-2">2</a></sup>
+
+To find your number, open a practice map, mark where your mouse sits on the pad, sweep until you have turned a full circle, and measure the distance. If you land outside 20 to 80 cm, move one step toward the middle and give it a few sessions before you judge it. The study used static targets and one mouse at 3,200 DPI, so treat the range as a starting point for your own testing.
+
+## 2. Frame rate: reach 60 before you upgrade
+
+Separate refresh rate from delay and the delay does the damage. In a 2019 NVIDIA study, eight skilled players shot at targets on screens running at 60, 120, 240, and 360 Hz, with delay added to the faster screens so each refresh rate carried the same latency. Refresh rate on its own had no significant effect on flick times. Adding about 30 ms of delay did.<sup class="cite"><a href="#source-4">4</a></sup> A faster screen helps your aim because it shows you each frame sooner.
+
+Frame rate counts too. In a 2026 study, 44 players fought through a test shooter at 12 frame rates from 7 to 500 frames a second, on a monitor fixed at 500 Hz. Their scores climbed up to about 60 and held flat from there to 500. Their smoothness ratings kept rising to about 75 frames a second and leveled off after that.<sup class="cite"><a href="#source-5">5</a></sup>
+
+<FrameRatePlateau />
+
+For a monitor, the clearest measured step is 60 to 144 Hz. In a study of 101 players, switching from 60 to 144 Hz raised shooting accuracy by about two percentage points. Between 144 and 360 Hz, accuracy showed no significant difference, players failed to detect the switch in most conditions, and the measured delay differed by 7.7 ms.<sup class="cite"><a href="#source-6">6</a></sup>
+
+NVIDIA researchers ran or co-authored all three studies, and NVIDIA sells the graphics cards that high frame rates need. In their own results, the gains stop far below 360.
+
+Lower your graphics settings until your game holds 60 frames a second or more in a busy fight, and treat 144 Hz as the monitor upgrade worth paying for. Past 144 Hz, these studies measured little gain in accuracy or in how smooth the game felt.
+
+## 3. Arm or wrist: the research splits
+
+"Aim with your arm" is standard advice in shooter communities, and the evidence behind it contradicts itself.
+
+Secrets of Gosu, the 2021 Korean study from section 1, tested 13 popular claims about professional play with motion capture, eye tracking, and muscle sensors. Six held up.<sup class="cite"><a href="#source-3">3</a></sup> Arm aiming was one: the 8 pros rotated at the elbow about three times as much as at the wrist, against a ratio of 1.2 for the amateurs. The pros played Rainbow Six Siege, though, and had never played the Counter-Strike game the study used.<sup class="cite"><a href="#source-3">3</a></sup>
+
+Three years later, researchers from the same group measured the opposite. With a two-sensor mouse that splits wrist movement from arm movement, they found 5 pros used their wrist 20% more than 12 amateurs did. Players leaned on their wrist more as their sensitivity rose and pressed harder on the mouse when they did, and their wrist habits showed only a weak link to their scores.<sup class="cite"><a href="#source-7">7</a></sup>
+
+A 1997 lab study found no winner between the two. Ten adults pointed at targets with each limb strapped into a splint, and the wrist and forearm tied at about 4.1 bits per second. The index finger on its own came last, and the thumb and index finger pinching a stylus together came first.<sup class="cite"><a href="#source-8">8</a></sup>
+
+<LimbBandwidth />
+
+That study ran on a drawing tablet and tested no mouse grip. Pick your sensitivity first and let the movement follow. A low setting puts the big turns on your arm, as it did for the low-sensitivity pros in the 2021 study, and a higher one moves the work to your wrist.<sup class="cite"><a href="#source-3">3</a>,<a href="#source-7">7</a></sup> In either case, avoid steering with a lone finger.
+
+## 4. Aim trainers: what practice proves
+
+Practice improves the drill you practice. In a 2021 study, researchers split 117 people, from non-gamers to skilled Counter-Strike players, into training groups and a control group that played Tetris. The trained players practiced a flick drill built in the Counter-Strike engine for 10 minutes a day over five days, and their time to kill on the drill fell by 6 to 9%, depending on skill level. On a different flick test, the skilled players improved right after training, and the gain had gone three days later.<sup class="cite"><a href="#source-9">9</a></sup>
+
+We found no controlled study that tests whether aim-trainer practice improves your results in real matches. The studies we found either measured progress inside the trainer or ran without a control group.
+
+Use a trainer as a measuring tool and a drill for mechanics. Keep the task fixed so your trend means something, and build your positioning and timing in matches. The <a href="/aim-trainer">Aim Trainer</a> runs one format with fixed target sizes and spawn distances, so your run on Friday measures the same task as your run on Monday.
+
+## 5. Caffeine and sleep
+
+Two things outside your setup shift your aim from one day to the next. In a 2024 trial with FPS players, about 83 mg of caffeine, one cup of coffee, improved shooting accuracy and reaction time against water, and about 250 mg did no better. The effects peaked 60 to 100 minutes after the dose.<sup class="cite"><a href="#source-10">10</a></sup>
+
+Sleep loss slows your reactions and brings attention lapses into your sessions. Our guide on <a href="/guides/how-sleep-affects-reaction-time">how sleep affects reaction time</a> has the measurements, and the <a href="/guides/how-caffeine-affects-reaction-time">caffeine guide</a> covers dose and timing.
+
+## Frequently asked questions
+
+### What is the best mouse sensitivity for aim?
+
+In the one controlled study we found, 13 FPS players hit static targets fastest anywhere from 20 to 80 cm per 360-degree turn, with no significant difference inside that range. Lower and higher settings were both slower. Pros lean toward the low end, but their settings vary up to eightfold within a single game, so measure your own cm/360 and test inside the range.<sup class="cite"><a href="#source-2">2</a>,<a href="#source-3">3</a></sup>
+
+### Does a higher refresh rate improve aim?
+
+Moving from 60 to 144 Hz does. In a study of 101 players, that switch raised shooting accuracy by about two percentage points. Between 144 and 360 Hz, accuracy showed no significant difference, and players failed to detect the switch in most conditions. A faster screen helps by cutting delay, so hold a steady 60 frames a second or more before you buy one.<sup class="cite"><a href="#source-4">4</a>,<a href="#source-6">6</a></sup>
+
+### Does aim training work?
+
+It improves the drill you train. In one randomized study, 10 minutes a day for five days cut time to kill on a flick drill by 6 to 9%. We found no controlled study showing that aim-trainer gains carry over to real matches, so use a trainer to sharpen and measure your mechanics, and play matches for positioning and timing.<sup class="cite"><a href="#source-9">9</a></sup>
+
+### Should I aim with my wrist or my arm?
+
+The research splits. In a 2021 study, 8 pros rotated at the elbow about three times as much as at the wrist, and a 2024 study from the same lab found pros used their wrist 20% more than amateurs. In lab pointing tests the wrist and forearm tied, and the index finger alone came last. A lower sensitivity puts the big movements on your arm, so settle your sensitivity first.<sup class="cite"><a href="#source-3">3</a>,<a href="#source-7">7</a>,<a href="#source-8">8</a></sup>
+
+## Sources
+
+<ol class="sources-list">
+  <li id="source-1">
+    Soukoreff, R. W., &amp; MacKenzie, I. S. (2004). Towards a standard for pointing device
+    evaluation, perspectives on 27 years of Fitts' law research in HCI.{' '}
+    <em>International Journal of Human-Computer Studies</em>.
+    <a href="https://www.yorku.ca/mack/ijhcs2004.pdf">yorku.ca</a>
+  </li>
+  <li id="source-2">
+    Boudaoud, B., Spjut, J., &amp; Kim, J. (2023). Mouse sensitivity in first-person targeting
+    tasks. <em>IEEE Transactions on Games</em>.
+    <a href="https://research.nvidia.com/publication/2023-07_mouse-sensitivity-first-person-targeting-tasks">
+      research.nvidia.com
+    </a>
+  </li>
+  <li id="source-3">
+    Park, E., Lee, S., Ham, A., et al. (2021). Secrets of Gosu: Understanding physical combat skills
+    of professional players in first-person shooters.{' '}
+    <em>Proceedings of the 2021 CHI Conference on Human Factors in Computing Systems</em>.
+    <a href="https://dl.acm.org/doi/10.1145/3411764.3445217">dl.acm.org</a>
+  </li>
+  <li id="source-4">
+    Spjut, J., Boudaoud, B., Binaee, K., et al. (2019). Latency of 30 ms benefits first person
+    targeting tasks more than refresh rate above 60 Hz. <em>SIGGRAPH Asia 2019 Technical Briefs</em>
+    .
+    <a href="https://research.nvidia.com/publication/2019-11_latency-30-ms-benefits-first-person-targeting-tasks-more-refresh-rate-above-60">
+      research.nvidia.com
+    </a>
+  </li>
+  <li id="source-5">
+    Tokey, S. S., Boudaoud, B., Kim, J., Spjut, J., &amp; Claypool, M. (2026). Effects of frame
+    rates up to 500 Hz on first person shooter game players.{' '}
+    <em>ACM Transactions on Multimedia Computing, Communications, and Applications</em>.
+    <a href="https://dl.acm.org/doi/10.1145/3837059">dl.acm.org</a>
+  </li>
+  <li id="source-6">
+    Toth, A. J., Kim, J., Spjut, J., et al. (2026). Monitor refresh rate impacts FPS video gamers'
+    perceptions of display "smoothness" and target acquisition performance.{' '}
+    <em>Social Sciences &amp; Humanities Open</em>.
+    <a href="https://www.sciencedirect.com/science/article/pii/S2590291126003396">
+      sciencedirect.com
+    </a>
+  </li>
+  <li id="source-7">
+    Kang, D., Kim, N., Kang, D., et al. (2024). Quantifying wrist-aiming habits with a dual-sensor
+    mouse: Implications for player performance and workload.{' '}
+    <em>Proceedings of the 2024 CHI Conference on Human Factors in Computing Systems</em>.
+    <a href="https://dl.acm.org/doi/10.1145/3613904.3642797">dl.acm.org</a>
+  </li>
+  <li id="source-8">
+    Balakrishnan, R., &amp; MacKenzie, I. S. (1997). Performance differences in the fingers, wrist,
+    and forearm in computer input control.{' '}
+    <em>Proceedings of the CHI '97 Conference on Human Factors in Computing Systems</em>.
+    <a href="https://www.yorku.ca/mack/CHI97.html">yorku.ca</a>
+  </li>
+  <li id="source-9">
+    Toth, A. J., Ramsbottom, N., Constantin, C., Milliet, A., &amp; Campbell, M. J. (2021). The
+    effect of expertise, training and neurostimulation on sensory-motor skill in esports.{' '}
+    <em>Computers in Human Behavior</em>.
+    <a href="https://www.sciencedirect.com/science/article/pii/S0747563221001059">
+      sciencedirect.com
+    </a>
+  </li>
+  <li id="source-10">
+    Rogers, E. J., Trotter, M. G., Johnson, D., Desbrow, B., &amp; King, N. (2024). Caffeine
+    improves the shooting performance and reaction time of first-person shooter esports players: a
+    dose-response study. <em>Frontiers in Sports and Active Living</em>.
+    <a href="https://www.frontiersin.org/journals/sports-and-active-living/articles/10.3389/fspor.2024.1437700/full">
+      frontiersin.org
+    </a>
+  </li>
+</ol>
+
+<section class="article-cta">
+  <h2>Set your baseline</h2>
+
+Run the Aim Trainer five times, change one thing, and run it five more. Your trend graph shows what the change was worth.
+
+  <a href="/aim-trainer" class="btn btn-primary">Take the Aim Trainer</a>
+</section>
