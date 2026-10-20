@@ -282,19 +282,19 @@ const HIGHLIGHT_PB = '<span class="desc-highlight">best audio reaction time</spa
 const HIGHLIGHT_AVG = '<span class="desc-highlight">average audio reaction time</span>';
 
 const PB_DESCRIPTIONS: Record<string, string> = {
-  Elite: `Your ${HIGHLIGHT_PB} sits with the fastest lab results for a simple beep.`,
-  Pro: `Your ${HIGHLIGHT_PB} beats the typical lab average for reacting to a sound.`,
-  Advanced: `Your ${HIGHLIGHT_PB} is quicker than most adults manage on this test.`,
-  Intermediate: `Your ${HIGHLIGHT_PB} lands in the normal adult range. Rested, focused sessions move it down.`,
-  Beginner: `Your ${HIGHLIGHT_PB} has room to drop. Check your audio setup, then run a few more sessions.`,
+  Elite: `Your ${HIGHLIGHT_PB} matches the fastest lab results for a beep.`,
+  Pro: `Your ${HIGHLIGHT_PB} beats the lab average for reacting to sound.`,
+  Advanced: `Your ${HIGHLIGHT_PB} is faster than most adults manage.`,
+  Intermediate: `Your ${HIGHLIGHT_PB} is in the normal adult range. Test when you're rested and focused to bring it down.`,
+  Beginner: `Your ${HIGHLIGHT_PB} is slower than most adults. Check your audio setup, then run a few more sessions.`,
 };
 
 const AVG_DESCRIPTIONS: Record<string, string> = {
-  Elite: `Your ${HIGHLIGHT_AVG} holds at the top of the scale, session after session.`,
-  Pro: `Your ${HIGHLIGHT_AVG} stays under the typical lab average.`,
-  Advanced: `Your ${HIGHLIGHT_AVG} runs faster than most adults on this test.`,
-  Intermediate: `Your ${HIGHLIGHT_AVG} sits in the normal adult range. Watch the trend over the week.`,
-  Beginner: `Your ${HIGHLIGHT_AVG} has room to drop. Wired headphones and a rested head help most.`,
+  Elite: `Your ${HIGHLIGHT_AVG} stays at the top of the scale across sessions.`,
+  Pro: `Your ${HIGHLIGHT_AVG} stays under the lab average for reacting to sound.`,
+  Advanced: `Your ${HIGHLIGHT_AVG} is faster than most adults manage.`,
+  Intermediate: `Your ${HIGHLIGHT_AVG} is in the normal adult range. Watch the trend over a week of sessions.`,
+  Beginner: `Your ${HIGHLIGHT_AVG} is slower than most adults. Wired headphones and a good night's sleep help most.`,
 };
 
 const rig = createRig(
@@ -379,10 +379,10 @@ const actionText = () => (settings.inputMethod === 'mouse' ? 'Click' : 'Press Sp
 const actionVerb = () => (settings.inputMethod === 'mouse' ? 'click' : 'press Space');
 
 const MESSAGES: Record<string, string> = {
-  elite: 'Top of the scale. Very few people react to a beep this fast.',
-  pro: 'Faster than the typical lab average for a sound.',
-  advanced: 'Quicker than most adults on this test.',
-  intermediate: 'A normal adult time. Run it again rested and see if it drops.',
+  elite: 'Top of the scale. Few people react to a beep this fast.',
+  pro: 'Faster than the lab average for reacting to sound.',
+  advanced: 'Faster than most adults.',
+  intermediate: "A normal adult time. Try again when you're rested and see if it drops.",
   beginner: 'Room to improve. Check your headphones, then go again.',
 };
 
@@ -407,7 +407,7 @@ function showIdleInstruction(): void {
       instruction,
       'Audio delay: ',
       Math.round(lastCheckDelayMs),
-      ' ms. That looks like wireless audio. We subtract it, but wired gives a truer time.'
+      ' ms. That looks like wireless audio. We subtract it, but wired headphones give a more accurate time.'
     );
   } else {
     setWithReadout(
@@ -545,7 +545,7 @@ function handleMiss(): void {
 
   status.textContent = 'No response';
   result.textContent = '';
-  instruction.textContent = `Didn't hear a beep? Check your volume and Sound check, then ${actionVerb()} to try again.`;
+  instruction.textContent = `Didn't hear a beep? Turn your volume up and run Sound check, then ${actionVerb()} to try again.`;
   announce('No response. Check your volume, then try again.');
 
   timerIds.push(
@@ -677,7 +677,7 @@ function showAudioUnavailable(): void {
   setAreaState('idle');
   status.textContent = 'Sound is blocked';
   instruction.textContent =
-    'Your browser did not start audio. Allow sound for this site, then try again.';
+    "Your browser didn't start the audio. Allow sound for this site, then try again.";
   announce('Sound is blocked. Allow sound for this site, then try again.');
 }
 
@@ -776,7 +776,7 @@ function saveSettings(): void {
 }
 
 function updateInputMethodText(): void {
-  hint.textContent = `Turn your sound on. The screen stays the same, so listen: when the beep plays, ${actionVerb()} as fast as you can.`;
+  hint.textContent = `Turn your sound on. The screen won't change when the beep plays, so listen for it and ${actionVerb()} as fast as you can.`;
   if (testStatus === 'idle') status.textContent = `${actionText()} to start`;
 }
 
