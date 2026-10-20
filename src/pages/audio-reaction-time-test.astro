@@ -1,0 +1,749 @@
+---
+import { getEntry, render } from 'astro:content';
+import { Icon } from 'astro-icon/components';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProgressWidgets from '../components/tool/ProgressWidgets.astro';
+import RelatedTools from '../components/tool/RelatedTools.astro';
+import ResetModal from '../components/tool/ResetModal.astro';
+import { audioReactionTool } from '../data/tool-defs';
+import '../styles/content.css';
+import '../styles/instrument.css';
+
+// Tool-page titles target the primary keyword and carry no "| ReflexLab"
+// suffix (NEW-TOOL.md). Primary keyword: "Audio Reaction Time Test".
+const TITLE = 'Audio Reaction Time Test - Free Auditory Reaction Test';
+const DESCRIPTION =
+  'Free audio reaction time test. Most adults react to a beep in about 240 ms. Click when you hear it, get your time corrected for audio delay, and earn a rank.';
+
+const entry = await getEntry('tools', 'audio-reaction-time');
+if (!entry) throw new Error('Missing tools/audio-reaction-time content entry');
+const { Content } = await render(entry);
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: entry.data.faq.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
+};
+
+const checklistRanks = [...(audioReactionTool.ranks ?? [])].reverse();
+---
+
+<BaseLayout
+  title={TITLE}
+  description={DESCRIPTION}
+  path="/audio-reaction-time-test"
+  topbarLabel="Audio Reaction"
+>
+  <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+
+  <!-- Sound is the test here, so there is no mute toggle. The check plays the
+       stimulus once so the player can set their volume, and reads the audio
+       delay the browser reports. -->
+  <button slot="controls" type="button" class="ctl" id="sound-check" aria-label="Sound check">
+    <Icon name="ph:speaker-high" width={18} height={18} aria-hidden="true" />
+    <span class="ctl-label-wide">Sound check</span>
+  </button>
+  <button slot="controls" type="button" class="ctl" id="reset-btn" aria-label="Reset all data">
+    <Icon name="ph:trash" width={18} height={18} aria-hidden="true" />
+    <span>Reset</span>
+  </button>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Audio Reaction Time Test</h1>
+      <p class="hero-subtitle">
+        Click the moment you hear the beep and get your reaction time to sound in milliseconds. The
+        screen stays still, so only your ears can help you.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== TEST ========== -->
+  <section id="test-section" class="test-section">
+    <div class="test-card">
+      <div class="settings-panel">
+        <div class="setting-group">
+          <span class="setting-label" id="rounds-label">Test Count</span>
+          <div class="btn-group" id="rounds-group" role="group" aria-labelledby="rounds-label">
+            <button type="button" class="btn-option" data-value="1">1</button>
+            <button type="button" class="btn-option" data-value="3">3</button>
+            <button type="button" class="btn-option active" data-value="5">5</button>
+            <button type="button" class="btn-option" data-value="10">10</button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <span class="setting-label" id="delay-label">Delay Range</span>
+          <div class="btn-group" id="delay-group" role="group" aria-labelledby="delay-label">
+            <button type="button" class="btn-option active" data-value="1-3">1-3s</button>
+            <button type="button" class="btn-option" data-value="2-4">2-4s</button>
+            <button type="button" class="btn-option" data-value="2-6">2-6s</button>
+            <button type="button" class="btn-option" data-value="3-8">3-8s</button>
+          </div>
+        </div>
+        <div class="setting-group">
+          <span class="setting-label" id="input-label">Input Method</span>
+          <div class="btn-group" id="input-group" role="group" aria-labelledby="input-label">
+            <button type="button" class="btn-option active" data-value="mouse">Mouse Click</button>
+            <button type="button" class="btn-option" data-value="spacebar">Spacebar Hit</button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="audio-area"
+        class="test-area state-idle"
+        tabindex="0"
+        role="button"
+        aria-label="Audio reaction test area. Press Enter or Space to start, then click or press Space the moment you hear the beep."
+      >
+        <!-- Default content (shown during the test). Nothing in here changes
+             when the beep plays: the sound is the only stimulus. -->
+        <div class="test-area-content" id="audio-content-default">
+          <span class="audio-icon" aria-hidden="true">
+            <Icon name="ph:headphones" width={44} height={44} />
+          </span>
+          <p class="test-hint" id="audio-hint">
+            Turn your sound on. The screen stays the same, so listen: when the beep plays, click as
+            fast as you can.
+          </p>
+          <p class="test-status" id="audio-status" aria-live="polite">Click to start</p>
+          <p class="test-result readout" id="audio-result"></p>
+          <p class="test-instruction" id="audio-instruction">
+            Use Sound check first to set your volume.
+          </p>
+        </div>
+
+        <!-- Results content (shown after the session) -->
+        <div class="test-area-results" id="audio-content-results" hidden>
+          <div class="attempts-row" id="audio-attempts-list">
+            <!-- Attempts populated by JS -->
+          </div>
+
+          <div class="main-result-card">
+            <p class="result-heading">Your average audio reaction time is</p>
+            <div class="result-time-row">
+              <span class="result-time readout" id="audio-avg-time">0</span>
+              <span class="result-unit">ms</span>
+              <span class="rank-badge" id="audio-rank-label"></span>
+            </div>
+            <p class="delay-note" id="audio-delay-note"></p>
+          </div>
+
+          <p class="result-message" id="audio-result-message"></p>
+
+          <button class="btn btn-try-again" id="audio-try-again" type="button">Try Again</button>
+        </div>
+
+        <!-- Screen-reader live announcements -->
+        <p class="visually-hidden" id="audio-announce" aria-live="assertive"></p>
+      </div>
+
+      <!-- Round progress bar -->
+      <div class="progress-bar-container" role="presentation">
+        <div class="progress-bar" id="audio-progress-bar"></div>
+      </div>
+    </div>
+
+    <ResetModal message="your personal best, session history, and achieved ranks" />
+
+    <ProgressWidgets
+      unit="ms"
+      bestTitle="Personal Best"
+      bestSubtitle="Your best average score"
+      bestEmpty="Complete a session to set your personal best."
+      avgTitle="Average Score"
+      avgNoun="sessions"
+      avgEmpty="Complete a session to see your average."
+      chartDescription="Average audio reaction time (ms) over your last sessions"
+      chartEmpty="Complete a session to see your trend graph"
+      historyEmpty="Complete a session to see your history"
+      ranks={checklistRanks}
+    />
+  </section>
+
+  <Content />
+
+  <RelatedTools current="/audio-reaction-time-test" />
+</BaseLayout>
+
+<script>
+  import '../scripts/audio-reaction-time';
+</script>
+
+<style>
+  /* --- Top-bar controls ------------------------------------------------------ */
+
+  .ctl {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+    white-space: nowrap;
+  }
+
+  .ctl:hover {
+    background-color: var(--panel-hover);
+    color: var(--ink-primary);
+  }
+
+  /* The smallest phones can't fit the label beside the brand and Reset; the
+     button keeps its icon and aria-label. */
+  @media (max-width: 360px) {
+    .ctl-label-wide {
+      display: none;
+    }
+  }
+
+  /* --- Hero ----------------------------------------------------------------- */
+
+  .hero-section {
+    padding: var(--space-xl) 0 var(--space-md);
+    text-align: center;
+  }
+
+  .hero-content {
+    max-width: 600px;
+    margin-inline: auto;
+  }
+
+  .hero-title {
+    margin-block-end: var(--space-md);
+    font-size: var(--text-display-size);
+    font-weight: var(--text-display-weight);
+    line-height: var(--text-display-lh);
+    letter-spacing: var(--text-display-ls);
+  }
+
+  .hero-subtitle {
+    font-size: 1.125rem;
+    color: var(--ink-secondary);
+  }
+
+  /* --- Test card --------------------------------------------------------------- */
+
+  .test-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-block: var(--space-md) var(--space-2xl);
+  }
+
+  .test-card {
+    display: flex;
+    width: 100%;
+    max-width: 960px;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-2xl);
+    background-color: var(--panel-02);
+  }
+
+  .settings-panel {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-xl);
+    padding-block-end: var(--space-lg);
+    border-block-end: 1px solid var(--line-subtle);
+  }
+
+  .setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .setting-label {
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    color: var(--ink-secondary);
+  }
+
+  .btn-group {
+    display: flex;
+    gap: var(--space-sm);
+  }
+
+  .btn-option {
+    min-width: 44px;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    text-align: center;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  .btn-option:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-muted);
+    color: var(--ink-primary);
+  }
+
+  .btn-option.active {
+    background-color: var(--chassis-black);
+    border-color: var(--signal-green);
+    color: var(--ink-primary);
+  }
+
+  .btn-option.active:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--signal-green);
+  }
+
+  /* --- Test area (the instrument face) ------------------------------------------
+     Each state pairs its colour with a distinct text message, so state is
+     never signalled by colour alone. The stimulus is the beep: no state
+     changes when it plays, so there is no visual GO state at all. */
+
+  .test-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 340px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: all var(--duration-base) var(--ease);
+  }
+
+  .test-area:focus-visible {
+    outline: 2px solid var(--signal-green);
+    outline-offset: 3px;
+  }
+
+  .test-area:active:not(.state-listening):not(.state-session-complete) {
+    transform: scale(0.98);
+  }
+
+  .test-area.state-idle {
+    background-color: var(--panel-03);
+    border: 2px solid var(--line);
+  }
+
+  .test-area.state-idle:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-secondary);
+  }
+
+  /* Listening: the red hold, "wait" in the game's language. It holds through
+     the beep and until the player responds. */
+  .test-area.state-listening {
+    background: linear-gradient(135deg, #2a1a1a 0%, #3d1f1f 100%);
+    border: 2px solid var(--hold-red);
+    box-shadow: 0 0 30px rgb(239 68 68 / 20%);
+  }
+
+  .test-area.state-listening :global(.test-status) {
+    animation: pulse-text 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-text {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .test-area.state-result {
+    background-color: var(--panel-03);
+    border: 2px solid var(--line);
+  }
+
+  .test-area.state-result :global(.test-result) {
+    color: var(--signal-green);
+  }
+
+  .test-area.state-false-start {
+    background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
+    border: 2px solid var(--hold-red);
+    box-shadow:
+      0 0 20px rgb(239 68 68 / 20%),
+      0 0 40px rgb(239 68 68 / 20%);
+  }
+
+  .test-area.state-false-start :global(.test-status) {
+    color: var(--hold-red);
+    animation: shake 0.4s ease-out;
+  }
+
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-5px);
+    }
+    75% {
+      transform: translateX(5px);
+    }
+  }
+
+  /* No response: a soft warning (amber), not an error. Usually the volume. */
+  .test-area.state-missed {
+    background-color: var(--panel-03);
+    border: 2px solid var(--line);
+  }
+
+  .test-area.state-missed :global(.test-status) {
+    color: var(--caution-amber);
+  }
+
+  .test-area.state-session-complete {
+    background-color: var(--panel-03);
+    border: 2px solid var(--line);
+    min-height: 320px;
+    cursor: default;
+  }
+
+  /* Trophy frame: border + glow adopt the achieved rank. */
+  .test-area.state-session-complete.rank-elite {
+    border-color: var(--rank-elite);
+    box-shadow:
+      0 0 20px rgb(168 85 247 / 20%),
+      0 0 40px rgb(168 85 247 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-pro {
+    border-color: var(--rank-pro);
+    box-shadow:
+      0 0 20px rgb(34 197 94 / 20%),
+      0 0 40px rgb(34 197 94 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-advanced {
+    border-color: var(--rank-advanced);
+    box-shadow:
+      0 0 20px rgb(59 130 246 / 20%),
+      0 0 40px rgb(59 130 246 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-intermediate {
+    border-color: var(--rank-intermediate);
+    box-shadow:
+      0 0 20px rgb(245 158 11 / 20%),
+      0 0 40px rgb(245 158 11 / 10%);
+  }
+
+  .test-area.state-session-complete.rank-beginner {
+    border-color: var(--rank-beginner);
+    box-shadow:
+      0 0 20px rgb(144 144 153 / 20%),
+      0 0 40px rgb(144 144 153 / 10%);
+  }
+
+  .test-area-content {
+    z-index: 1;
+    padding: 0 var(--space-lg);
+    text-align: center;
+  }
+
+  .audio-icon {
+    display: inline-flex;
+    margin-block-end: var(--space-md);
+    color: var(--ink-muted);
+  }
+
+  .test-hint {
+    margin-block-end: var(--space-lg);
+    font-size: var(--text-label-size);
+    font-style: italic;
+    color: var(--ink-muted);
+  }
+
+  .test-status {
+    margin-block-end: var(--space-xs);
+    font-size: var(--text-headline-size);
+    font-weight: var(--text-headline-weight);
+  }
+
+  .test-result {
+    margin-block-end: var(--space-xs);
+    font-size: 2.5rem;
+    font-weight: 700;
+  }
+
+  .test-result:empty {
+    display: none;
+  }
+
+  .test-instruction {
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+  }
+
+  /* --- Results ------------------------------------------------------------------ */
+
+  .test-area-results {
+    z-index: 1;
+    width: 100%;
+    padding: var(--space-lg);
+    text-align: center;
+  }
+
+  /* Attempt columns are JS-created, so :global. */
+  .attempts-row {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-lg);
+    margin-block-end: var(--space-lg);
+    padding: var(--space-md) var(--space-lg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background-color: var(--panel-01);
+  }
+
+  .attempts-row :global(.attempt-column) {
+    min-width: 60px;
+    text-align: center;
+  }
+
+  .attempts-row :global(.attempt-time) {
+    display: block;
+    margin-block-end: var(--space-xs);
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  .attempts-row :global(.attempt-label) {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  .main-result-card {
+    margin-block-end: var(--space-lg);
+    padding: var(--space-xl) var(--space-2xl);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-01);
+  }
+
+  .result-heading {
+    margin-block-end: var(--space-sm);
+    color: var(--ink-secondary);
+  }
+
+  .result-time-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  .result-time-row .rank-badge {
+    align-self: center;
+  }
+
+  .result-time {
+    font-size: var(--text-readout-size);
+    font-weight: var(--text-readout-weight);
+    line-height: var(--text-readout-lh);
+  }
+
+  .result-unit {
+    font-size: var(--text-headline-size);
+    font-weight: 500;
+    color: var(--ink-secondary);
+  }
+
+  .delay-note {
+    margin-block-start: var(--space-md);
+    font-size: var(--text-label-size);
+    color: var(--ink-secondary);
+  }
+
+  .rank-badge {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: capitalize;
+  }
+
+  .rank-badge.elite {
+    background-color: rgb(168 85 247 / 20%);
+    border: 1px solid rgb(168 85 247 / 30%);
+    color: var(--rank-elite);
+  }
+
+  .rank-badge.pro {
+    background-color: rgb(34 197 94 / 20%);
+    border: 1px solid rgb(34 197 94 / 30%);
+    color: var(--rank-pro);
+  }
+
+  .rank-badge.advanced {
+    background-color: rgb(59 130 246 / 20%);
+    border: 1px solid rgb(59 130 246 / 30%);
+    color: var(--rank-advanced);
+  }
+
+  .rank-badge.intermediate {
+    background-color: rgb(245 158 11 / 20%);
+    border: 1px solid rgb(245 158 11 / 30%);
+    color: var(--rank-intermediate);
+  }
+
+  .rank-badge.beginner {
+    background-color: rgb(144 144 153 / 20%);
+    border: 1px solid rgb(144 144 153 / 30%);
+    color: var(--rank-beginner);
+  }
+
+  .result-message {
+    margin-block-end: var(--space-lg);
+    color: var(--ink-secondary);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  .btn-try-again {
+    min-width: 160px;
+    background-color: var(--ink-primary);
+    border-color: var(--ink-primary);
+    color: var(--chassis-black);
+  }
+
+  .btn-try-again:hover {
+    background-color: var(--ink-secondary);
+    border-color: var(--ink-secondary);
+  }
+
+  /* --- Round progress bar ----------------------------------------------------------- */
+
+  .progress-bar-container {
+    width: 100%;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background-color: var(--panel-03);
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    width: 0%;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background-color: var(--signal-green);
+    transition: width var(--duration-base) var(--ease);
+  }
+
+  /* --- Responsive --------------------------------------------------------------------- */
+
+  @media (max-width: 992px) {
+    .settings-panel {
+      order: 3;
+      padding-block: var(--space-lg) 0;
+      border-block-end: none;
+      border-block-start: 1px solid var(--line-subtle);
+      flex-wrap: wrap;
+      gap: var(--space-md) var(--space-xl);
+    }
+
+    .progress-bar-container {
+      order: 2;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero-title {
+      font-size: 2rem;
+    }
+
+    .hero-subtitle {
+      font-size: var(--text-body-size);
+    }
+
+    .test-card {
+      padding: var(--space-md);
+    }
+
+    .settings-panel {
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--space-md);
+    }
+
+    .btn-group {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .btn-option {
+      flex: 1;
+      min-height: 44px;
+      padding: var(--space-sm);
+    }
+
+    .test-area-content {
+      padding: 0 var(--space-md);
+    }
+
+    .attempts-row {
+      gap: var(--space-md);
+      padding: var(--space-sm) var(--space-md);
+      flex-wrap: wrap;
+    }
+
+    .attempts-row :global(.attempt-column) {
+      min-width: 50px;
+    }
+
+    .attempts-row :global(.attempt-time) {
+      font-size: var(--text-body-size);
+    }
+
+    .main-result-card {
+      padding: var(--space-lg);
+    }
+
+    .result-time {
+      font-size: 3rem;
+    }
+  }
+
+  /* Reduced motion: every state keeps its text cue; the motion cues go quiet. */
+  @media (prefers-reduced-motion: reduce) {
+    .test-area.state-listening :global(.test-status),
+    .test-area.state-false-start :global(.test-status) {
+      animation: none;
+    }
+  }
+</style>

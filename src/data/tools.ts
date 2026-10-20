@@ -90,6 +90,13 @@ export const tools: Tool[] = [
     icon: 'ph:flag-checkered',
     blurb: 'Five red lights, then lights out. React like a race start and get your time in ms.',
   },
+  {
+    href: '/audio-reaction-time-test',
+    name: 'Audio Reaction Time Test',
+    navLabel: 'Audio Reaction',
+    icon: 'ph:ear',
+    blurb: 'Hear the beep, then click. Get your reaction time to sound in milliseconds.',
+  },
 ];
 
 /**

@@ -300,3 +300,43 @@ export const f1ReactionTool = defineTool({
   ],
   maxHistory: 20,
 });
+
+/**
+ * Audio reaction time. Lower is better.
+ *
+ * The stimulus is a beep with no visual cue; the score has the browser's
+ * audio output delay removed (see src/scripts/audio-reaction-time.ts).
+ *
+ * Ranks, not milestones (research 2026-10-20): unlike the F1 test, a plain
+ * beep test has population data. Madison et al. 2016 measured 7,081 adults
+ * online with latency correction: 241 ± 47 ms. Thresholds centre
+ * Intermediate on that, put Pro in world-class sprinter territory (142–166 ms
+ * at world championships, Tønnessen et al. 2013) and Elite near the floor of
+ * human auditory reaction (~110 ms, Lipps et al. 2011). The bands sit 20–50 ms
+ * under the reaction test's, the head start sound has over light in
+ * same-person studies. Provisional in the same way the other tools' tables
+ * are; never move them for copy reasons once players hold ranks.
+ */
+export const audioReactionTool = defineTool({
+  id: 'audio-reaction-time',
+  metrics: {
+    ms: {
+      label: 'Audio reaction time',
+      direction: 'lower-is-better',
+      unit: 'ms',
+      primary: true,
+    },
+    falseStarts: {
+      label: 'False starts',
+      direction: 'lower-is-better',
+    },
+  },
+  ranks: [
+    { id: 'elite', name: 'Elite', threshold: 129, rangeLabel: '0-129ms' },
+    { id: 'pro', name: 'Pro', threshold: 169, rangeLabel: '130-169ms' },
+    { id: 'advanced', name: 'Advanced', threshold: 209, rangeLabel: '170-209ms' },
+    { id: 'intermediate', name: 'Intermediate', threshold: 299, rangeLabel: '210-299ms' },
+    { id: 'beginner', name: 'Beginner', threshold: Infinity, rangeLabel: '300ms and above' },
+  ],
+  maxHistory: 20,
+});
