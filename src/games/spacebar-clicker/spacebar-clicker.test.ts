@@ -11,15 +11,15 @@ import {
   earn,
   energyPerPress,
   energyPerSecond,
-  markTappersSeen,
+  markShopTabSeen,
   milestoneBonus,
   nextComboTier,
   offlineAward,
   prestigeGain,
   reactorProgress,
   reactorState,
+  shopTabHasNews,
   tapperCost,
-  unseenTappers,
   updateReveals,
   upgradeCost,
 } from './economy';
@@ -139,23 +139,49 @@ describe('combo targets', () => {
   });
 });
 
-describe('shop seen tracking', () => {
-  it('reports unseen reveals and clears them when the tab is viewed', () => {
+describe('shop tab notices', () => {
+  it('flags a closed tab when an auto-tapper is revealed, until it is opened', () => {
     const s = defaultSave(NOW);
+    expect(shopTabHasNews(s, 'auto')).toBe(false);
     s.runLifetime = 400;
-    updateReveals(s); // pneumatic
-    expect(unseenTappers(s)).toEqual(['pneumatic']);
-    expect(markTappersSeen(s)).toBe(true);
-    expect(unseenTappers(s)).toEqual([]);
-    expect(markTappersSeen(s)).toBe(false);
+    updateReveals(s); // Pneumatic Key appears, not yet affordable
+    expect(shopTabHasNews(s, 'auto')).toBe(true);
+    expect(markShopTabSeen(s, 'auto')).toBe(true);
+    expect(shopTabHasNews(s, 'auto')).toBe(false);
+    expect(markShopTabSeen(s, 'auto')).toBe(false);
   });
 
-  it('treats owned auto-tappers as seen when loading a save', () => {
-    const s = parseSave(
-      JSON.stringify({ tappers: { arm: 1 }, revealed: ['assistant', 'arm'] }),
-      NOW
-    );
-    expect(s.seen).toEqual(['assistant', 'arm']);
+  it('flags an item that becomes affordable at a price not seen before', () => {
+    const s = defaultSave(NOW);
+    s.energy = 20; // Finger Strength costs 15
+    expect(shopTabHasNews(s, 'press')).toBe(true);
+    markShopTabSeen(s, 'press');
+    expect(shopTabHasNews(s, 'press')).toBe(false);
+
+    // Dipping below the price and earning it back is not news.
+    s.energy = 0;
+    expect(shopTabHasNews(s, 'press')).toBe(false);
+    s.energy = 20;
+    expect(shopTabHasNews(s, 'press')).toBe(false);
+
+    // The next level is a new price, so it is news once affordable.
+    buyUpgrade(s, 'finger'); // 5 left, next level costs 27
+    expect(shopTabHasNews(s, 'press')).toBe(false);
+    s.energy = 30;
+    expect(shopTabHasNews(s, 'press')).toBe(true);
+  });
+
+  it('ignores maxed upgrades and auto-tappers the shop has not shown', () => {
+    const s = defaultSave(NOW);
+    for (const u of PRESS_UPGRADES) s.upgrades[u.id] = u.max;
+    s.energy = 1e9;
+    expect(shopTabHasNews(s, 'press')).toBe(false);
+
+    markShopTabSeen(s, 'auto'); // Lab Assistant is affordable and now seen
+    expect(shopTabHasNews(s, 'auto')).toBe(false); // the collider is still hidden
+    s.revealed.push('collider');
+    s.seen.push('collider');
+    expect(shopTabHasNews(s, 'auto')).toBe(true); // shown and affordable
   });
 });
 
@@ -213,6 +239,7 @@ describe('prestige', () => {
     expect(after.bestSurgeCps).toBe(9.4);
     expect(after.achievements).toEqual(['first-press']);
     expect(after.revealed).toHaveLength(AUTO_TAPPERS.length);
+    expect(after.announced).toEqual({});
   });
 });
 
@@ -418,6 +445,7 @@ describe('save', () => {
         isotopes: 'lots',
         achievements: ['first-press', 'made-up', 'first-press'],
         lastSeen: NOW + 1e9,
+        announced: { finger: 3, bogus: 1, double: -1, spring: 1.5 },
       }),
       NOW
     );
@@ -429,6 +457,7 @@ describe('save', () => {
     expect(s.achievements).toEqual(['first-press']);
     expect(s.revealed).toEqual(['assistant', 'arm']);
     expect(s.lastSeen).toBe(NOW); // never in the future
+    expect(s.announced).toEqual({ finger: 3 });
   });
 });
 

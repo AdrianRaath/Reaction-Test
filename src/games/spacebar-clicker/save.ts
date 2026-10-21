@@ -15,6 +15,7 @@ import {
   type AchievementId,
   type AutoTapperId,
   type PressUpgradeId,
+  type ShopItemId,
 } from './config';
 
 export interface SaveState {
@@ -30,8 +31,13 @@ export interface SaveState {
   tappers: Record<AutoTapperId, number>;
   /** Auto-tappers the shop has shown. Survives prestige. */
   revealed: AutoTapperId[];
-  /** Revealed auto-tappers the player has looked at, so "New" tags clear. */
+  /** Revealed auto-tappers the player has looked at. */
   seen: AutoTapperId[];
+  /**
+   * The level each item was at when the player last saw it affordable. An
+   * item affordable at any other level is news for its shop tab.
+   */
+  announced: Partial<Record<ShopItemId, number>>;
   isotopes: number;
   prestiges: number;
   bestCombo: number;
@@ -64,6 +70,7 @@ export function defaultSave(now: number): SaveState {
     tappers: zeroed(TAPPER_IDS),
     revealed: ['assistant'],
     seen: ['assistant'],
+    announced: {},
     isotopes: 0,
     prestiges: 0,
     bestCombo: 0,
@@ -95,6 +102,17 @@ function counts<K extends string>(value: unknown, ids: readonly K[], max?: (id: 
 function idList<T extends string>(value: unknown, valid: (id: string) => boolean): T[] {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.filter((v): v is T => typeof v === 'string' && valid(v)))];
+}
+
+/** Whole, non-negative levels keyed by known shop ids; anything else dropped. */
+function levels(value: unknown): Partial<Record<ShopItemId, number>> {
+  const out: Partial<Record<ShopItemId, number>> = {};
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return out;
+  for (const id of [...UPGRADE_IDS, ...TAPPER_IDS]) {
+    const n = (value as Record<string, unknown>)[id];
+    if (typeof n === 'number' && Number.isInteger(n) && n >= 0) out[id] = n;
+  }
+  return out;
 }
 
 /**
@@ -140,6 +158,7 @@ export function parseSave(raw: string | null, now: number): SaveState {
     tappers,
     revealed,
     seen,
+    announced: levels(d.announced),
     isotopes: Math.floor(num(d.isotopes, 0)),
     prestiges: Math.floor(num(d.prestiges, 0)),
     bestCombo: Math.floor(num(d.bestCombo, 0)),
@@ -167,6 +186,8 @@ export function prestigeReset(state: SaveState, isotopesGained: number, now: num
     ...state,
     energy: 0,
     runLifetime: 0,
+    // Every price is back at level zero, so every item can be news again.
+    announced: {},
     upgrades: zeroed(UPGRADE_IDS),
     tappers: zeroed(TAPPER_IDS),
     isotopes: state.isotopes + isotopesGained,

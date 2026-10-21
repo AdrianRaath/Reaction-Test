@@ -26,6 +26,8 @@ import {
   type PressUpgradeDef,
   type PressUpgradeId,
   type ReactorStateDef,
+  type ShopItemId,
+  type ShopTab,
 } from './config';
 import type { SaveState } from './save';
 
@@ -191,21 +193,62 @@ export function buyTapper(state: SaveState, id: AutoTapperId): boolean {
   return true;
 }
 
-/** Mark every revealed auto-tapper as looked at. Returns true if anything changed. */
-export function markTappersSeen(state: SaveState): boolean {
+/**
+ * Shop-tab notices (DESIGN.md, the Shop-Signal Exception). A tab has news
+ * when it holds something the player has not looked at: an auto-tapper newly
+ * revealed, or any item affordable at a price the player has not yet seen it
+ * affordable at. The open tab is always "looked at". Remembering the level,
+ * not a yes/no, means spending energy elsewhere and earning it back never
+ * re-announces the same item at the same price.
+ */
+interface ShopRow {
+  id: ShopItemId;
+  level: number;
+  affordable: boolean;
+}
+
+function shopRows(state: SaveState, tab: ShopTab): ShopRow[] {
+  if (tab === 'press') {
+    return PRESS_UPGRADES.map((u) => ({
+      id: u.id,
+      level: state.upgrades[u.id],
+      affordable: canBuyUpgrade(state, u.id),
+    }));
+  }
+  return AUTO_TAPPERS.filter((t) => state.revealed.includes(t.id)).map((t) => ({
+    id: t.id,
+    level: state.tappers[t.id],
+    affordable: canBuyTapper(state, t.id),
+  }));
+}
+
+function isNews(state: SaveState, row: ShopRow): boolean {
+  return row.affordable && state.announced[row.id] !== row.level;
+}
+
+export function shopTabHasNews(state: SaveState, tab: ShopTab): boolean {
+  if (tab === 'auto' && state.revealed.some((id) => !state.seen.includes(id))) return true;
+  return shopRows(state, tab).some((row) => isNews(state, row));
+}
+
+/** Record everything on the tab as looked at. Returns true if anything changed. */
+export function markShopTabSeen(state: SaveState, tab: ShopTab): boolean {
   let changed = false;
-  for (const id of state.revealed) {
-    if (!state.seen.includes(id)) {
-      state.seen.push(id);
+  if (tab === 'auto') {
+    for (const id of state.revealed) {
+      if (!state.seen.includes(id)) {
+        state.seen.push(id);
+        changed = true;
+      }
+    }
+  }
+  for (const row of shopRows(state, tab)) {
+    if (isNews(state, row)) {
+      state.announced[row.id] = row.level;
       changed = true;
     }
   }
   return changed;
-}
-
-/** Revealed auto-tappers the player has not looked at yet. */
-export function unseenTappers(state: SaveState): AutoTapperId[] {
-  return state.revealed.filter((id) => !state.seen.includes(id));
 }
 
 /**

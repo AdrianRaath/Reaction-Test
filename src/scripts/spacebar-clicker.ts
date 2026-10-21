@@ -27,6 +27,7 @@ import {
   SURGE,
   type AutoTapperId,
   type PressUpgradeId,
+  type ShopTab,
 } from '../games/spacebar-clicker/config';
 import {
   autoTapper,
@@ -40,7 +41,7 @@ import {
   energyPerPress,
   energyPerSecond,
   isotopeBonus,
-  markTappersSeen,
+  markShopTabSeen,
   nextComboTier,
   offlineAward,
   pressUpgrade,
@@ -48,8 +49,8 @@ import {
   prestigeUnlocked,
   reactorIndex,
   reactorProgress,
+  shopTabHasNews,
   tapperCost,
-  unseenTappers,
   updateReveals,
   upgradeCost,
 } from '../games/spacebar-clicker/economy';
@@ -140,19 +141,18 @@ const surgeBest = el('sc-surge-best');
 const toastEl = el('sc-toast');
 const toastText = el('sc-toast-text');
 
-// Shop: two tabs, each with an affordable-count chip; the auto-tapper tab
-// also carries an unseen-item dot (DESIGN.md, the Shop-Signal Exception).
+// Shop: two tabs. A closed tab that gains something wears an amber "New" tag
+// until it is opened (DESIGN.md, the Shop-Signal Exception; rules in economy.ts).
 const shopTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-shop-tab]'));
 const shopPanels = new Map(
-  shopTabs.map((t) => [t.dataset.shopTab!, el(`sc-shop-${t.dataset.shopTab}`)])
+  shopTabs.map((t) => [t.dataset.shopTab as ShopTab, el(`sc-shop-${t.dataset.shopTab}`)])
 );
-const chipPress = el('sc-chip-press');
-const chipAuto = el('sc-chip-auto');
-const dotAuto = el('sc-dot-auto');
+const newTagEls: Record<ShopTab, HTMLElement> = {
+  press: el('sc-new-press'),
+  auto: el('sc-new-auto'),
+};
 const shopHiddenHint = el('sc-shop-hidden-hint');
-let activeShopTab = 'press';
-/** Rows tagged "New" for the current visit to the auto-tapper tab. */
-const newTags = new Set<AutoTapperId>();
+let activeShopTab: ShopTab = 'press';
 
 const shopButtons = new Map<string, HTMLButtonElement>();
 document.querySelectorAll<HTMLButtonElement>('.shop-buy').forEach((btn) => {
@@ -333,14 +333,12 @@ function renderCombo(now: number): void {
 }
 
 function renderShop(): void {
-  let affordablePress = 0;
   for (const def of PRESS_UPGRADES) {
     const btn = shopButtons.get(`press:${def.id}`);
     if (!btn) continue;
     const owned = state.upgrades[def.id];
     const maxed = owned >= def.max;
     const affordable = canBuyUpgrade(state, def.id);
-    if (affordable) affordablePress++;
     btn.querySelector('[data-cost]')!.textContent = maxed
       ? 'Max'
       : formatEnergy(upgradeCost(state, def.id));
@@ -351,9 +349,7 @@ function renderShop(): void {
     btn.setAttribute('aria-disabled', String(!affordable));
   }
 
-  let affordableAuto = 0;
   let anyHidden = false;
-  const unseen = new Set<string>(unseenTappers(state));
   for (const def of AUTO_TAPPERS) {
     const btn = shopButtons.get(`auto:${def.id}`);
     if (!btn) continue;
@@ -365,24 +361,25 @@ function renderShop(): void {
       continue;
     }
     const affordable = canBuyTapper(state, def.id);
-    if (affordable) affordableAuto++;
     btn.querySelector('[data-cost]')!.textContent = formatEnergy(tapperCost(state, def.id));
     btn.querySelector('[data-owned]')!.textContent = String(state.tappers[def.id]);
     btn.classList.toggle('is-affordable', affordable);
     btn.setAttribute('aria-disabled', String(!affordable));
-    const tag = btn.querySelector<HTMLElement>('.shop-new');
-    if (tag) tag.hidden = !(unseen.has(def.id) || newTags.has(def.id));
   }
   shopHiddenHint.hidden = !anyHidden;
 
-  setChip(chipPress, affordablePress);
-  setChip(chipAuto, affordableAuto);
-  dotAuto.hidden = unseen.size === 0 || activeShopTab === 'auto';
+  renderShopNotices();
 }
 
-function setChip(chip: HTMLElement, count: number): void {
-  chip.hidden = count === 0;
-  chip.textContent = String(count);
+/**
+ * The open tab is always being looked at, so everything on it is marked seen
+ * first; then each closed tab shows its tag if it has gained anything since.
+ */
+function renderShopNotices(): void {
+  if (markShopTabSeen(state, activeShopTab)) dirty = true;
+  for (const tab of ['press', 'auto'] as const) {
+    newTagEls[tab].hidden = tab === activeShopTab || !shopTabHasNews(state, tab);
+  }
 }
 
 function renderStats(): void {
@@ -787,10 +784,6 @@ for (const [key, btn] of shopButtons) {
         ? buyUpgrade(state, id as PressUpgradeId)
         : buyTapper(state, id as AutoTapperId);
     if (!bought) return;
-    if (kind === 'auto') {
-      newTags.delete(id as AutoTapperId);
-      if (!state.seen.includes(id as AutoTapperId)) state.seen.push(id as AutoTapperId);
-    }
     SOUND.purchase();
     const name =
       kind === 'press'
@@ -807,7 +800,7 @@ for (const [key, btn] of shopButtons) {
   });
 }
 
-function selectShopTab(name: string): void {
+function selectShopTab(name: ShopTab): void {
   activeShopTab = name;
   for (const tab of shopTabs) {
     const on = tab.dataset.shopTab === name;
@@ -815,15 +808,7 @@ function selectShopTab(name: string): void {
     tab.tabIndex = on ? 0 : -1;
   }
   for (const [key, panel] of shopPanels) panel.hidden = key !== name;
-  // Opening the auto-tapper tab clears the dot; the "New" tags on the rows
-  // stay for this visit so the player can spot what arrived, then go.
-  if (name === 'auto') {
-    for (const id of unseenTappers(state)) newTags.add(id);
-    if (markTappersSeen(state)) dirty = true;
-  } else {
-    newTags.clear();
-  }
-  renderShop();
+  renderShop(); // marks the opened tab seen, which clears its tag
 }
 
 // --- Tabs ---------------------------------------------------------------------------------
@@ -839,10 +824,10 @@ function selectTab(name: string): void {
 }
 
 /** Click to select, arrow keys to move; the selected tab loses focus so Space still presses. */
-function wireTabs(
+function wireTabs<T extends string>(
   buttons: HTMLButtonElement[],
-  nameOf: (b: HTMLButtonElement) => string,
-  select: (name: string) => void
+  nameOf: (b: HTMLButtonElement) => T,
+  select: (name: T) => void
 ): void {
   buttons.forEach((tab, i) => {
     tab.addEventListener('click', () => {
@@ -861,7 +846,7 @@ function wireTabs(
 }
 
 wireTabs(tabs, (b) => b.dataset.tab!, selectTab);
-wireTabs(shopTabs, (b) => b.dataset.shopTab!, selectShopTab);
+wireTabs(shopTabs, (b) => b.dataset.shopTab as ShopTab, selectShopTab);
 
 // --- Input ----------------------------------------------------------------------------------
 

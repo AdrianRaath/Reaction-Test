@@ -2,6 +2,7 @@
 import { getEntry, render } from 'astro:content';
 import { Icon } from 'astro-icon/components';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ShopIcon from '../components/games/ShopIcon.astro';
 import RelatedTools from '../components/tool/RelatedTools.astro';
 import ResetModal from '../components/tool/ResetModal.astro';
 import {
@@ -165,13 +166,14 @@ const whole = (v: number) => v.toLocaleString('en-US');
         <aside class="shop" aria-labelledby="shop-heading">
           <h2 class="shop-heading" id="shop-heading">Shop</h2>
 
-          <!-- Two tabs so neither list outgrows the reactor. The amber chip counts
-               what is affordable now; the dot marks an unseen new item
-               (DESIGN.md, the Shop-Signal Exception). -->
+          <!-- Two tabs, styled like the site's setting buttons. A closed tab that
+               gains something (a newly revealed auto-tapper, or an item newly
+               affordable at its current price) wears an amber "New" tag until
+               it is opened (DESIGN.md, the Shop-Signal Exception). -->
           <div class="shop-tabs" role="tablist" aria-label="Shop sections">
             <button
               type="button"
-              class="shop-tab"
+              class="tab shop-tab"
               role="tab"
               id="sc-shop-tab-press"
               data-shop-tab="press"
@@ -179,11 +181,14 @@ const whole = (v: number) => v.toLocaleString('en-US');
               aria-controls="sc-shop-press"
             >
               Upgrades
-              <span class="shop-chip readout" id="sc-chip-press" hidden>0</span>
+              <span class="shop-new-tag" id="sc-new-press" hidden>
+                <span aria-hidden="true">New</span>
+                <span class="visually-hidden">, new items</span>
+              </span>
             </button>
             <button
               type="button"
-              class="shop-tab"
+              class="tab shop-tab"
               role="tab"
               id="sc-shop-tab-auto"
               data-shop-tab="auto"
@@ -192,85 +197,84 @@ const whole = (v: number) => v.toLocaleString('en-US');
               tabindex="-1"
             >
               Auto-tappers
-              <span class="shop-chip readout" id="sc-chip-auto" hidden>0</span>
-              <span class="shop-dot" id="sc-dot-auto" hidden>
-                <span class="visually-hidden">New item</span>
+              <span class="shop-new-tag" id="sc-new-auto" hidden>
+                <span aria-hidden="true">New</span>
+                <span class="visually-hidden">, new items</span>
               </span>
             </button>
           </div>
 
-          <ul
-            class="shop-list"
+          <div
+            class="shop-panel"
             id="sc-shop-press"
             role="tabpanel"
             aria-labelledby="sc-shop-tab-press"
           >
-            {
-              PRESS_UPGRADES.map((u) => (
-                <li class="shop-item" data-kind="press" data-id={u.id}>
-                  <button type="button" class="shop-buy" aria-disabled="true">
-                    <span class="shop-emoji" aria-hidden="true">
-                      {u.emoji}
-                    </span>
-                    <span class="shop-text">
-                      <span class="shop-name">{u.name}</span>
-                      <span class="shop-detail">{u.detail}</span>
-                    </span>
-                    <span class="shop-nums">
-                      <span class="shop-cost readout" data-cost>
-                        {whole(u.baseCost)}
+            <ul class="shop-list">
+              {
+                PRESS_UPGRADES.map((u) => (
+                  <li class="shop-item" data-kind="press" data-id={u.id}>
+                    <button type="button" class="shop-buy" aria-disabled="true">
+                      <span class="shop-icon">
+                        <ShopIcon id={u.id} />
                       </span>
-                      <span class="shop-level readout" data-level>
-                        {u.max === 1 ? '' : `0/${u.max}`}
+                      <span class="shop-text">
+                        <span class="shop-name">{u.name}</span>
+                        <span class="shop-detail">{u.detail}</span>
                       </span>
-                    </span>
-                  </button>
-                </li>
-              ))
-            }
-          </ul>
+                      <span class="shop-nums">
+                        <span class="shop-cost readout" data-cost>
+                          {whole(u.baseCost)}
+                        </span>
+                        <span class="shop-level readout" data-level>
+                          {u.max === 1 ? '' : `0/${u.max}`}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))
+              }
+            </ul>
+          </div>
 
-          <ul
-            class="shop-list"
+          <div
+            class="shop-panel"
             id="sc-shop-auto"
             role="tabpanel"
             aria-labelledby="sc-shop-tab-auto"
             hidden
           >
-            {
-              AUTO_TAPPERS.map((t, i) => (
-                <li class="shop-item" data-kind="auto" data-id={t.id} hidden={i > 0}>
-                  <button type="button" class="shop-buy" aria-disabled="true">
-                    <span class="shop-emoji" aria-hidden="true">
-                      {t.emoji}
-                    </span>
-                    <span class="shop-text">
-                      <span class="shop-name">
-                        {t.name}
-                        <span class="shop-new" hidden>
-                          New
+            <ul class="shop-list">
+              {
+                AUTO_TAPPERS.map((t, i) => (
+                  <li class="shop-item" data-kind="auto" data-id={t.id} hidden={i > 0}>
+                    <button type="button" class="shop-buy" aria-disabled="true">
+                      <span class="shop-icon">
+                        <ShopIcon id={t.id} />
+                      </span>
+                      <span class="shop-text">
+                        <span class="shop-name">{t.name}</span>
+                        <span class="shop-detail">
+                          {t.detail}. <span class="readout">{t.eps}</span> per second each.
                         </span>
                       </span>
-                      <span class="shop-detail">
-                        {t.detail}. <span class="readout">{t.eps}</span> per second each.
+                      <span class="shop-nums">
+                        <span class="shop-cost readout" data-cost>
+                          {whole(t.baseCost)}
+                        </span>
+                        <span class="shop-level readout">
+                          <span data-owned>0</span> owned
+                        </span>
                       </span>
-                    </span>
-                    <span class="shop-nums">
-                      <span class="shop-cost readout" data-cost>
-                        {whole(t.baseCost)}
-                      </span>
-                      <span class="shop-level readout">
-                        <span data-owned>0</span> owned
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))
-            }
-          </ul>
-          <p class="shop-hint" id="sc-shop-hidden-hint">
-            More auto-tappers appear as the reactor earns.
-          </p>
+                    </button>
+                  </li>
+                ))
+              }
+            </ul>
+            <p class="shop-hint" id="sc-shop-hidden-hint">
+              More auto-tappers appear as the reactor earns.
+            </p>
+          </div>
         </aside>
       </div>
 
@@ -1084,77 +1088,54 @@ const whole = (v: number) => v.toLocaleString('en-US');
     font-weight: var(--text-title-weight);
   }
 
+  /* The tabs themselves take the shared .tab look (setting-button parity);
+     these rules only lay them out and carry the tag. */
   .shop-tabs {
     display: flex;
-    gap: var(--space-xs);
-    padding-block-end: var(--space-sm);
-    border-block-end: 1px solid var(--line-subtle);
+    gap: var(--space-sm);
+    margin-block-end: var(--space-xs);
   }
 
   .shop-tab {
     position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    min-height: 36px;
-    padding: var(--space-xs) var(--space-sm);
-    border: 1px solid transparent;
-    border-radius: var(--radius-md);
-    background: none;
-    color: var(--ink-secondary);
-    font-size: var(--text-label-size);
-    font-weight: var(--text-label-weight);
-    transition: all var(--duration-fast) var(--ease);
+    flex: 1;
   }
 
-  .shop-tab:hover {
-    background-color: var(--panel-hover);
-    color: var(--ink-primary);
-  }
-
-  .shop-tab[aria-selected='true'] {
-    border-color: var(--line);
-    background-color: var(--panel-03);
-    color: var(--ink-primary);
-  }
-
-  /* Shop-Signal Exception: amber means "something to spend or collect". */
-  .shop-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding-inline: 6px;
+  /* Shop-Signal Exception: amber means "something new to spend on". Pinned to
+     the tab's top-right corner so it never shifts the label. */
+  .shop-new-tag {
+    position: absolute;
+    inset-block-start: -9px;
+    inset-inline-end: -6px;
+    padding: 2px 7px;
     border-radius: var(--radius-full);
     background-color: var(--caution-amber);
     color: var(--chassis-black);
-    font-size: 0.75rem;
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .shop-dot {
-    position: absolute;
-    inset-block-start: 4px;
-    inset-inline-end: 4px;
-    width: 8px;
-    height: 8px;
-    border-radius: var(--radius-full);
-    background-color: var(--caution-amber);
-  }
-
-  .shop-new {
-    display: inline-block;
-    margin-inline-start: var(--space-xs);
-    padding: 1px 6px;
-    border-radius: var(--radius-sm);
-    background-color: rgb(245 158 11 / 18%);
-    color: var(--caution-amber);
     font-size: 0.6875rem;
     font-weight: 700;
+    line-height: 1.3;
     letter-spacing: 0.02em;
-    vertical-align: 1px;
+    pointer-events: none;
+    animation: new-tag-in 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes new-tag-in {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .shop-panel {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    gap: var(--space-sm);
   }
 
   .shop-list {
@@ -1168,21 +1149,15 @@ const whole = (v: number) => v.toLocaleString('en-US');
     list-style: none;
   }
 
-  .shop-emoji {
-    flex-shrink: 0;
-    width: 28px;
-    font-size: 1.125rem;
-    line-height: 1;
-    text-align: center;
-  }
-
+  /* Three fixed columns: glyph tile, text, numbers. Every row puts its name at
+     the same x, whatever the price beside it. */
   .shop-buy {
-    display: flex;
-    width: 100%;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
+    column-gap: 0.75rem;
+    width: 100%;
+    padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-sm);
     border: 1px solid var(--line-subtle);
     border-radius: var(--radius-md);
     background-color: var(--panel-03);
@@ -1207,6 +1182,28 @@ const whole = (v: number) => v.toLocaleString('en-US');
 
   .shop-buy.is-maxed {
     opacity: 0.7;
+  }
+
+  /* A recessed tile for the glyph, as the related-tools cards do. It
+     brightens with the row when the item is affordable. */
+  .shop-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-01);
+    color: var(--ink-muted);
+    transition:
+      color var(--duration-fast) var(--ease),
+      border-color var(--duration-fast) var(--ease);
+  }
+
+  .shop-buy.is-affordable .shop-icon {
+    border-color: var(--line);
+    color: var(--ink-primary);
   }
 
   .shop-text {
@@ -1288,10 +1285,17 @@ const whole = (v: number) => v.toLocaleString('en-US');
     color: var(--ink-primary);
   }
 
+  /* Selected reads as the active setting button: a recessed, illuminated key.
+     Shared by the shop tabs and the panel tabs. */
   .tab[aria-selected='true'] {
     background-color: var(--chassis-black);
     border-color: var(--signal-green);
     color: var(--ink-primary);
+  }
+
+  .tab[aria-selected='true']:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--signal-green);
   }
 
   .stats {
@@ -1553,6 +1557,7 @@ const whole = (v: number) => v.toLocaleString('en-US');
     .combo-tier.is-up,
     .arc-fill,
     .toast.is-in,
+    .shop-new-tag,
     .reactor-face.is-warning {
       animation: none;
       transition: none;
