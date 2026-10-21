@@ -25,6 +25,27 @@ first: what should rank/PB/trend mean here, which parts of the rig apply,
 whether the engine needs a considered extension. Build only once the shape is
 agreed. A wrong tool shipped "by the book" is worse than a conversation.
 
+### Games are not tools (precedent: Spacebar Clicker, 2026-10-21)
+
+A game keeps persistent state rather than scored runs, so the engine's model
+(one primary metric, ranks or milestones, history, trend) does not apply and
+must not be forced. The agreed shape:
+
+- **In the registry, out of the rig.** The `tools.ts` entry (sidebar,
+  cross-links, sitemap) carries `telemetry: false`, which removes the top-bar
+  readout. No `defineTool`, no `createRig`, no `ProgressWidgets`.
+- **Pure logic in `src/games/<id>/`** with its own unit tests; the DOM script
+  in `src/scripts/<id>.ts`. Reuse from the engine only the storage adapter
+  and the beeper. The save is one versioned JSON blob under
+  `reflexlab:<id>:save`, parsed defensively.
+- Content, SEO, `BaseLayout`, `ResetModal` and the top-bar slot all apply as
+  for a tool. Rulebook tables in the MDX render from the game's config so the
+  copy cannot drift from the numbers (`.spec-table` in `content.css`).
+- Balance the economy by simulation before styling anything, and record the
+  method in the config header.
+
+See `SPACEBAR-CLICKER-DESIGN.md` §16 for the full set of decisions.
+
 ---
 
 ## Copy and SEO — every tool page

@@ -25,6 +25,12 @@ export interface Tool {
   icon: string;
   /** One line, used on cross-links and link previews. */
   blurb: string;
+  /**
+   * Whether the page runs the telemetry rig (best / average / rank in the
+   * top bar). Defaults to true. A game keeps persistent state rather than
+   * scored runs, so it carries its own readout and sets this false.
+   */
+  telemetry?: boolean;
 }
 
 export interface NavLink {
@@ -68,6 +74,14 @@ export const tools: Tool[] = [
     navLabel: 'Spacebar Test',
     icon: 'ph:keyboard',
     blurb: 'Measure how fast you can press the spacebar, in presses per second.',
+  },
+  {
+    href: '/spacebar-clicker',
+    name: 'Spacebar Clicker',
+    navLabel: 'Spacebar Clicker',
+    icon: 'ph:atom',
+    blurb: 'Press space to charge a reactor. Buy upgrades, hold a rhythm, and let it run idle.',
+    telemetry: false,
   },
   {
     href: '/memory-test',

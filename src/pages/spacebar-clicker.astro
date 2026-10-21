@@ -1,0 +1,1353 @@
+---
+import { getEntry, render } from 'astro:content';
+import { Icon } from 'astro-icon/components';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import RelatedTools from '../components/tool/RelatedTools.astro';
+import ResetModal from '../components/tool/ResetModal.astro';
+import {
+  ACHIEVEMENTS,
+  AUTO_TAPPERS,
+  PRESS_UPGRADES,
+  PRESTIGE_UNLOCK,
+} from '../games/spacebar-clicker/config';
+import '../styles/content.css';
+import '../styles/instrument.css';
+
+// A game page, not a tool page: it is in the registry (sidebar, cross-links,
+// sitemap) with `telemetry: false`, so no rig and no top-bar readout. The game
+// keeps its own save and its own HUD. See src/scripts/spacebar-clicker.ts.
+
+// Authored for the primary keyword "spacebar clicker". No "| ReflexLab" suffix.
+const TITLE = 'Spacebar Clicker - Free Online Idle Spacebar Game';
+const DESCRIPTION =
+  'Play Spacebar Clicker free. Every press charges the reactor, upgrades and auto-tappers do the rest, and a steady rhythm earns up to 3x. No ads, saves in your browser.';
+
+const entry = await getEntry('tools', 'spacebar-clicker');
+if (!entry) throw new Error('Missing tools/spacebar-clicker content entry');
+const { Content } = await render(entry);
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: entry.data.faq.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: { '@type': 'Answer', text: item.answer },
+  })),
+};
+
+const whole = (v: number) => v.toLocaleString('en-US');
+---
+
+<BaseLayout
+  title={TITLE}
+  description={DESCRIPTION}
+  path="/spacebar-clicker"
+  topbarLabel="Spacebar Clicker"
+>
+  <script slot="head" is:inline type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+
+  <button slot="controls" type="button" class="ctl" id="sound-toggle" aria-label="Toggle sound">
+    <span class="ctl-icon" id="sound-icon-on">
+      <Icon name="ph:speaker-high" width={18} height={18} aria-hidden="true" />
+    </span>
+    <span class="ctl-icon" id="sound-icon-off" hidden>
+      <Icon name="ph:speaker-slash" width={18} height={18} aria-hidden="true" />
+    </span>
+  </button>
+  <button slot="controls" type="button" class="ctl" id="reset-btn" aria-label="Reset all progress">
+    <Icon name="ph:trash" width={18} height={18} aria-hidden="true" />
+    <span>Reset</span>
+  </button>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Spacebar Clicker</h1>
+      <p class="hero-subtitle">
+        Press space to feed the reactor. Buy upgrades, hire auto-tappers, and hold a steady rhythm
+        for up to 3x energy. Your progress saves in this browser.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== GAME ========== -->
+  <section id="game-section" class="game-section">
+    <div class="game-card">
+      <div class="game-grid">
+        <!-- The reactor face: the instrument the whole game is played on. -->
+        <div
+          id="sc-reactor"
+          class="test-area reactor-face"
+          data-state="dormant"
+          tabindex="0"
+          role="button"
+          aria-label="Reactor. Press the spacebar, or tap here, to generate energy."
+        >
+          <div class="energy-block">
+            <p class="energy-row">
+              <span class="energy-value readout" id="sc-energy">0</span>
+              <span class="energy-unit">energy</span>
+            </p>
+            <p class="energy-rates">
+              <span><span class="readout" id="sc-eps">0.0</span> per second</span>
+              <span><span class="readout" id="sc-epp">1</span> per press</span>
+            </p>
+          </div>
+
+          <div class="core-wrap">
+            <div class="core" id="sc-core" data-state="dormant" aria-hidden="true">
+              <span class="core-ring core-ring-outer"></span>
+              <span class="core-ring core-ring-inner"></span>
+              <span class="core-heart"></span>
+            </div>
+            <div class="floats" id="sc-floats" aria-hidden="true"></div>
+          </div>
+
+          <p class="state-label">
+            <span class="state-name" id="sc-state">Dormant</span>
+            <span class="state-noun">reactor</span>
+          </p>
+
+          <div class="combo">
+            <div class="combo-row">
+              <span class="combo-count readout" id="sc-combo">0</span>
+              <span class="combo-tier" id="sc-combo-tier">combo</span>
+              <span class="combo-mult readout" id="sc-combo-mult">x1</span>
+            </div>
+            <div class="combo-track" role="presentation">
+              <div class="combo-fill" id="sc-combo-fill"></div>
+            </div>
+          </div>
+
+          <p class="test-hint" id="sc-hint">
+            Press the spacebar to generate energy. Keep a steady beat to build a combo.
+          </p>
+          <p class="keycap" aria-hidden="true">space</p>
+
+          <!-- Surge overlay (spec §5) -->
+          <div class="surge" id="sc-surge" hidden>
+            <p class="surge-title" id="sc-surge-title">Surge in 3</p>
+            <div class="surge-live" id="sc-surge-live" hidden>
+              <p class="surge-cps-row">
+                <span class="surge-cps readout" id="sc-surge-cps">0.0</span>
+                <span class="surge-cps-unit">per second</span>
+              </p>
+              <p class="surge-meta"><span class="readout" id="sc-surge-count">0</span> presses</p>
+              <div class="surge-track" role="presentation">
+                <div class="surge-fill" id="sc-surge-fill"></div>
+              </div>
+            </div>
+            <dl class="surge-summary" id="sc-surge-summary" hidden>
+              <div><dt>Presses</dt><dd class="readout" id="sc-surge-presses">0</dd></div>
+              <div><dt>Per second</dt><dd class="readout" id="sc-surge-rate">0.0</dd></div>
+              <div><dt>Energy earned</dt><dd class="readout" id="sc-surge-earned">0</dd></div>
+              <p class="surge-best" id="sc-surge-best" hidden>
+                <span aria-hidden="true">🏆</span> New best surge
+              </p>
+            </dl>
+          </div>
+
+          <div class="toast" id="sc-toast" hidden>
+            <span id="sc-toast-text"></span>
+          </div>
+
+          <p class="visually-hidden" id="sc-announce" aria-live="polite"></p>
+        </div>
+
+        <!-- Shop (spec §6), rendered from the rulebook so the first paint is right. -->
+        <aside class="shop" aria-labelledby="shop-heading">
+          <h2 class="shop-heading" id="shop-heading">Shop</h2>
+
+          <h3 class="shop-group">Press upgrades</h3>
+          <ul class="shop-list" id="sc-shop-press">
+            {
+              PRESS_UPGRADES.map((u) => (
+                <li class="shop-item" data-kind="press" data-id={u.id}>
+                  <button type="button" class="shop-buy" aria-disabled="true">
+                    <span class="shop-text">
+                      <span class="shop-name">{u.name}</span>
+                      <span class="shop-detail">{u.detail}</span>
+                    </span>
+                    <span class="shop-nums">
+                      <span class="shop-cost readout" data-cost>
+                        {whole(u.baseCost)}
+                      </span>
+                      <span class="shop-level readout" data-level>
+                        {u.max === 1 ? '' : `0/${u.max}`}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))
+            }
+          </ul>
+
+          <h3 class="shop-group">Auto-tappers</h3>
+          <ul class="shop-list" id="sc-shop-auto">
+            {
+              AUTO_TAPPERS.map((t, i) => (
+                <li class="shop-item" data-kind="auto" data-id={t.id} hidden={i > 0}>
+                  <button type="button" class="shop-buy" aria-disabled="true">
+                    <span class="shop-text">
+                      <span class="shop-name">{t.name}</span>
+                      <span class="shop-detail">
+                        {t.detail}. <span class="readout">{t.eps}</span> per second each.
+                      </span>
+                    </span>
+                    <span class="shop-nums">
+                      <span class="shop-cost readout" data-cost>
+                        {whole(t.baseCost)}
+                      </span>
+                      <span class="shop-level readout">
+                        <span data-owned>0</span> owned
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))
+            }
+          </ul>
+          <p class="shop-hint" id="sc-shop-hidden-hint">
+            More auto-tappers appear as the reactor earns.
+          </p>
+        </aside>
+      </div>
+
+      <!-- Stats, achievements, prestige (spec §9–11) behind tabs. -->
+      <div class="panels">
+        <div class="tabs" role="tablist" aria-label="Game panels">
+          <button
+            type="button"
+            class="tab"
+            role="tab"
+            id="sc-tab-stats"
+            data-tab="stats"
+            aria-selected="true"
+            aria-controls="sc-panel-stats">Stats</button
+          >
+          <button
+            type="button"
+            class="tab"
+            role="tab"
+            id="sc-tab-achievements"
+            data-tab="achievements"
+            aria-selected="false"
+            aria-controls="sc-panel-achievements"
+            tabindex="-1">Achievements</button
+          >
+          <button
+            type="button"
+            class="tab"
+            role="tab"
+            id="sc-tab-prestige"
+            data-tab="prestige"
+            aria-selected="false"
+            aria-controls="sc-panel-prestige"
+            tabindex="-1">Reset the experiment</button
+          >
+        </div>
+
+        <div class="panel" id="sc-panel-stats" role="tabpanel" aria-labelledby="sc-tab-stats">
+          <dl class="stats">
+            <div><dt>Total presses</dt><dd class="readout" id="sc-stat-presses">0</dd></div>
+            <div><dt>Energy this run</dt><dd class="readout" id="sc-stat-run">0</dd></div>
+            <div><dt>Energy all time</dt><dd class="readout" id="sc-stat-lifetime">0</dd></div>
+            <div><dt>Energy per second</dt><dd class="readout" id="sc-stat-eps">0.0</dd></div>
+            <div><dt>Energy per press</dt><dd class="readout" id="sc-stat-epp">1</dd></div>
+            <div><dt>Best combo</dt><dd class="readout" id="sc-stat-best-combo">0</dd></div>
+            <div>
+              <dt>Best surge, per second</dt><dd class="readout" id="sc-stat-best-surge">—</dd>
+            </div>
+            <div><dt>Isotopes</dt><dd class="readout" id="sc-stat-isotopes">0</dd></div>
+            <div><dt>Experiments reset</dt><dd class="readout" id="sc-stat-prestiges">0</dd></div>
+            <div><dt>Time played</dt><dd class="readout" id="sc-stat-played">0s</dd></div>
+          </dl>
+        </div>
+
+        <div
+          class="panel"
+          id="sc-panel-achievements"
+          role="tabpanel"
+          aria-labelledby="sc-tab-achievements"
+          hidden
+        >
+          <p class="panel-intro">
+            <span class="readout" id="sc-ach-count">0 of {ACHIEVEMENTS.length}</span> unlocked
+          </p>
+          <ul class="achievements">
+            {
+              ACHIEVEMENTS.map((a) => (
+                <li class="achievement" data-id={a.id}>
+                  <span class="achievement-mark" aria-hidden="true">
+                    ✗
+                  </span>
+                  <span class="achievement-text">
+                    <span class="achievement-name">{a.name}</span>
+                    <span class="achievement-detail">{a.detail}</span>
+                  </span>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+
+        <div
+          class="panel"
+          id="sc-panel-prestige"
+          role="tabpanel"
+          aria-labelledby="sc-tab-prestige"
+          hidden
+        >
+          <div class="prestige">
+            <p class="prestige-copy">
+              Resetting the experiment wipes your energy, upgrades, auto-tappers and reactor state.
+              In return you keep isotopes, and each one adds 10% to every gain from then on. You
+              hold <span class="readout" id="sc-isotopes">0</span> isotopes, worth
+              <span class="readout" id="sc-isotope-bonus">+0%</span>.
+            </p>
+            <p class="prestige-locked" id="sc-prestige-locked">
+              Unlocks at <span class="readout">{whole(PRESTIGE_UNLOCK)}</span> energy earned this run.
+              You are at <span class="readout" id="sc-prestige-progress">0 of 1.00M</span>.
+            </p>
+            <div class="prestige-ready" id="sc-prestige-ready" hidden>
+              <p class="prestige-gain-row">
+                Resetting now gives <span class="prestige-gain readout" id="sc-prestige-gain"
+                  >1</span
+                > isotopes.
+              </p>
+              <button type="button" class="btn btn-primary" id="sc-prestige-btn"
+                >Reset the experiment</button
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ResetModal
+      message="your energy, upgrades, auto-tappers, isotopes, achievements and stats. Sound settings stay"
+    />
+
+    <!-- Prestige confirm (spec §9: the player must confirm). -->
+    <div
+      class="modal-overlay"
+      id="sc-prestige-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sc-prestige-modal-title"
+      hidden
+    >
+      <div class="modal">
+        <h3 class="modal-title" id="sc-prestige-modal-title">Reset the experiment?</h3>
+        <p class="modal-message">
+          Your energy, upgrades, auto-tappers and reactor state go back to zero. You gain
+          <span class="readout" id="sc-prestige-modal-gain">1</span> isotopes and keep your achievements
+          and records.
+        </p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="sc-prestige-cancel" type="button">Keep going</button
+          >
+          <button class="btn btn-primary" id="sc-prestige-confirm" type="button"
+            >Reset and collect</button
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- Offline progress (spec §7). -->
+    <div
+      class="modal-overlay"
+      id="sc-away-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sc-away-title"
+      hidden
+    >
+      <div class="modal">
+        <h3 class="modal-title" id="sc-away-title">While you were away</h3>
+        <p class="modal-message">
+          Your auto-tappers ran for <span class="readout" id="sc-away-time">0s</span> at half speed and
+          made <span class="readout" id="sc-away-energy">0</span> energy.
+        </p>
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="sc-away-collect" type="button">Collect</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <Content />
+
+  <RelatedTools current="/spacebar-clicker" />
+</BaseLayout>
+
+<script>
+  import '../scripts/spacebar-clicker';
+</script>
+
+<style>
+  /* --- Top-bar controls (slot content, styled by the page) ---------------- */
+
+  .ctl {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+  }
+
+  .ctl:hover {
+    background-color: var(--panel-hover);
+    color: var(--ink-primary);
+  }
+
+  .ctl.muted {
+    color: var(--ink-muted);
+  }
+
+  .ctl-icon {
+    display: inline-flex;
+  }
+
+  /* --- Hero ----------------------------------------------------------------- */
+
+  .hero-section {
+    padding: var(--space-xl) 0 var(--space-md);
+    text-align: center;
+  }
+
+  .hero-content {
+    max-width: 620px;
+    margin-inline: auto;
+  }
+
+  .hero-title {
+    margin-block-end: var(--space-md);
+    font-size: var(--text-display-size);
+    font-weight: var(--text-display-weight);
+    line-height: var(--text-display-lh);
+    letter-spacing: var(--text-display-ls);
+  }
+
+  .hero-subtitle {
+    font-size: 1.125rem;
+    color: var(--ink-secondary);
+  }
+
+  /* --- Game card --------------------------------------------------------------- */
+
+  .game-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    padding-block: var(--space-md) var(--space-2xl);
+  }
+
+  .game-card {
+    display: flex;
+    width: 100%;
+    max-width: 960px;
+    flex-direction: column;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-2xl);
+    background-color: var(--panel-02);
+  }
+
+  .game-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-lg);
+    align-items: start;
+  }
+
+  /* --- Reactor face ------------------------------------------------------------- */
+
+  /* State is carried by custom properties set per data-state, so the core, the
+     glow and the pulse all read one source. Every state is Signal Green: the
+     reactor means "active", and green getting hotter and whiter is the whole
+     visual arc (One Signal Rule; maintainer decision 2026-10-21). Nothing
+     flickers. */
+  .reactor-face {
+    --core-alpha: 0.14;
+    --core-glow: 0px;
+    --core-pulse: 0s;
+    --core-heart: rgb(34 197 94 / 45%);
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    min-height: 520px;
+    padding: var(--space-lg);
+    border: 2px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-03);
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    cursor: pointer;
+    transition:
+      border-color var(--duration-base) var(--ease),
+      box-shadow var(--duration-base) var(--ease);
+  }
+
+  .reactor-face:focus-visible {
+    outline: 2px solid var(--signal-green);
+    outline-offset: 3px;
+  }
+
+  .reactor-face[data-state='warming'] {
+    --core-alpha: 0.26;
+    --core-glow: 14px;
+    --core-pulse: 3.2s;
+  }
+  .reactor-face[data-state='stable'] {
+    --core-alpha: 0.4;
+    --core-glow: 22px;
+    --core-pulse: 2.4s;
+  }
+  .reactor-face[data-state='charged'] {
+    --core-alpha: 0.55;
+    --core-glow: 30px;
+    --core-pulse: 1.8s;
+  }
+  .reactor-face[data-state='unstable'] {
+    --core-alpha: 0.7;
+    --core-glow: 40px;
+    --core-pulse: 1.3s;
+    --core-heart: rgb(134 239 172 / 80%);
+  }
+  .reactor-face[data-state='critical'] {
+    --core-alpha: 0.85;
+    --core-glow: 52px;
+    --core-pulse: 0.95s;
+    --core-heart: rgb(220 252 231 / 92%);
+  }
+  .reactor-face[data-state='supercritical'] {
+    --core-alpha: 1;
+    --core-glow: 68px;
+    --core-pulse: 0.75s;
+    --core-heart: var(--ink-primary);
+  }
+
+  /* Warning: the border eases to green over the three-second countdown. */
+  .reactor-face.is-warning {
+    border-color: var(--signal-green);
+    transition: border-color 3s linear;
+  }
+
+  /* Surge: the sanctioned "active" treatment the speed tests use. */
+  .reactor-face.is-surging {
+    border-color: var(--signal-green);
+    box-shadow:
+      0 0 20px rgb(34 197 94 / 20%),
+      0 0 40px rgb(34 197 94 / 20%);
+  }
+
+  .energy-block {
+    z-index: 1;
+    text-align: center;
+  }
+
+  .energy-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-sm);
+    line-height: 1;
+  }
+
+  .energy-value {
+    font-size: clamp(2.5rem, 7vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .energy-unit {
+    font-size: var(--text-title-size);
+    color: var(--ink-secondary);
+  }
+
+  .energy-rates {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-lg);
+    margin-block-start: var(--space-sm);
+    font-size: var(--text-label-size);
+    color: var(--ink-secondary);
+  }
+
+  .energy-rates .readout {
+    color: var(--ink-primary);
+  }
+
+  /* The core: a disc of green light inside two rings. Depth is tonal; the only
+     shadow is the glow, which reports state. */
+  .core-wrap {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .core {
+    position: relative;
+    width: 168px;
+    height: 168px;
+    border-radius: var(--radius-full);
+    background: radial-gradient(
+      circle at center,
+      rgb(34 197 94 / var(--core-alpha)) 0%,
+      rgb(34 197 94 / calc(var(--core-alpha) * 0.45)) 42%,
+      rgb(34 197 94 / 0%) 72%
+    );
+    box-shadow:
+      0 0 var(--core-glow) rgb(34 197 94 / 25%),
+      0 0 calc(var(--core-glow) * 2) rgb(34 197 94 / 12%);
+    animation: core-breathe var(--core-pulse) ease-in-out infinite;
+    transition:
+      box-shadow var(--duration-base) var(--ease),
+      background var(--duration-base) var(--ease);
+  }
+
+  .core[data-state='dormant'] {
+    animation: none;
+  }
+
+  .core-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--line);
+  }
+
+  .core-ring-inner {
+    inset: 22px;
+    border-color: rgb(34 197 94 / calc(var(--core-alpha) * 0.6));
+  }
+
+  .core-heart {
+    position: absolute;
+    inset: 50%;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    background-color: var(--core-heart);
+    transform: translate(-50%, -50%);
+    transition: background-color var(--duration-base) var(--ease);
+  }
+
+  .core.is-pressed {
+    animation: core-press 160ms var(--ease);
+  }
+
+  @keyframes core-breathe {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.04);
+    }
+  }
+
+  @keyframes core-press {
+    0% {
+      transform: scale(1.08);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .floats {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .floats :global(.float) {
+    position: absolute;
+    font-size: var(--text-title-size);
+    font-weight: 700;
+    color: var(--signal-green); /* live gain = "active", the speed tests' live readout rule */
+    white-space: nowrap;
+    transform: translate(-50%, -50%);
+    animation: float-rise 720ms ease-out forwards;
+  }
+
+  @keyframes float-rise {
+    0% {
+      opacity: 0.95;
+      transform: translate(-50%, -50%);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% - 72px));
+    }
+  }
+
+  .state-label {
+    z-index: 1;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+    font-size: var(--text-title-size);
+  }
+
+  .state-name {
+    font-weight: 700;
+    color: var(--ink-primary);
+  }
+
+  .state-noun {
+    color: var(--ink-muted);
+  }
+
+  /* --- Combo meter ----------------------------------------------------------- */
+
+  .combo {
+    z-index: 1;
+    width: min(360px, 100%);
+  }
+
+  .combo-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+    margin-block-end: var(--space-xs);
+  }
+
+  .combo-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .combo-tier {
+    font-size: var(--text-label-size);
+    color: var(--ink-muted);
+  }
+
+  .combo-tier.is-tiered {
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  .combo-mult {
+    margin-inline-start: auto;
+    font-size: var(--text-title-size);
+    font-weight: 700;
+    color: var(--ink-secondary);
+  }
+
+  .combo-track {
+    width: 100%;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background-color: var(--panel-01);
+    overflow: hidden;
+  }
+
+  /* The fill draining is the grace window: green as "active", and it fades to
+     nothing the moment the combo is gone. */
+  .combo-fill {
+    width: 100%;
+    height: 100%;
+    background-color: var(--signal-green);
+    transform: scaleX(0);
+    transform-origin: left center;
+    will-change: transform;
+  }
+
+  .test-hint {
+    z-index: 1;
+    max-width: 38ch;
+    font-size: var(--text-label-size);
+    font-style: italic;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  .keycap {
+    z-index: 1;
+    display: block;
+    width: min(320px, 70%);
+    padding: var(--space-sm) 0;
+    border: 1px solid var(--line);
+    border-block-end-width: 3px;
+    border-radius: var(--radius-md);
+    background-color: var(--panel-01);
+    color: var(--ink-muted);
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    letter-spacing: 0.24em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  /* --- Surge overlay ---------------------------------------------------------- */
+
+  .surge {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    background-color: rgb(10 10 11 / 82%);
+    text-align: center;
+  }
+
+  .surge-title {
+    font-size: var(--text-headline-size);
+    font-weight: var(--text-headline-weight);
+  }
+
+  .surge-cps-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--space-sm);
+    line-height: 1;
+  }
+
+  .surge-cps {
+    font-size: clamp(3rem, 11vw, 5rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--signal-green);
+  }
+
+  .surge-cps-unit {
+    font-size: var(--text-title-size);
+    color: var(--ink-secondary);
+  }
+
+  .surge-meta {
+    margin-block-start: var(--space-sm);
+    color: var(--ink-secondary);
+  }
+
+  .surge-meta .readout {
+    font-weight: 700;
+    color: var(--ink-primary);
+  }
+
+  .surge-track {
+    width: min(320px, 100%);
+    height: 6px;
+    margin-block-start: var(--space-md);
+    margin-inline: auto;
+    border-radius: var(--radius-full);
+    background-color: var(--panel-03);
+    overflow: hidden;
+  }
+
+  .surge-fill {
+    width: 100%;
+    height: 100%;
+    background-color: var(--signal-green);
+    transform-origin: left center;
+    will-change: transform;
+  }
+
+  .surge-summary {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: var(--space-lg);
+    justify-content: center;
+  }
+
+  .surge-summary > div {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .surge-summary dt {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  .surge-summary dd {
+    font-size: var(--text-headline-size);
+    font-weight: 700;
+  }
+
+  .surge-best {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-full);
+    background-color: rgb(34 197 94 / 10%);
+    color: var(--signal-green); /* "your best" */
+    font-size: var(--text-label-size);
+    font-weight: 600;
+  }
+
+  /* --- Toast ---------------------------------------------------------------- */
+
+  .toast {
+    position: absolute;
+    inset-block-start: var(--space-md);
+    inset-inline-end: var(--space-md);
+    z-index: 3;
+    max-width: 60%;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-01);
+    font-size: var(--text-label-size);
+    font-weight: 500;
+    color: var(--ink-primary);
+  }
+
+  .toast.is-in {
+    animation: toast-in var(--duration-base) var(--ease);
+  }
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* --- Shop -------------------------------------------------------------------- */
+
+  .shop {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    min-width: 0;
+  }
+
+  .shop-heading {
+    font-size: var(--text-title-size);
+    font-weight: var(--text-title-weight);
+  }
+
+  .shop-group {
+    margin-block-start: var(--space-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .shop-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding: 0;
+    list-style: none;
+  }
+
+  .shop-buy {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+    color: var(--ink-secondary);
+    text-align: start;
+    cursor: default;
+    transition:
+      border-color var(--duration-fast) var(--ease),
+      background-color var(--duration-fast) var(--ease);
+  }
+
+  .shop-buy.is-affordable {
+    border-color: var(--line);
+    color: var(--ink-primary);
+    cursor: pointer;
+  }
+
+  .shop-buy.is-affordable:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-muted);
+  }
+
+  .shop-buy.is-maxed {
+    opacity: 0.7;
+  }
+
+  .shop-text {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .shop-name {
+    font-size: var(--text-label-size);
+    font-weight: 600;
+  }
+
+  .shop-detail {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  .shop-nums {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+
+  .shop-cost {
+    font-size: var(--text-label-size);
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+
+  .shop-buy.is-affordable .shop-cost {
+    color: var(--ink-primary);
+  }
+
+  .shop-level {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  .shop-hint {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: var(--ink-muted);
+  }
+
+  /* --- Panels -------------------------------------------------------------------- */
+
+  .panels {
+    padding-block-start: var(--space-lg);
+    border-block-start: 1px solid var(--line-subtle);
+  }
+
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-block-end: var(--space-lg);
+  }
+
+  .tab {
+    min-width: 44px;
+    min-height: 44px;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  .tab:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-muted);
+    color: var(--ink-primary);
+  }
+
+  .tab[aria-selected='true'] {
+    background-color: var(--chassis-black);
+    border-color: var(--signal-green);
+    color: var(--ink-primary);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-sm) var(--space-lg);
+  }
+
+  .stats > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+  }
+
+  .stats dt {
+    font-size: var(--text-label-size);
+    color: var(--ink-secondary);
+  }
+
+  .stats dd {
+    font-weight: 700;
+  }
+
+  .panel-intro {
+    margin-block-end: var(--space-md);
+    font-size: var(--text-label-size);
+    color: var(--ink-secondary);
+  }
+
+  .achievements {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-sm);
+    padding: 0;
+    list-style: none;
+  }
+
+  .achievement {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+  }
+
+  .achievement-mark {
+    min-width: 20px;
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+
+  .achievement.is-unlocked .achievement-mark {
+    color: var(--signal-green); /* achieved, as the rank checklist does */
+  }
+
+  .achievement-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .achievement-name {
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .achievement.is-unlocked .achievement-name {
+    color: var(--ink-primary);
+  }
+
+  .achievement-detail {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  .prestige {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    max-width: 60ch;
+  }
+
+  .prestige-copy,
+  .prestige-locked {
+    font-size: var(--text-label-size);
+    line-height: 1.7;
+    color: var(--ink-secondary);
+  }
+
+  .prestige-copy .readout,
+  .prestige-locked .readout {
+    color: var(--ink-primary);
+  }
+
+  .prestige-ready {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-md);
+  }
+
+  .prestige-gain-row {
+    color: var(--ink-secondary);
+  }
+
+  .prestige-gain {
+    font-size: var(--text-headline-size);
+    font-weight: 700;
+    color: var(--ink-primary);
+  }
+
+  /* --- Buttons and dialogs ---------------------------------------------------------- */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-sm) var(--space-lg);
+    border: 1px solid transparent;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  .btn-primary {
+    background-color: var(--signal-green);
+    border-color: var(--signal-green);
+    color: var(--chassis-black);
+  }
+
+  .btn-primary:hover {
+    background-color: var(--signal-green-deep);
+    border-color: var(--signal-green-deep);
+    transform: translateY(-1px);
+    box-shadow:
+      0 0 20px rgb(34 197 94 / 20%),
+      0 0 40px rgb(34 197 94 / 20%);
+  }
+
+  .btn-secondary {
+    border-color: var(--line);
+    background: transparent;
+    color: var(--ink-primary);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--panel-hover);
+    border-color: var(--ink-muted);
+  }
+
+  /* Mirrors ResetModal.astro so the three dialogs read as one component. */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+    background-color: rgb(0 0 0 / 70%);
+    backdrop-filter: blur(4px);
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 400px;
+    padding: var(--space-xl);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    background-color: var(--panel-02);
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 40%),
+      0 4px 6px -4px rgb(0 0 0 / 30%);
+    text-align: center;
+  }
+
+  .modal-title {
+    margin-block-end: var(--space-md);
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .modal-message {
+    margin-block-end: var(--space-xl);
+    font-size: var(--text-label-size);
+    line-height: 1.7;
+    color: var(--ink-secondary);
+  }
+
+  .modal-message .readout {
+    color: var(--ink-primary);
+    font-weight: 700;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+  }
+
+  /* --- Responsive ------------------------------------------------------------------- */
+
+  @media (max-width: 900px) {
+    .game-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .reactor-face {
+      min-height: 460px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .hero-title {
+      font-size: 2rem;
+    }
+
+    .hero-subtitle {
+      font-size: var(--text-body-size);
+    }
+
+    .game-card {
+      padding: var(--space-md);
+    }
+
+    .reactor-face {
+      padding: var(--space-md);
+    }
+
+    .core {
+      width: 140px;
+      height: 140px;
+    }
+
+    .keycap {
+      width: 100%;
+    }
+
+    .surge-summary {
+      gap: var(--space-md);
+    }
+
+    .toast {
+      max-width: 80%;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .core,
+    .core.is-pressed,
+    .toast.is-in,
+    .reactor-face.is-warning {
+      animation: none;
+      transition: none;
+    }
+
+    .floats :global(.float) {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,393 @@
+---
+faq:
+  - question: 'Is Spacebar Clicker free to play?'
+    answer: 'Yes. Spacebar Clicker is a free browser game with no download, no account and no ads. Open the page, press the spacebar, and you are playing.'
+  - question: 'Does my progress save?'
+    answer: 'Yes. The game saves to your browser every five seconds and again when you leave the page, so you can close the tab and pick up where you stopped. The save lives on this device in this browser. Clearing site data erases it, and the Reset button in the toolbar wipes it on purpose.'
+  - question: 'Can I play Spacebar Clicker on my phone?'
+    answer: 'Yes. Tap the reactor instead of pressing a key. Taps build the combo the same way key presses do, and auto-tappers run the same.'
+  - question: 'Does Spacebar Clicker work at school or work?'
+    answer: 'It is an ordinary web page with no download or plugin, so it runs anywhere a browser can reach reflexlab.co. Whether a school or office network allows the site is up to whoever runs that network, and nothing on this page can change that.'
+  - question: 'Can I use an auto clicker?'
+    answer: 'You can, but the game throws away any press that arrives less than 33 milliseconds after the last one, so anything above 30 presses per second is wasted. Nothing bans you. The game is built around holding your own rhythm, and auto-tappers already exist to do the automating for you.'
+  - question: 'How is Spacebar Clicker different from the spacebar speed test?'
+    answer: 'The spacebar speed test measures your presses per second over a fixed window and gives you a rank. Spacebar Clicker is an idle game: progress carries over between visits, presses buy upgrades, and a steady rhythm matters more than raw speed. The surge event is the one moment the game asks you to mash, and it records your presses per second like the test does.'
+  - question: 'How long does it take to reach the first reset?'
+    answer: 'Around 25 minutes of steady tapping if you buy well and hold a combo, about twice that if you mash with no rhythm, and longer if you leave the auto-tappers to work on their own. Offline progress at half speed brings it closer across a couple of sessions.'
+  - question: 'What does holding a rhythm do?'
+    answer: 'Each press that lands within 25% of your recent average interval adds one to your combo. At 10 combo every press is worth 1.5 times as much, at 25 it is doubled, at 50 it is 2.5 times and at 100 it is tripled. Pause for more than 0.8 seconds, or miss the beat three times in a row, and the combo breaks.'
+---
+
+import {
+  AUTO_TAPPERS,
+  COMBO_TIERS,
+  PRESS_UPGRADES,
+  REACTOR_STATES,
+} from '../../games/spacebar-clicker/config';
+
+export const whole = (v) => v.toLocaleString('en-US');
+export const scaling = (s) => (s === 1 ? 'one-off' : `x${s} per level`);
+export const tiers = [...COMBO_TIERS].reverse();
+export const tierRange = (i) =>
+  i === tiers.length - 1 ? `${tiers[i].min}+` : `${tiers[i].min} to ${tiers[i + 1].min - 1}`;
+
+<section id="what-is" class="info-section">
+  <div class="container">
+    <h2>What is Spacebar Clicker?</h2>
+
+      Spacebar Clicker is an idle game played on one key. Every press of the spacebar feeds energy
+      into a lab reactor. You spend that energy on upgrades that make each press worth more, and on
+      auto-tappers that press for you while you do something else. The reactor changes state as
+      you earn, and once a run has produced a million energy you can reset the experiment for a
+      permanent bonus.
+
+      The difference from other spacebar clicker games is the combo. Most clickers reward mashing.
+      This one tracks the gap between your presses and pays up to three times more energy when you
+      hold a steady beat. A player tapping five times a second in rhythm out-earns a frantic masher
+      by a wide margin, which makes it a cousin of the <a href="/spacebar-speed-test">spacebar speed
+      test</a> rather than a copy of it.
+
+      Everything saves in your browser. No account, no ads, no download.
+
+  </div>
+</section>
+
+<section id="how-to-play" class="info-section alt-bg">
+  <div class="container">
+    <h2>How to play Spacebar Clicker</h2>
+    <ol class="steps-list section-content">
+      <li>
+        <strong>Press the spacebar</strong>
+
+          Each press adds energy to the reactor. On a phone, tap the reactor instead. The first
+          upgrade costs {PRESS_UPGRADES[0].baseCost} energy, so you can afford it within your first
+          few seconds.
+
+      </li>
+      <li>
+        <strong>Hold a rhythm</strong>
+
+          Tap at a pace you can keep. After ten presses in time your combo reaches Steady and every
+          press pays 1.5 times as much. Keep going for Locked in, Resonance and Harmonic. The bar
+          under the combo counter drains during the 0.8 second grace window, so you can see a
+          combo about to break.
+
+      </li>
+      <li>
+        <strong>Buy upgrades and auto-tappers</strong>
+
+          Finger Strength and Spring Keys raise what a press is worth. Lab Assistants, Pneumatic
+          Keys and the rest generate energy on their own, even while you are away. New auto-tappers
+          appear in the shop once a run has earned half their price.
+
+      </li>
+      <li>
+        <strong>Mash the surge</strong>
+
+          Every few minutes of active play the reactor warns you, counts down from three, and then
+          pays ten times per press for five seconds. This is the one moment speed beats rhythm. The
+          game records your presses per second for each surge.
+
+      </li>
+      <li>
+        <strong>Reset the experiment</strong>
+
+          Once a run has earned a million energy you can reset it for isotopes. Each isotope adds
+          10% to every gain for good. Your energy, shop and reactor state go back to zero; your
+          isotopes, achievements and records stay.
+
+      </li>
+    </ol>
+    <div class="note">
+      <strong>Note:</strong> Holding the spacebar down does nothing. The game ignores the repeat
+      events your operating system fires for a held key, and it discards any press that lands
+      within 33 milliseconds of the one before.
+    </div>
+
+  </div>
+</section>
+
+<section id="combo" class="info-section">
+  <div class="container">
+    <h2>The combo: steady beats fast</h2>
+
+      A press keeps rhythm when the gap since the last press is within 25% of the average of your
+      previous five gaps, and under 0.6 seconds. Each press that keeps rhythm adds one to the combo.
+      The first five presses after a break count regardless, so a combo can start. One or two
+      off-beat presses are forgiven and add nothing. The third in a row breaks the combo, and so
+      does a pause longer than 0.8 seconds.
+
+    <div class="spec-table spec-table-3 section-content">
+      <div class="spec-row spec-head">
+        <span class="spec-name">Combo</span>
+        <span class="spec-num">Multiplier</span>
+        <span class="spec-desc">Tier</span>
+      </div>
+      {tiers.map((tier, i) => (
+        <div class="spec-row">
+          <span class="spec-name">{tierRange(i)}</span>
+          <span class="spec-num">x{tier.multiplier}</span>
+          <span class="spec-desc">{tier.label || 'No tier yet'}</span>
+        </div>
+      ))}
+    </div>
+
+      The combo multiplies your presses only. Auto-tappers ignore it until you own Synchronisation,
+      which gives them half of your current multiplier. Rhythm, not speed, is what the tracker
+      measures: a tapper at three presses a second holds a combo as well as one at eight, as long as
+      the gaps stay even.
+
+  </div>
+</section>
+
+<section id="shop" class="info-section alt-bg">
+  <div class="container">
+    <h2>Every upgrade and what it costs</h2>
+
+      Prices rise with each purchase. The cost of the next level is the base cost multiplied by the
+      scaling factor once for every level you already own, rounded to a whole number. These are the
+      live numbers the game runs on.
+
+    <h3>Press upgrades</h3>
+    <div class="spec-table">
+      <div class="spec-row spec-head">
+        <span class="spec-name">Upgrade</span>
+        <span class="spec-num">Base cost</span>
+        <span class="spec-num">Scaling</span>
+        <span class="spec-desc">Effect and cap</span>
+      </div>
+      {PRESS_UPGRADES.map((u) => (
+        <div class="spec-row">
+          <span class="spec-name">{u.name}</span>
+          <span class="spec-num">{whole(u.baseCost)}</span>
+          <span class="spec-num">{scaling(u.scale)}</span>
+          <span class="spec-desc">{u.detail}{u.max > 1 ? `. Up to ${u.max} levels.` : '.'}</span>
+        </div>
+      ))}
+    </div>
+
+    <h3>Auto-tappers</h3>
+    <div class="spec-table">
+      <div class="spec-row spec-head">
+        <span class="spec-name">Auto-tapper</span>
+        <span class="spec-num">Base cost</span>
+        <span class="spec-num">Per second</span>
+        <span class="spec-desc">Scaling and flavour</span>
+      </div>
+      {AUTO_TAPPERS.map((t) => (
+        <div class="spec-row">
+          <span class="spec-name">{t.name}</span>
+          <span class="spec-num">{whole(t.baseCost)}</span>
+          <span class="spec-num">{t.eps}</span>
+          <span class="spec-desc">x{t.scale} per purchase. {t.detail}.</span>
+        </div>
+      ))}
+    </div>
+
+      There are ten shop items and no more. The game is shallow on purpose: no tech tree, no second
+      shop, one prestige layer. Auto-tappers out-earn your fingers after about an hour of play,
+      which is the point where resetting the experiment starts to make sense.
+
+  </div>
+</section>
+
+<section id="reactor" class="info-section">
+  <div class="container">
+    <h2>Reactor states</h2>
+
+      The reactor's state follows the energy your current run has earned. Each state past Dormant
+      adds 5% to every gain for the rest of the run, so a Supercritical reactor pays 30% more than a
+      Dormant one. The state resets when you reset the experiment.
+
+    <div class="spec-table spec-table-3 section-content">
+      <div class="spec-row spec-head">
+        <span class="spec-name">State</span>
+        <span class="spec-num">Energy this run</span>
+        <span class="spec-desc">Bonus to all gains</span>
+      </div>
+      {REACTOR_STATES.map((s, i) => (
+        <div class="spec-row">
+          <span class="spec-name">{s.name}</span>
+          <span class="spec-num">{whole(s.threshold)}</span>
+          <span class="spec-desc">+{i * 5}%</span>
+        </div>
+      ))}
+    </div>
+
+  </div>
+</section>
+
+<section id="prestige" class="info-section alt-bg">
+  <div class="container">
+    <h2>Reset the experiment</h2>
+
+      Once a run has earned a million energy, the Reset the experiment tab offers isotopes in
+      exchange for starting over. Isotopes gained equal the square root of your run's energy in
+      millions, rounded down: one million gives 1, four million gives 2, twenty-five million gives
+      5, a hundred million gives 10. Each isotope adds 10% to every gain, presses and auto-tappers
+      alike, on every run from then on.
+
+      Waiting longer pays off slowly. Going from one million to four million takes far more time
+      than it takes to reset, start again with a 10% bonus, and reach a million a second time. The
+      game shows you how many isotopes a reset would give right now, and asks you to confirm.
+
+  </div>
+</section>
+
+<section id="million" class="info-section">
+  <div class="container">
+    <h2>How to reach a million energy</h2>
+    <div class="tips-grid section-content">
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🎵
+        </span>
+        <h3>Find a beat you can hold</h3>
+
+          A combo at Harmonic triples your presses. Pick a pace that feels easy, around four or five
+          presses a second, and keep it. Sprinting breaks the combo and costs more than it earns.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🧮
+        </span>
+        <h3>Buy by payback</h3>
+
+          Divide an item's price by the energy per second it adds. The item with the smallest answer
+          pays for itself soonest. Early on that is Finger Strength and Lab Assistants; later the
+          bigger auto-tappers win.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          ⚡
+        </span>
+        <h3>Spend the surge</h3>
+
+          Ten times per press for five seconds is the best five seconds in the game. Stop buying
+          when the countdown starts, mash, then spend the windfall.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          😴
+        </span>
+        <h3>Leave it running</h3>
+
+          Auto-tappers earn at half speed while you are away, for up to four hours. A few Pneumatic
+          Keys before you close the tab is worth a free Robot Arm when you come back.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🔁
+        </span>
+        <h3>Reset early</h3>
+
+          Your first reset at exactly one million gives one isotope and a 10% bonus on the next run.
+          That run reaches a million faster than the first one did, and the one after is faster
+          still.
+
+      </div>
+      <div class="tip-card">
+        <span class="tip-card-icon" aria-hidden="true">
+          🖐️
+        </span>
+        <h3>Rest your hand</h3>
+
+          Thirty minutes of tapping is a lot for one thumb. Switch fingers, use the auto-tappers,
+          and stop if anything hurts. The reactor will be there tomorrow.
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section id="faq" class="info-section alt-bg">
+  <div class="container">
+    <h2>Spacebar Clicker FAQ</h2>
+    <div class="faq-list section-content">
+      <details class="faq-item">
+        <summary>Is Spacebar Clicker free to play?</summary>
+
+          Yes. Spacebar Clicker is a free browser game with no download, no account and no ads.
+          Open the page, press the spacebar, and you are playing.
+
+      </details>
+      <details class="faq-item">
+        <summary>Does my progress save?</summary>
+
+          Yes. The game saves to your browser every five seconds and again when you leave the page,
+          so you can close the tab and pick up where you stopped. The save lives on this device in
+          this browser. Clearing site data erases it, and the Reset button in the toolbar wipes it
+          on purpose.
+
+      </details>
+      <details class="faq-item">
+        <summary>Can I play Spacebar Clicker on my phone?</summary>
+
+          Yes. Tap the reactor instead of pressing a key. Taps build the combo the same way key
+          presses do, and auto-tappers run the same.
+
+      </details>
+      <details class="faq-item">
+        <summary>Does Spacebar Clicker work at school or work?</summary>
+
+          It is an ordinary web page with no download or plugin, so it runs anywhere a browser can
+          reach reflexlab.co. Whether a school or office network allows the site is up to whoever
+          runs that network, and nothing on this page can change that.
+
+      </details>
+      <details class="faq-item">
+        <summary>Can I use an auto clicker?</summary>
+
+          You can, but the game throws away any press that arrives less than 33 milliseconds after
+          the last one, so anything above 30 presses per second is wasted. Nothing bans you. The
+          game is built around holding your own rhythm, and auto-tappers already exist to do the
+          automating for you.
+
+      </details>
+      <details class="faq-item">
+        <summary>How is Spacebar Clicker different from the spacebar speed test?</summary>
+
+          The <a href="/spacebar-speed-test">spacebar speed test</a> measures your presses per
+          second over a fixed window and gives you a rank. Spacebar Clicker is an idle game:
+          progress carries over between visits, presses buy upgrades, and a steady rhythm matters
+          more than raw speed. The surge event is the one moment the game asks you to mash, and it
+          records your presses per second like the test does. The <a href="/cps">CPS test</a> does
+          the same for mouse clicks.
+
+      </details>
+      <details class="faq-item">
+        <summary>How long does it take to reach the first reset?</summary>
+
+          Around 25 minutes of steady tapping if you buy well and hold a combo, about twice that if
+          you mash with no rhythm, and longer if you leave the auto-tappers to work on their own.
+          Offline progress at half speed brings it closer across a couple of sessions.
+
+      </details>
+      <details class="faq-item">
+        <summary>What does holding a rhythm do?</summary>
+
+          Each press that lands within 25% of your recent average interval adds one to your combo.
+          At 10 combo every press is worth 1.5 times as much, at 25 it is doubled, at 50 it is 2.5
+          times and at 100 it is tripled. Pause for more than 0.8 seconds, or miss the beat three
+          times in a row, and the combo breaks.
+
+      </details>
+    </div>
+
+  </div>
+</section>
+
+<section class="disclaimer-section">
+  <div class="container">
+    <div class="disclaimer">
+      <strong>Disclaimer:</strong> Spacebar Clicker is a game for entertainment. Your progress is
+      stored in this browser only and we never see it. Tapping for long stretches can strain a hand;
+      take breaks, and stop if it hurts.
+    </div>
+  </div>
+</section>
