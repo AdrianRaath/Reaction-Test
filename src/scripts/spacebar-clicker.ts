@@ -40,12 +40,16 @@ import {
   energyPerPress,
   energyPerSecond,
   isotopeBonus,
+  markTappersSeen,
+  nextComboTier,
   offlineAward,
   pressUpgrade,
   prestigeGain,
   prestigeUnlocked,
   reactorIndex,
+  reactorProgress,
   tapperCost,
+  unseenTappers,
   updateReveals,
   upgradeCost,
 } from '../games/spacebar-clicker/economy';
@@ -65,6 +69,9 @@ import {
 
 const SAVE_KEY = `${KEY_PREFIX}:spacebar-clicker:save`;
 const SETTINGS_KEY = `${KEY_PREFIX}:spacebar-clicker:settings`;
+
+/** Circumference of the progress arc's circle (r = 47 in a 100-unit viewBox). */
+const ARC_LENGTH = 2 * Math.PI * 47;
 
 interface Settings {
   sound: boolean;
@@ -107,10 +114,12 @@ const energyEl = el('sc-energy');
 const epsEl = el('sc-eps');
 const eppEl = el('sc-epp');
 const coreEl = el('sc-core');
+const arcEl = document.getElementById('sc-arc') as SVGCircleElement | null;
 const stateEl = el('sc-state');
 const hintEl = el('sc-hint');
 const comboEl = el('sc-combo');
 const comboTierEl = el('sc-combo-tier');
+const comboNextEl = el('sc-combo-next');
 const comboMultEl = el('sc-combo-mult');
 const comboFill = el('sc-combo-fill');
 const floats = el('sc-floats');
@@ -131,7 +140,20 @@ const surgeBest = el('sc-surge-best');
 const toastEl = el('sc-toast');
 const toastText = el('sc-toast-text');
 
+// Shop: two tabs, each with an affordable-count chip; the auto-tapper tab
+// also carries an unseen-item dot (DESIGN.md, the Shop-Signal Exception).
+const shopTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-shop-tab]'));
+const shopPanels = new Map(
+  shopTabs.map((t) => [t.dataset.shopTab!, el(`sc-shop-${t.dataset.shopTab}`)])
+);
+const chipPress = el('sc-chip-press');
+const chipAuto = el('sc-chip-auto');
+const dotAuto = el('sc-dot-auto');
 const shopHiddenHint = el('sc-shop-hidden-hint');
+let activeShopTab = 'press';
+/** Rows tagged "New" for the current visit to the auto-tapper tab. */
+const newTags = new Set<AutoTapperId>();
+
 const shopButtons = new Map<string, HTMLButtonElement>();
 document.querySelectorAll<HTMLButtonElement>('.shop-buy').forEach((btn) => {
   const item = btn.closest<HTMLElement>('.shop-item');
@@ -241,6 +263,14 @@ function showNextToast(): void {
   toastTimer = window.setTimeout(showNextToast, 2600);
 }
 
+/** Restart a one-shot CSS animation on an element. */
+function replay(node: HTMLElement, className: string): void {
+  if (reducedMotion()) return;
+  node.classList.remove(className);
+  void node.offsetWidth;
+  node.classList.add(className);
+}
+
 // --- Run state ------------------------------------------------------------------
 
 const combo = new ComboTracker(() => state.upgrades.stabiliser > 0);
@@ -284,23 +314,33 @@ function renderReactor(): void {
   stateEl.textContent = def.name;
 }
 
+/** The arc around the core fills toward the next reactor state. */
+function renderArc(): void {
+  if (!arcEl) return;
+  const fraction = reactorProgress(state.runLifetime);
+  arcEl.style.strokeDashoffset = String(ARC_LENGTH * (1 - fraction));
+}
+
 function renderCombo(now: number): void {
   const tier = comboTier(combo.combo);
+  const next = nextComboTier(combo.combo);
   comboEl.textContent = String(combo.combo);
   comboTierEl.textContent = tier.label || 'combo';
   comboTierEl.classList.toggle('is-tiered', tier.multiplier > 1);
+  comboNextEl.textContent = next ? `${next.min - combo.combo} to ${next.label}` : 'top tier';
   comboMultEl.textContent = formatMultiplier(tier.multiplier);
   comboFill.style.transform = `scaleX(${combo.graceRemaining(now)})`;
 }
 
 function renderShop(): void {
-  let anyHidden = false;
+  let affordablePress = 0;
   for (const def of PRESS_UPGRADES) {
     const btn = shopButtons.get(`press:${def.id}`);
     if (!btn) continue;
     const owned = state.upgrades[def.id];
     const maxed = owned >= def.max;
     const affordable = canBuyUpgrade(state, def.id);
+    if (affordable) affordablePress++;
     btn.querySelector('[data-cost]')!.textContent = maxed
       ? 'Max'
       : formatEnergy(upgradeCost(state, def.id));
@@ -310,6 +350,10 @@ function renderShop(): void {
     btn.classList.toggle('is-maxed', maxed);
     btn.setAttribute('aria-disabled', String(!affordable));
   }
+
+  let affordableAuto = 0;
+  let anyHidden = false;
+  const unseen = new Set<string>(unseenTappers(state));
   for (const def of AUTO_TAPPERS) {
     const btn = shopButtons.get(`auto:${def.id}`);
     if (!btn) continue;
@@ -321,12 +365,24 @@ function renderShop(): void {
       continue;
     }
     const affordable = canBuyTapper(state, def.id);
+    if (affordable) affordableAuto++;
     btn.querySelector('[data-cost]')!.textContent = formatEnergy(tapperCost(state, def.id));
     btn.querySelector('[data-owned]')!.textContent = String(state.tappers[def.id]);
     btn.classList.toggle('is-affordable', affordable);
     btn.setAttribute('aria-disabled', String(!affordable));
+    const tag = btn.querySelector<HTMLElement>('.shop-new');
+    if (tag) tag.hidden = !(unseen.has(def.id) || newTags.has(def.id));
   }
   shopHiddenHint.hidden = !anyHidden;
+
+  setChip(chipPress, affordablePress);
+  setChip(chipAuto, affordableAuto);
+  dotAuto.hidden = unseen.size === 0 || activeShopTab === 'auto';
+}
+
+function setChip(chip: HTMLElement, count: number): void {
+  chip.hidden = count === 0;
+  chip.textContent = String(count);
 }
 
 function renderStats(): void {
@@ -376,6 +432,7 @@ function renderPanels(): void {
 function renderAll(now = performance.now()): void {
   renderReadouts();
   renderReactor();
+  renderArc();
   renderCombo(now);
   renderShop();
   renderPanels();
@@ -406,13 +463,6 @@ function spawnFloat(value: number, doubled: boolean, e?: Event): void {
   floats.appendChild(span);
 }
 
-function pulseCore(): void {
-  if (reducedMotion()) return;
-  coreEl.classList.remove('is-pressed');
-  void coreEl.offsetWidth; // restart the animation on every press
-  coreEl.classList.add('is-pressed');
-}
-
 // --- Game events -------------------------------------------------------------------
 
 function afterEarn(): void {
@@ -420,6 +470,7 @@ function afterEarn(): void {
   if (idx !== reactorIdx) {
     reactorIdx = idx;
     renderReactor();
+    replay(coreEl, 'is-stepped');
     const name = REACTOR_STATES[idx]!.name;
     toast(`Reactor is now ${name}`);
     announce(`Reactor is now ${name}.`);
@@ -434,13 +485,9 @@ function afterEarn(): void {
 function awardAchievements(ctx: { combo?: number; surgeCps?: number } = {}): void {
   const earned = checkAchievements(state, ctx);
   if (earned.length === 0) return;
-  for (const id of earned) {
-    const def = ACHIEVEMENTS.find((a) => a.id === id)!;
-    toast(`Achievement: ${def.name}`);
-  }
-  announce(
-    `Achievement unlocked: ${earned.map((id) => ACHIEVEMENTS.find((a) => a.id === id)!.name).join(', ')}.`
-  );
+  const names = earned.map((id) => ACHIEVEMENTS.find((a) => a.id === id)!.name);
+  for (const name of names) toast(`Achievement: ${name}`);
+  announce(`Achievement unlocked: ${names.join(', ')}.`);
   SOUND.achievement();
   renderAchievements();
 }
@@ -453,7 +500,10 @@ function press(e?: Event): void {
 
   const result = combo.press(now);
   const tier = comboTier(result.combo);
-  if (tier.multiplier > lastTierMultiplier) SOUND.tierUp();
+  if (tier.multiplier > lastTierMultiplier) {
+    SOUND.tierUp();
+    replay(comboTierEl, 'is-up');
+  }
   lastTierMultiplier = tier.multiplier;
 
   const surging = surge.phase === 'active';
@@ -470,7 +520,7 @@ function press(e?: Event): void {
   }
 
   spawnFloat(value, doubled, e);
-  pulseCore();
+  replay(coreEl, 'is-pressed');
   afterEarn();
   if (
     state.totalPresses === 1 ||
@@ -495,13 +545,13 @@ function surgeTick(now: number): void {
       if (activeS >= surge.dueAt && now - lastPressAt < SURGE.idleAfterS * 1000) {
         surge.phase = 'warning';
         surge.phaseEndsAt = now + SURGE.warningS * 1000;
+        surge.lastTick = SURGE.warningS;
         surgeEl.hidden = false;
         surgeLive.hidden = true;
         surgeSummary.hidden = true;
         reactor.classList.add('is-warning');
         announce(`Surge in ${SURGE.warningS} seconds. Every press is worth ten times more.`);
         SOUND.warningTick();
-        surge.lastTick = SURGE.warningS;
       }
       break;
     case 'warning': {
@@ -598,6 +648,7 @@ function frame(now: number): void {
   renderCombo(now);
   if (now - lastShopRender > 150) {
     renderShop();
+    renderArc();
     lastShopRender = now;
   }
   if (now - lastPanelRender > 500) {
@@ -610,6 +661,8 @@ function frame(now: number): void {
 }
 
 // --- Offline / away progress --------------------------------------------------------------
+
+let pendingAway = 0;
 
 /**
  * Credit the time since the last save. Short gaps (a tab switch) pay full EPS
@@ -631,7 +684,6 @@ function settleAbsence(): void {
   }
   state.lastSeen = Date.now();
 }
-let pendingAway = 0;
 
 awayCollect.addEventListener('click', () => {
   earn(state, pendingAway);
@@ -677,20 +729,26 @@ document.addEventListener('keydown', (e) => {
   if (!prestigeModal.hidden) closeDialog(prestigeModal);
 });
 
+/** Return the live state to a fresh run's starting point (reset or prestige). */
+function restartRun(): void {
+  combo.reset();
+  lastTierMultiplier = 1;
+  reactorIdx = reactorIndex(state.runLifetime);
+  surge.phase = 'idle';
+  surgeEl.hidden = true;
+  reactor.classList.remove('is-surging', 'is-warning');
+  scheduleSurge();
+}
+
 // Reset everything (top bar). Settings survive, as the dialog promises.
 resetBtn.addEventListener('click', () => openDialog(resetModal, resetCancel));
 resetCancel.addEventListener('click', () => closeDialog(resetModal));
 resetConfirm.addEventListener('click', () => {
   state = defaultSave(Date.now());
-  combo.reset();
-  lastTierMultiplier = 1;
-  reactorIdx = 0;
-  surge.phase = 'idle';
-  surgeEl.hidden = true;
-  reactor.classList.remove('is-surging', 'is-warning');
   activeS = 0;
-  scheduleSurge();
+  restartRun();
   save();
+  selectShopTab('press');
   renderAll();
   closeDialog(resetModal);
   announce('All progress erased.');
@@ -709,13 +767,7 @@ prestigeConfirm.addEventListener('click', () => {
     return;
   }
   state = prestigeReset(state, gain, Date.now());
-  combo.reset();
-  lastTierMultiplier = 1;
-  reactorIdx = 0;
-  surge.phase = 'idle';
-  surgeEl.hidden = true;
-  reactor.classList.remove('is-surging', 'is-warning');
-  scheduleSurge();
+  restartRun();
   closeDialog(prestigeModal);
   renderAll();
   toast(`Experiment reset. ${gain} isotope${gain === 1 ? '' : 's'} gained.`);
@@ -735,6 +787,10 @@ for (const [key, btn] of shopButtons) {
         ? buyUpgrade(state, id as PressUpgradeId)
         : buyTapper(state, id as AutoTapperId);
     if (!bought) return;
+    if (kind === 'auto') {
+      newTags.delete(id as AutoTapperId);
+      if (!state.seen.includes(id as AutoTapperId)) state.seen.push(id as AutoTapperId);
+    }
     SOUND.purchase();
     const name =
       kind === 'press'
@@ -751,6 +807,25 @@ for (const [key, btn] of shopButtons) {
   });
 }
 
+function selectShopTab(name: string): void {
+  activeShopTab = name;
+  for (const tab of shopTabs) {
+    const on = tab.dataset.shopTab === name;
+    tab.setAttribute('aria-selected', String(on));
+    tab.tabIndex = on ? 0 : -1;
+  }
+  for (const [key, panel] of shopPanels) panel.hidden = key !== name;
+  // Opening the auto-tapper tab clears the dot; the "New" tags on the rows
+  // stay for this visit so the player can spot what arrived, then go.
+  if (name === 'auto') {
+    for (const id of unseenTappers(state)) newTags.add(id);
+    if (markTappersSeen(state)) dirty = true;
+  } else {
+    newTags.clear();
+  }
+  renderShop();
+}
+
 // --- Tabs ---------------------------------------------------------------------------------
 
 function selectTab(name: string): void {
@@ -763,19 +838,30 @@ function selectTab(name: string): void {
   renderPanels();
 }
 
-tabs.forEach((tab, i) => {
-  tab.addEventListener('click', () => {
-    selectTab(tab.dataset.tab!);
-    tab.blur();
+/** Click to select, arrow keys to move; the selected tab loses focus so Space still presses. */
+function wireTabs(
+  buttons: HTMLButtonElement[],
+  nameOf: (b: HTMLButtonElement) => string,
+  select: (name: string) => void
+): void {
+  buttons.forEach((tab, i) => {
+    tab.addEventListener('click', () => {
+      select(nameOf(tab));
+      tab.blur();
+    });
+    tab.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      const next =
+        buttons[(i + (e.key === 'ArrowRight' ? 1 : buttons.length - 1)) % buttons.length]!;
+      select(nameOf(next));
+      next.focus();
+    });
   });
-  tab.addEventListener('keydown', (e) => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    e.preventDefault();
-    const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]!;
-    selectTab(next.dataset.tab!);
-    next.focus();
-  });
-});
+}
+
+wireTabs(tabs, (b) => b.dataset.tab!, selectTab);
+wireTabs(shopTabs, (b) => b.dataset.shopTab!, selectShopTab);
 
 // --- Input ----------------------------------------------------------------------------------
 
@@ -844,5 +930,6 @@ updateSoundIcon();
 updateReveals(state);
 settleAbsence();
 selectTab('stats');
+selectShopTab('press');
 renderAll();
 requestAnimationFrame(frame);

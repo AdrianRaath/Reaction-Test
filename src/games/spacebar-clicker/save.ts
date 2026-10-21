@@ -30,6 +30,8 @@ export interface SaveState {
   tappers: Record<AutoTapperId, number>;
   /** Auto-tappers the shop has shown. Survives prestige. */
   revealed: AutoTapperId[];
+  /** Revealed auto-tappers the player has looked at, so "New" tags clear. */
+  seen: AutoTapperId[];
   isotopes: number;
   prestiges: number;
   bestCombo: number;
@@ -61,6 +63,7 @@ export function defaultSave(now: number): SaveState {
     upgrades: zeroed(UPGRADE_IDS),
     tappers: zeroed(TAPPER_IDS),
     revealed: ['assistant'],
+    seen: ['assistant'],
     isotopes: 0,
     prestiges: 0,
     bestCombo: 0,
@@ -121,6 +124,10 @@ export function parseSave(raw: string | null, now: number): SaveState {
   // Anything owned is visible whatever the list says; the first is always visible.
   for (const id of TAPPER_IDS) if (tappers[id] > 0 && !revealed.includes(id)) revealed.push(id);
   if (!revealed.includes('assistant')) revealed.unshift('assistant');
+  // Owning something counts as having seen it; the first row is always seen.
+  const seen = idList<AutoTapperId>(d.seen, (id) => (revealed as string[]).includes(id));
+  for (const id of TAPPER_IDS) if (tappers[id] > 0 && !seen.includes(id)) seen.push(id);
+  if (!seen.includes('assistant')) seen.unshift('assistant');
 
   const runLifetime = num(d.runLifetime, 0);
   return {
@@ -132,6 +139,7 @@ export function parseSave(raw: string | null, now: number): SaveState {
     upgrades,
     tappers,
     revealed,
+    seen,
     isotopes: Math.floor(num(d.isotopes, 0)),
     prestiges: Math.floor(num(d.prestiges, 0)),
     bestCombo: Math.floor(num(d.bestCombo, 0)),

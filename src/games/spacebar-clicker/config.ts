@@ -41,6 +41,8 @@ export type AchievementId =
 export interface PressUpgradeDef {
   id: PressUpgradeId;
   name: string;
+  /** Decorative glyph beside the name, aria-hidden (DESIGN.md iconography). */
+  emoji: string;
   /** One line, shown in the shop and the rulebook table. */
   detail: string;
   baseCost: number;
@@ -52,6 +54,7 @@ export interface PressUpgradeDef {
 export interface AutoTapperDef {
   id: AutoTapperId;
   name: string;
+  emoji: string;
   detail: string;
   /** Energy per second, each. */
   eps: number;
@@ -83,6 +86,7 @@ export interface AchievementDef {
 export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
   {
     id: 'finger',
+    emoji: '☝️',
     name: 'Finger Strength',
     detail: '+1 energy per press, each level',
     baseCost: 15,
@@ -91,6 +95,7 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
   },
   {
     id: 'double',
+    emoji: '✌️',
     name: 'Double Tap',
     detail: '+5% chance a press counts twice, each level',
     baseCost: 300,
@@ -99,6 +104,7 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
   },
   {
     id: 'spring',
+    emoji: '🌀',
     name: 'Spring Keys',
     detail: 'Press value x1.5, each level',
     baseCost: 5000,
@@ -107,6 +113,7 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
   },
   {
     id: 'stabiliser',
+    emoji: '⚖️',
     name: 'Stabiliser',
     detail: 'A broken combo drops by 10 instead of resetting',
     baseCost: 5000,
@@ -115,6 +122,7 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
   },
   {
     id: 'sync',
+    emoji: '🔗',
     name: 'Synchronisation',
     detail: 'Auto-tappers get half your combo multiplier',
     baseCost: 25000,
@@ -127,6 +135,7 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
 export const AUTO_TAPPERS: readonly AutoTapperDef[] = [
   {
     id: 'assistant',
+    emoji: '🧑‍🔬',
     name: 'Lab Assistant',
     detail: 'An intern tapping the key',
     eps: 0.5,
@@ -135,6 +144,7 @@ export const AUTO_TAPPERS: readonly AutoTapperDef[] = [
   },
   {
     id: 'pneumatic',
+    emoji: '🔩',
     name: 'Pneumatic Key',
     detail: 'A piston on a timer',
     eps: 3,
@@ -143,6 +153,7 @@ export const AUTO_TAPPERS: readonly AutoTapperDef[] = [
   },
   {
     id: 'arm',
+    emoji: '🦾',
     name: 'Robot Arm',
     detail: 'Industrial precision',
     eps: 15,
@@ -151,6 +162,7 @@ export const AUTO_TAPPERS: readonly AutoTapperDef[] = [
   },
   {
     id: 'quantum',
+    emoji: '⌨️',
     name: 'Quantum Keyboard',
     detail: 'Presses in several states at once',
     eps: 80,
@@ -159,6 +171,7 @@ export const AUTO_TAPPERS: readonly AutoTapperDef[] = [
   },
   {
     id: 'collider',
+    emoji: '⚛️',
     name: 'Particle Collider',
     detail: 'Not technically a keyboard',
     eps: 200,

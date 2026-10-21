@@ -96,6 +96,11 @@ const whole = (v: number) => v.toLocaleString('en-US');
           </div>
 
           <div class="core-wrap">
+            <!-- Progress to the next reactor state, drawn as an arc outside the core. -->
+            <svg class="core-arc" viewBox="0 0 100 100" aria-hidden="true">
+              <circle class="arc-track" cx="50" cy="50" r="47"></circle>
+              <circle class="arc-fill" id="sc-arc" cx="50" cy="50" r="47"></circle>
+            </svg>
             <div class="core" id="sc-core" data-state="dormant" aria-hidden="true">
               <span class="core-ring core-ring-outer"></span>
               <span class="core-ring core-ring-inner"></span>
@@ -113,6 +118,7 @@ const whole = (v: number) => v.toLocaleString('en-US');
             <div class="combo-row">
               <span class="combo-count readout" id="sc-combo">0</span>
               <span class="combo-tier" id="sc-combo-tier">combo</span>
+              <span class="combo-next" id="sc-combo-next">10 to Steady</span>
               <span class="combo-mult readout" id="sc-combo-mult">x1</span>
             </div>
             <div class="combo-track" role="presentation">
@@ -159,12 +165,53 @@ const whole = (v: number) => v.toLocaleString('en-US');
         <aside class="shop" aria-labelledby="shop-heading">
           <h2 class="shop-heading" id="shop-heading">Shop</h2>
 
-          <h3 class="shop-group">Press upgrades</h3>
-          <ul class="shop-list" id="sc-shop-press">
+          <!-- Two tabs so neither list outgrows the reactor. The amber chip counts
+               what is affordable now; the dot marks an unseen new item
+               (DESIGN.md, the Shop-Signal Exception). -->
+          <div class="shop-tabs" role="tablist" aria-label="Shop sections">
+            <button
+              type="button"
+              class="shop-tab"
+              role="tab"
+              id="sc-shop-tab-press"
+              data-shop-tab="press"
+              aria-selected="true"
+              aria-controls="sc-shop-press"
+            >
+              Upgrades
+              <span class="shop-chip readout" id="sc-chip-press" hidden>0</span>
+            </button>
+            <button
+              type="button"
+              class="shop-tab"
+              role="tab"
+              id="sc-shop-tab-auto"
+              data-shop-tab="auto"
+              aria-selected="false"
+              aria-controls="sc-shop-auto"
+              tabindex="-1"
+            >
+              Auto-tappers
+              <span class="shop-chip readout" id="sc-chip-auto" hidden>0</span>
+              <span class="shop-dot" id="sc-dot-auto" hidden>
+                <span class="visually-hidden">New item</span>
+              </span>
+            </button>
+          </div>
+
+          <ul
+            class="shop-list"
+            id="sc-shop-press"
+            role="tabpanel"
+            aria-labelledby="sc-shop-tab-press"
+          >
             {
               PRESS_UPGRADES.map((u) => (
                 <li class="shop-item" data-kind="press" data-id={u.id}>
                   <button type="button" class="shop-buy" aria-disabled="true">
+                    <span class="shop-emoji" aria-hidden="true">
+                      {u.emoji}
+                    </span>
                     <span class="shop-text">
                       <span class="shop-name">{u.name}</span>
                       <span class="shop-detail">{u.detail}</span>
@@ -183,14 +230,27 @@ const whole = (v: number) => v.toLocaleString('en-US');
             }
           </ul>
 
-          <h3 class="shop-group">Auto-tappers</h3>
-          <ul class="shop-list" id="sc-shop-auto">
+          <ul
+            class="shop-list"
+            id="sc-shop-auto"
+            role="tabpanel"
+            aria-labelledby="sc-shop-tab-auto"
+            hidden
+          >
             {
               AUTO_TAPPERS.map((t, i) => (
                 <li class="shop-item" data-kind="auto" data-id={t.id} hidden={i > 0}>
                   <button type="button" class="shop-buy" aria-disabled="true">
+                    <span class="shop-emoji" aria-hidden="true">
+                      {t.emoji}
+                    </span>
                     <span class="shop-text">
-                      <span class="shop-name">{t.name}</span>
+                      <span class="shop-name">
+                        {t.name}
+                        <span class="shop-new" hidden>
+                          New
+                        </span>
+                      </span>
                       <span class="shop-detail">
                         {t.detail}. <span class="readout">{t.eps}</span> per second each.
                       </span>
@@ -461,11 +521,13 @@ const whole = (v: number) => v.toLocaleString('en-US');
     background-color: var(--panel-02);
   }
 
+  /* Stretch, so the shop column is pinned to the reactor's height and the two
+     read as one instrument; the shop scrolls inside itself if it must. */
   .game-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
     gap: var(--space-lg);
-    align-items: start;
+    align-items: stretch;
   }
 
   /* --- Reactor face ------------------------------------------------------------- */
@@ -595,18 +657,52 @@ const whole = (v: number) => v.toLocaleString('en-US');
   /* The core: a disc of green light inside two rings. Depth is tonal; the only
      shadow is the glow, which reports state. */
   .core-wrap {
+    --core-size: 168px;
+
     position: relative;
     z-index: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
+    /* Room for the arc outside the core. */
+    padding: 14px 0;
+  }
+
+  /* The progress arc: a thin dial just outside the outer ring that fills
+     toward the next reactor state. Green here is the live "active" reading,
+     the same licence the speed tests' live readouts use. */
+  .core-arc {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    width: calc(var(--core-size) + 28px);
+    height: calc(var(--core-size) + 28px);
+    transform: translate(-50%, -50%) rotate(-90deg);
+    pointer-events: none;
+  }
+
+  .core-arc circle {
+    fill: none;
+    stroke-width: 2.5;
+  }
+
+  .arc-track {
+    stroke: var(--line);
+  }
+
+  .arc-fill {
+    stroke: var(--signal-green);
+    stroke-linecap: round;
+    stroke-dasharray: 295.31; /* 2π × 47 */
+    stroke-dashoffset: 295.31;
+    transition: stroke-dashoffset var(--duration-base) linear;
   }
 
   .core {
     position: relative;
-    width: 168px;
-    height: 168px;
+    width: var(--core-size);
+    height: var(--core-size);
     border-radius: var(--radius-full);
     background: radial-gradient(
       circle at center,
@@ -652,6 +748,20 @@ const whole = (v: number) => v.toLocaleString('en-US');
 
   .core.is-pressed {
     animation: core-press 160ms var(--ease);
+  }
+
+  /* Reaching a new state: one larger snap as the glow steps up. */
+  .core.is-stepped {
+    animation: core-step 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes core-step {
+    0% {
+      transform: scale(1.18);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 
   @keyframes core-breathe {
@@ -745,6 +855,28 @@ const whole = (v: number) => v.toLocaleString('en-US');
   .combo-tier.is-tiered {
     font-weight: 600;
     color: var(--ink-primary);
+  }
+
+  /* Tier up: the label snaps, the way the GO state does. */
+  .combo-tier.is-up {
+    animation: tier-up 360ms cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: left center;
+  }
+
+  @keyframes tier-up {
+    0% {
+      transform: scale(1.35);
+      color: var(--signal-green);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* The next target, so the player chases a number rather than waits. */
+  .combo-next {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
   }
 
   .combo-mult {
@@ -944,6 +1076,7 @@ const whole = (v: number) => v.toLocaleString('en-US');
     flex-direction: column;
     gap: var(--space-sm);
     min-width: 0;
+    min-height: 0; /* lets the list scroll inside the pinned height */
   }
 
   .shop-heading {
@@ -951,19 +1084,96 @@ const whole = (v: number) => v.toLocaleString('en-US');
     font-weight: var(--text-title-weight);
   }
 
-  .shop-group {
-    margin-block-start: var(--space-sm);
+  .shop-tabs {
+    display: flex;
+    gap: var(--space-xs);
+    padding-block-end: var(--space-sm);
+    border-block-end: 1px solid var(--line-subtle);
+  }
+
+  .shop-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-height: 36px;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--ink-secondary);
+    font-size: var(--text-label-size);
+    font-weight: var(--text-label-weight);
+    transition: all var(--duration-fast) var(--ease);
+  }
+
+  .shop-tab:hover {
+    background-color: var(--panel-hover);
+    color: var(--ink-primary);
+  }
+
+  .shop-tab[aria-selected='true'] {
+    border-color: var(--line);
+    background-color: var(--panel-03);
+    color: var(--ink-primary);
+  }
+
+  /* Shop-Signal Exception: amber means "something to spend or collect". */
+  .shop-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding-inline: 6px;
+    border-radius: var(--radius-full);
+    background-color: var(--caution-amber);
+    color: var(--chassis-black);
     font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--ink-muted);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .shop-dot {
+    position: absolute;
+    inset-block-start: 4px;
+    inset-inline-end: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background-color: var(--caution-amber);
+  }
+
+  .shop-new {
+    display: inline-block;
+    margin-inline-start: var(--space-xs);
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    background-color: rgb(245 158 11 / 18%);
+    color: var(--caution-amber);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    vertical-align: 1px;
   }
 
   .shop-list {
     display: flex;
+    flex: 1;
+    min-height: 0;
     flex-direction: column;
     gap: var(--space-xs);
     padding: 0;
+    overflow-y: auto;
     list-style: none;
+  }
+
+  .shop-emoji {
+    flex-shrink: 0;
+    width: 28px;
+    font-size: 1.125rem;
+    line-height: 1;
+    text-align: center;
   }
 
   .shop-buy {
@@ -1319,9 +1529,8 @@ const whole = (v: number) => v.toLocaleString('en-US');
       padding: var(--space-md);
     }
 
-    .core {
-      width: 140px;
-      height: 140px;
+    .core-wrap {
+      --core-size: 140px;
     }
 
     .keycap {
@@ -1340,6 +1549,9 @@ const whole = (v: number) => v.toLocaleString('en-US');
   @media (prefers-reduced-motion: reduce) {
     .core,
     .core.is-pressed,
+    .core.is-stepped,
+    .combo-tier.is-up,
+    .arc-fill,
     .toast.is-in,
     .reactor-face.is-warning {
       animation: none;

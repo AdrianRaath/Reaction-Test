@@ -59,6 +59,26 @@ export function comboTier(combo: number): ComboTierDef {
   return COMBO_TIERS.find((t) => combo >= t.min) ?? COMBO_TIERS[COMBO_TIERS.length - 1]!;
 }
 
+/** The tier above the current combo, or null at the top. */
+export function nextComboTier(combo: number): ComboTierDef | null {
+  const ascending = [...COMBO_TIERS].reverse();
+  return ascending.find((t) => t.min > combo) ?? null;
+}
+
+/**
+ * How far the run is through its current reactor state, 0..1. Linear between
+ * thresholds, so with rising income the arc speeds up toward each state. 1 at
+ * Supercritical, which has nothing above it.
+ */
+export function reactorProgress(runLifetime: number): number {
+  const i = reactorIndex(runLifetime);
+  const current = REACTOR_STATES[i]!;
+  const next = REACTOR_STATES[i + 1];
+  if (!next) return 1;
+  const span = next.threshold - current.threshold;
+  return Math.min(1, Math.max(0, (runLifetime - current.threshold) / span));
+}
+
 /** Index into REACTOR_STATES for a run's lifetime energy. */
 export function reactorIndex(runLifetime: number): number {
   let index = 0;
@@ -169,6 +189,23 @@ export function buyTapper(state: SaveState, id: AutoTapperId): boolean {
   state.energy -= tapperCost(state, id);
   state.tappers[id] += 1;
   return true;
+}
+
+/** Mark every revealed auto-tapper as looked at. Returns true if anything changed. */
+export function markTappersSeen(state: SaveState): boolean {
+  let changed = false;
+  for (const id of state.revealed) {
+    if (!state.seen.includes(id)) {
+      state.seen.push(id);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+/** Revealed auto-tappers the player has not looked at yet. */
+export function unseenTappers(state: SaveState): AutoTapperId[] {
+  return state.revealed.filter((id) => !state.seen.includes(id));
 }
 
 /**

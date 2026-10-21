@@ -11,11 +11,15 @@ import {
   earn,
   energyPerPress,
   energyPerSecond,
+  markTappersSeen,
   milestoneBonus,
+  nextComboTier,
   offlineAward,
   prestigeGain,
+  reactorProgress,
   reactorState,
   tapperCost,
+  unseenTappers,
   updateReveals,
   upgradeCost,
 } from './economy';
@@ -126,7 +130,45 @@ describe('combo tiers', () => {
   });
 });
 
+describe('combo targets', () => {
+  it('names the next tier, or nothing at the top', () => {
+    expect(nextComboTier(0)).toMatchObject({ min: 10, label: 'Steady' });
+    expect(nextComboTier(10)).toMatchObject({ min: 25 });
+    expect(nextComboTier(99)).toMatchObject({ min: 100, label: 'Harmonic' });
+    expect(nextComboTier(100)).toBeNull();
+  });
+});
+
+describe('shop seen tracking', () => {
+  it('reports unseen reveals and clears them when the tab is viewed', () => {
+    const s = defaultSave(NOW);
+    s.runLifetime = 400;
+    updateReveals(s); // pneumatic
+    expect(unseenTappers(s)).toEqual(['pneumatic']);
+    expect(markTappersSeen(s)).toBe(true);
+    expect(unseenTappers(s)).toEqual([]);
+    expect(markTappersSeen(s)).toBe(false);
+  });
+
+  it('treats owned auto-tappers as seen when loading a save', () => {
+    const s = parseSave(
+      JSON.stringify({ tappers: { arm: 1 }, revealed: ['assistant', 'arm'] }),
+      NOW
+    );
+    expect(s.seen).toEqual(['assistant', 'arm']);
+  });
+});
+
 describe('reactor', () => {
+  it('reports progress through the current state as 0..1', () => {
+    expect(reactorProgress(0)).toBe(0);
+    expect(reactorProgress(250)).toBe(0.5);
+    expect(reactorProgress(500)).toBe(0); // just entered Warming
+    expect(reactorProgress(5250)).toBeCloseTo(0.5);
+    expect(reactorProgress(1e8)).toBe(1);
+    expect(reactorProgress(5e8)).toBe(1);
+  });
+
   it('names the state for a run lifetime and stacks +5% per state', () => {
     expect(reactorState(0).id).toBe('dormant');
     expect(reactorState(499).id).toBe('dormant');
@@ -354,7 +396,11 @@ describe('save', () => {
     s.tappers.quantum = 2;
     s.achievements = ['first-press', 'warmed-up'];
     const back = parseSave(serializeSave(s), NOW + 5000);
-    expect(back).toEqual({ ...s, revealed: ['assistant', 'quantum'] });
+    expect(back).toEqual({
+      ...s,
+      revealed: ['assistant', 'quantum'],
+      seen: ['assistant', 'quantum'],
+    });
   });
 
   it('starts fresh on nothing, garbage, or the wrong shape', () => {

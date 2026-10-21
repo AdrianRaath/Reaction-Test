@@ -217,6 +217,8 @@ Decisions taken during the build, with the maintainer, that adapt this spec to t
 - **Rhythm tolerance** stays at 25%, checked by Monte Carlo: a tapper with 10% interval jitter never breaks on rhythm, 20% jitter breaks about three times a minute. Pauses end most combos, which is the intended behaviour.
 - **Reveals survive prestige.** The spec wipes shop purchases on reset; the list of auto-tappers the shop has shown is kept, since a second-run player knows the shop.
 - **Away progress** uses the saved `lastSeen` timestamp. A gap under a minute (a tab switch) pays full EPS silently; longer pays half, capped at four hours, behind Collect. A hidden tab counts as away.
+- **Shop as two tabs** (Upgrades / Auto-tappers), pinned to the reactor's height, after the first preview showed the stacked lists outgrowing it. Each tab carries an amber chip counting what is affordable right now; the auto-tapper tab carries an amber dot for a revealed-but-unviewed item, and that row a "New" tag, both cleared by opening the tab. This is the one use of amber on the page, written into DESIGN.md as the Shop-Signal Exception. Rows carry an emoji each (config `emoji`).
+- **Reactor dial.** A thin arc outside the core fills toward the next reactor state and snaps on reaching it; the combo row shows the distance to the next tier ("20 to Resonance") and the tier label snaps on tier-up.
 - **Content** below the game is ~2,300 words: what it is, how to play, the combo rules, the full shop tables and reactor states rendered from the config, the prestige formula, tips for the "1 million" query, and an eight-question FAQ with JSON-LD. The "unblocked" cluster gets one honest FAQ answer and no proxy advice.
 
 ## 15. Explicitly out of scope
