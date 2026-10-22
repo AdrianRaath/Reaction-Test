@@ -137,12 +137,12 @@ const comboFill = el('sc-combo-fill');
 const floats = el('sc-floats');
 const announceEl = el('sc-announce');
 
-const surgeEl = el('sc-surge');
-const surgeTitle = el('sc-surge-title');
-const surgeLive = el('sc-surge-live');
-const surgeCps = el('sc-surge-cps');
-const surgeCount = el('sc-surge-count');
-const surgeFill = el('sc-surge-fill');
+const stateLabelEl = el('sc-state-label');
+const surgeLabel = el('sc-surge-label');
+const coreNum = el('sc-core-num');
+const coreUnit = el('sc-core-unit');
+const sparksEl = el('sc-sparks');
+const scopeEl = document.getElementById('sc-scope') as HTMLCanvasElement | null;
 const surgeSummary = el('sc-surge-summary');
 const surgePresses = el('sc-surge-presses');
 const surgeRate = el('sc-surge-rate');
@@ -216,7 +216,8 @@ const soundOnIcon = el('sound-icon-on');
 const soundOffIcon = el('sound-icon-off');
 
 const isTouchInput = window.matchMedia('(pointer: coarse)').matches;
-const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+const reducedMotion = () => motionQuery.matches;
 
 // --- Sound ---------------------------------------------------------------------
 // Noteworthy moments only (maintainer decision): never a beep per press.
@@ -329,11 +330,31 @@ function renderReactor(): void {
   for (const led of dialLeds) led.node.classList.toggle('is-lit', led.index <= reactorIdx);
 }
 
-/** The arc around the core fills toward the next reactor state. */
+/**
+ * The arc around the core fills toward the next reactor state. While a surge
+ * counts down or runs, it becomes that phase's clock and drains instead.
+ */
 function renderArc(now = performance.now()): void {
   if (!arcEl) return;
-  const fraction = now < arcHoldUntil ? 1 : reactorProgress(state.runLifetime);
+  let fraction: number;
+  if (surge.phase === 'warning') {
+    fraction = (surge.phaseEndsAt - now) / (SURGE.warningS * 1000);
+  } else if (surge.phase === 'active') {
+    fraction = (surge.phaseEndsAt - now) / (SURGE.durationS * 1000);
+  } else {
+    fraction = now < arcHoldUntil ? 1 : reactorProgress(state.runLifetime);
+  }
+  fraction = Math.min(1, Math.max(0, fraction));
   arcEl.style.strokeDashoffset = String(ARC_LENGTH * (1 - fraction));
+}
+
+/** Ease the dial back to the run's progress (after a stage change or a surge). */
+function sweepArcBack(): void {
+  if (!arcEl) return;
+  clearArcTimers();
+  arcEl.classList.add('is-sweeping');
+  renderArc();
+  arcTimers.push(window.setTimeout(() => arcEl.classList.remove('is-sweeping'), ARC_SWEEP_MS));
 }
 
 function clearArcTimers(): void {
@@ -362,16 +383,16 @@ function celebrateStage(prevIdx: number): void {
   washEl.style.setProperty('--wash-y', `${core.top - face.top + core.height / 2}px`);
   replay(washEl, 'is-washing');
 
-  if (!arcEl) return;
+  // During a surge the dial is the surge clock; it sweeps back when that ends.
+  if (!arcEl || surge.phase === 'warning' || surge.phase === 'active') return;
   clearArcTimers();
   arcHoldUntil = performance.now() + ARC_HOLD_MS;
   arcEl.classList.add('is-complete');
   renderArc();
   arcTimers.push(
     window.setTimeout(() => {
-      arcEl.classList.replace('is-complete', 'is-sweeping');
-      renderArc();
-      arcTimers.push(window.setTimeout(() => arcEl.classList.remove('is-sweeping'), ARC_SWEEP_MS));
+      arcEl.classList.remove('is-complete');
+      sweepArcBack();
     }, ARC_HOLD_MS)
   );
 }
@@ -515,6 +536,109 @@ function spawnFloat(value: number, doubled: boolean, e?: Event): void {
   floats.appendChild(span);
 }
 
+const MAX_SPARKS = 60;
+const SPARKS_PER_PRESS = 5;
+
+/** Overdrive presses throw a few short streaks off the core's rim. */
+function spawnSparks(): void {
+  if (reducedMotion()) return;
+  const box = sparksEl.getBoundingClientRect();
+  const core = coreEl.getBoundingClientRect();
+  const cx = core.left - box.left + core.width / 2;
+  const cy = core.top - box.top + core.height / 2;
+  const rim = core.width * 0.42;
+  for (let i = 0; i < SPARKS_PER_PRESS && sparksEl.childElementCount < MAX_SPARKS; i++) {
+    const spark = document.createElement('span');
+    spark.className = 'spark';
+    spark.style.left = `${cx}px`;
+    spark.style.top = `${cy - 1}px`;
+    spark.style.setProperty('--a', `${Math.random() * 360}deg`);
+    spark.style.setProperty('--r0', `${rim}px`);
+    spark.style.setProperty('--r1', `${rim + 36 + Math.random() * 44}px`);
+    spark.addEventListener('animationend', () => spark.remove());
+    sparksEl.appendChild(spark);
+  }
+}
+
+// --- Rhythm scope ------------------------------------------------------------------
+// One spike per press on a trace that scrolls left. Evenly spaced spikes are a
+// steady beat; mashing crowds them into a ragged scribble. Presses that miss
+// the rhythm draw at half height. Under reduced motion it redraws on presses
+// only, so nothing scrolls on its own.
+
+const SCOPE_WINDOW_MS = 2400;
+const scopeCtx = scopeEl?.getContext('2d') ?? null;
+const blips: { t: number; kept: boolean }[] = [];
+let scopeColor = '#22c55e';
+/** The idle baseline is already on the canvas; skip redrawing it. */
+let scopeFlat = false;
+
+function sizeScope(): void {
+  if (!scopeEl || !scopeCtx) return;
+  const dpr = window.devicePixelRatio || 1;
+  scopeEl.width = Math.round(scopeEl.clientWidth * dpr);
+  scopeEl.height = Math.round(scopeEl.clientHeight * dpr);
+  scopeCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  scopeFlat = false;
+  drawScope(performance.now());
+}
+
+/** The trace follows the reactor's (possibly fading) stage color. */
+function readScopeColor(): void {
+  const color = getComputedStyle(reactor).getPropertyValue('--stage').trim();
+  if (color && color !== scopeColor) {
+    scopeColor = color;
+    scopeFlat = false;
+  }
+}
+
+function drawScope(now: number): void {
+  if (!scopeEl || !scopeCtx) return;
+  while (blips.length && now - blips[0]!.t > SCOPE_WINDOW_MS) blips.shift();
+  if (blips.length === 0 && scopeFlat) return;
+
+  const ctx = scopeCtx;
+  const w = scopeEl.clientWidth;
+  const h = scopeEl.clientHeight;
+  const base = Math.round(h * 0.72) + 0.5;
+  const peak = h * 0.62;
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgb(255 255 255 / 7%)';
+  ctx.beginPath();
+  ctx.moveTo(0, base);
+  ctx.lineTo(w, base);
+  ctx.stroke();
+  if (blips.length === 0) {
+    scopeFlat = true;
+    return;
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(0, base);
+  for (const blip of blips) {
+    const x = w * (1 - (now - blip.t) / SCOPE_WINDOW_MS);
+    const height = blip.kept ? peak : peak * 0.45;
+    ctx.lineTo(x - 6, base);
+    ctx.lineTo(x - 3, base + 2.5);
+    ctx.lineTo(x, base - height);
+    ctx.lineTo(x + 3, base + 3);
+    ctx.lineTo(x + 6, base);
+  }
+  ctx.lineTo(w, base);
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = scopeColor;
+  ctx.shadowColor = scopeColor;
+  ctx.shadowBlur = 6;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  scopeFlat = false;
+}
+
+if (scopeEl) new ResizeObserver(sizeScope).observe(scopeEl);
+
 // --- Game events -------------------------------------------------------------------
 
 function afterEarn(): void {
@@ -571,8 +695,11 @@ function press(e?: Event): void {
   if (surging) {
     surge.presses++;
     surge.earned += value;
+    spawnSparks();
   }
 
+  blips.push({ t: now, kept: result.kept });
+  if (reducedMotion()) drawScope(now);
   spawnFloat(value, doubled, e);
   replay(coreEl, 'is-pressed');
   afterEarn();
@@ -593,37 +720,81 @@ function onComboBroke(): void {
 
 // --- Surge ---------------------------------------------------------------------------
 
+/** How long the results card stays over the core. */
+const SUMMARY_MS = 4000;
+/** How long the results take to count up. */
+const TALLY_MS = 800;
+/** Bumped to cancel any count-up still running (a reset, or a new surge). */
+let tallyGen = 0;
+
+/**
+ * Put the reactor into a surge phase. CSS keys everything visual off
+ * data-surge; this also swaps the state label for the surge label while the
+ * countdown and overdrive run.
+ */
+function setSurgePhase(phase: SurgePhase): void {
+  surge.phase = phase;
+  if (phase === 'idle') delete reactor.dataset.surge;
+  else reactor.dataset.surge = phase;
+  const live = phase === 'warning' || phase === 'active';
+  stateLabelEl.hidden = live;
+  surgeLabel.hidden = !live;
+  if (phase !== 'summary') surgeSummary.hidden = true;
+}
+
+/** One countdown second in the core. */
+function showCount(n: number): void {
+  coreNum.textContent = String(n);
+  coreUnit.textContent = '';
+  replay(coreNum, 'is-tick');
+}
+
+/** Count a result up from zero, easing out. Reduced motion shows the total. */
+function tally(node: HTMLElement, to: number, format: (v: number) => string, gen: number): void {
+  if (reducedMotion()) {
+    node.textContent = format(to);
+    return;
+  }
+  const start = performance.now();
+  node.textContent = format(0);
+  const step = (now: number) => {
+    if (gen !== tallyGen) return;
+    const p = Math.min(1, (now - start) / TALLY_MS);
+    node.textContent = format(to * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 function surgeTick(now: number): void {
   switch (surge.phase) {
     case 'idle':
       if (activeS >= surge.dueAt && now - lastPressAt < SURGE.idleAfterS * 1000) {
-        surge.phase = 'warning';
+        setSurgePhase('warning');
         surge.phaseEndsAt = now + SURGE.warningS * 1000;
         surge.lastTick = SURGE.warningS;
-        surgeEl.hidden = false;
-        surgeLive.hidden = true;
-        surgeSummary.hidden = true;
-        reactor.classList.add('is-warning');
+        surgeLabel.textContent = 'Surge incoming';
+        showCount(SURGE.warningS);
         announce(`Surge in ${SURGE.warningS} seconds. Every press is worth ten times more.`);
         SOUND.warningTick();
       }
       break;
     case 'warning': {
       const left = Math.ceil((surge.phaseEndsAt - now) / 1000);
-      surgeTitle.textContent = `Surge in ${Math.max(left, 1)}`;
       if (left < surge.lastTick && left >= 1) {
         surge.lastTick = left;
+        showCount(left);
         SOUND.warningTick();
       }
       if (now >= surge.phaseEndsAt) {
-        surge.phase = 'active';
+        setSurgePhase('active');
         surge.phaseEndsAt = now + SURGE.durationS * 1000;
         surge.presses = 0;
         surge.earned = 0;
-        surgeTitle.textContent = `Surge x${SURGE.multiplier}`;
-        surgeLive.hidden = false;
-        reactor.classList.remove('is-warning');
-        reactor.classList.add('is-surging');
+        surgeLabel.textContent = `Surge x${SURGE.multiplier}`;
+        coreNum.textContent = '0.0';
+        coreUnit.textContent = 'per second';
+        replay(coreNum, 'is-tick');
         announce('Surge. Press as fast as you can for five seconds.');
         SOUND.surgeStart();
       }
@@ -631,16 +802,13 @@ function surgeTick(now: number): void {
     }
     case 'active': {
       const elapsed = (SURGE.durationS * 1000 - (surge.phaseEndsAt - now)) / 1000;
-      surgeCps.textContent = (surge.presses / Math.max(elapsed, 0.3)).toFixed(1);
-      surgeCount.textContent = String(surge.presses);
-      surgeFill.style.transform = `scaleX(${Math.max(0, (surge.phaseEndsAt - now) / (SURGE.durationS * 1000))})`;
+      coreNum.textContent = (surge.presses / Math.max(elapsed, 0.3)).toFixed(1);
       if (now >= surge.phaseEndsAt) endSurge(now);
       break;
     }
     case 'summary':
       if (now >= surge.phaseEndsAt) {
-        surge.phase = 'idle';
-        surgeEl.hidden = true;
+        setSurgePhase('idle');
         scheduleSurge();
       }
       break;
@@ -653,18 +821,26 @@ function endSurge(now: number): void {
   state.surges++;
   if (isBest) state.bestSurgeCps = cps;
 
-  surge.phase = 'summary';
-  surge.phaseEndsAt = now + 4000;
-  surgeLive.hidden = true;
+  setSurgePhase('summary');
+  surge.phaseEndsAt = now + SUMMARY_MS;
   surgeSummary.hidden = false;
-  surgeTitle.textContent = 'Surge over';
-  surgePresses.textContent = String(surge.presses);
-  surgeRate.textContent = cps.toFixed(1);
-  surgeEarned.textContent = formatEnergy(surge.earned);
   surgeBest.hidden = !isBest;
-  reactor.classList.remove('is-surging');
+  surgeBest.classList.remove('is-shining');
+
+  const gen = ++tallyGen;
+  tally(surgePresses, surge.presses, (v) => String(Math.round(v)), gen);
+  tally(surgeRate, cps, (v) => v.toFixed(1), gen);
+  tally(surgeEarned, surge.earned, formatEnergy, gen);
+  if (isBest) {
+    window.setTimeout(() => {
+      if (gen === tallyGen) replay(surgeBest, 'is-shining');
+    }, TALLY_MS);
+  }
+  sweepArcBack();
+
   announce(
-    `Surge over. ${surge.presses} presses, ${cps.toFixed(1)} per second.${isBest ? ' New best.' : ''}`
+    `Surge over. ${surge.presses} presses, ${cps.toFixed(1)} per second, ${formatEnergy(surge.earned)} energy.` +
+      (isBest ? ' New best.' : '')
   );
   SOUND.surgeEnd();
   awardAchievements({ surgeCps: cps });
@@ -700,9 +876,13 @@ function frame(now: number): void {
 
   renderReadouts();
   renderCombo(now);
+  if (!reducedMotion()) drawScope(now);
+  // The dial is a clock during a surge, so it updates every frame then.
+  if (surge.phase === 'warning' || surge.phase === 'active') renderArc(now);
   if (now - lastShopRender > 150) {
     renderShop();
-    renderArc();
+    renderArc(now);
+    readScopeColor();
     lastShopRender = now;
   }
   if (now - lastPanelRender > 500) {
@@ -789,9 +969,10 @@ function restartRun(): void {
   lastTierMultiplier = 1;
   reactorIdx = reactorIndex(state.runLifetime);
   clearArcTimers();
-  surge.phase = 'idle';
-  surgeEl.hidden = true;
-  reactor.classList.remove('is-surging', 'is-warning');
+  setSurgePhase('idle');
+  tallyGen++;
+  sparksEl.replaceChildren();
+  blips.length = 0;
   scheduleSurge();
 }
 

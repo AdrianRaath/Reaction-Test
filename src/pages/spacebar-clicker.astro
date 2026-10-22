@@ -143,14 +143,35 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
               <span class="core-ring core-ring-outer"></span>
               <span class="core-ring core-ring-inner"></span>
               <span class="core-heart"></span>
+              <!-- Surge (spec §5): the countdown, then the live rate, read from the core. -->
+              <span class="core-readout">
+                <span class="core-num readout" id="sc-core-num"></span>
+                <span class="core-unit" id="sc-core-unit"></span>
+              </span>
             </div>
+            <div class="sparks" id="sc-sparks" aria-hidden="true"></div>
             <div class="floats" id="sc-floats" aria-hidden="true"></div>
+
+            <!-- Surge results, laid over the core for a few seconds. The numbers
+                 tally up; screen readers get the totals from the announcer. -->
+            <div class="surge-card" id="sc-surge-summary" aria-hidden="true" hidden>
+              <p class="surge-card-title">Surge over</p>
+              <dl class="surge-stats">
+                <div><dt>Presses</dt><dd class="readout" id="sc-surge-presses">0</dd></div>
+                <div><dt>Per second</dt><dd class="readout" id="sc-surge-rate">0.0</dd></div>
+                <div><dt>Energy</dt><dd class="readout" id="sc-surge-earned">0</dd></div>
+              </dl>
+              <p class="surge-best" id="sc-surge-best" hidden>
+                <span aria-hidden="true">🏆</span> New best surge
+              </p>
+            </div>
           </div>
 
-          <p class="state-label">
+          <p class="state-label" id="sc-state-label">
             <span class="state-name" id="sc-state">Dormant</span>
             <span class="state-noun">reactor</span>
           </p>
+          <p class="surge-label" id="sc-surge-label" hidden>Surge incoming</p>
 
           <div class="combo">
             <div class="combo-row">
@@ -162,35 +183,15 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
             <div class="combo-track" role="presentation">
               <div class="combo-fill" id="sc-combo-fill"></div>
             </div>
+            <!-- The rhythm scope: one spike per press, scrolling left. Even
+                 spacing is a steady beat; off-beat presses draw half height. -->
+            <canvas class="rhythm-scope" id="sc-scope" aria-hidden="true"></canvas>
           </div>
 
           <p class="test-hint" id="sc-hint">
             Press the spacebar to generate energy. Keep a steady beat to build a combo.
           </p>
           <p class="keycap" aria-hidden="true">space</p>
-
-          <!-- Surge overlay (spec §5) -->
-          <div class="surge" id="sc-surge" hidden>
-            <p class="surge-title" id="sc-surge-title">Surge in 3</p>
-            <div class="surge-live" id="sc-surge-live" hidden>
-              <p class="surge-cps-row">
-                <span class="surge-cps readout" id="sc-surge-cps">0.0</span>
-                <span class="surge-cps-unit">per second</span>
-              </p>
-              <p class="surge-meta"><span class="readout" id="sc-surge-count">0</span> presses</p>
-              <div class="surge-track" role="presentation">
-                <div class="surge-fill" id="sc-surge-fill"></div>
-              </div>
-            </div>
-            <dl class="surge-summary" id="sc-surge-summary" hidden>
-              <div><dt>Presses</dt><dd class="readout" id="sc-surge-presses">0</dd></div>
-              <div><dt>Per second</dt><dd class="readout" id="sc-surge-rate">0.0</dd></div>
-              <div><dt>Energy earned</dt><dd class="readout" id="sc-surge-earned">0</dd></div>
-              <p class="surge-best" id="sc-surge-best" hidden>
-                <span aria-hidden="true">🏆</span> New best surge
-              </p>
-            </dl>
-          </div>
 
           <div class="toast" id="sc-toast" hidden>
             <span id="sc-toast-text"></span>
@@ -590,8 +591,15 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     --ramp-cyan: #22d3ee;
     --ramp-blue: #38bdf8;
     --ramp-white: #e0f2fe;
+    /* Surge Gold: the reactor in overdrive. Lighter than Caution Amber, so it
+       never reads as the shop's "New" tag. */
+    --gold: #fcd34d;
+    --gold-deep: #fbbf24;
+    --gold-ink: #fef3c7;
 
     --stage: var(--ramp-green);
+    /* The dial follows the stage, except while a surge counts down. */
+    --dial: var(--stage);
     --halo: var(--ramp-green);
     --core-heart: color-mix(in srgb, var(--ramp-green) 45%, transparent);
     --core-alpha: 14%;
@@ -606,7 +614,7 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-md);
+    gap: 0.75rem;
     min-height: 520px;
     padding: var(--space-lg);
     border: 2px solid var(--line);
@@ -677,20 +685,48 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     --core-pulse: 0.75s;
   }
 
-  /* Warning: the border eases to green over the three-second countdown. */
-  .reactor-face.is-warning {
-    border-color: var(--signal-green);
+  /* --- Surge phases (data-surge) ----------------------------------------------
+
+     warning:  the core counts down 3, 2, 1, the dial drains in gold, and the
+               border warms to gold over the three seconds.
+     active:   overdrive. The core, halo, gains and dial run gold, the core
+               reads the live rate, and the border glows (Glow-Is-A-Signal).
+     summary:  the results card; the reactor fades back to its stage color. */
+
+  .reactor-face[data-surge='warning'] {
+    --dial: var(--gold);
+    border-color: color-mix(in srgb, var(--gold) 75%, transparent);
     transition:
       border-color 3s linear,
       var(--stage-fade);
   }
 
-  /* Surge: the sanctioned "active" treatment the speed tests use. */
-  .reactor-face.is-surging {
-    border-color: var(--signal-green);
+  .reactor-face[data-surge='active'] {
+    --stage: var(--gold);
+    --halo: var(--gold-deep);
+    --core-heart: var(--gold-ink);
+    --dial: var(--gold);
+    --core-alpha: 75%;
+    --core-glow: 48px;
+    --core-pulse: 0.6s;
+    /* Into overdrive fast; the way back uses the stage's slower fade. */
+    --stage-fade:
+      --stage 250ms ease, --halo 250ms ease, --core-heart 250ms ease, --core-alpha 250ms ease,
+      --core-glow 250ms ease;
+    border-color: var(--gold);
     box-shadow:
-      0 0 20px rgb(34 197 94 / 20%),
-      0 0 40px rgb(34 197 94 / 20%);
+      0 0 20px color-mix(in srgb, var(--gold) 22%, transparent),
+      0 0 40px color-mix(in srgb, var(--gold) 14%, transparent);
+  }
+
+  /* The two hottest stages are already brighter than overdrive's floor. */
+  .reactor-face[data-surge='active'][data-state='critical'] {
+    --core-alpha: 85%;
+    --core-glow: 52px;
+  }
+  .reactor-face[data-surge='active'][data-state='supercritical'] {
+    --core-alpha: 100%;
+    --core-glow: 68px;
   }
 
   .energy-block {
@@ -742,7 +778,7 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     justify-content: center;
     width: 100%;
     /* Room for the dial and its lights outside the core. */
-    padding: 28px 0;
+    padding: 26px 0;
   }
 
   /* The dial: the arc fills toward the next state; the lights record each
@@ -769,7 +805,7 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
   }
 
   .arc-fill {
-    stroke: var(--stage);
+    stroke: var(--dial);
     stroke-linecap: round;
     transition: stroke-dashoffset var(--duration-base) linear;
   }
@@ -1037,6 +1073,109 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     }
   }
 
+  /* Overdrive gains: gold (via --stage) and larger, so the 10x reads at once. */
+  .reactor-face[data-surge='active'] .floats :global(.float) {
+    font-size: 1.375rem;
+    text-shadow: 0 0 12px color-mix(in srgb, var(--gold) 55%, transparent);
+  }
+
+  /* --- Core readout (surge countdown and live rate) ------------------------- */
+
+  .core-readout {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease);
+  }
+
+  .reactor-face[data-surge='warning'] .core-readout,
+  .reactor-face[data-surge='active'] .core-readout {
+    opacity: 1;
+  }
+
+  /* The readout takes the heart's place while it shows. */
+  .core-heart {
+    transition: opacity var(--duration-base) var(--ease);
+  }
+
+  .reactor-face[data-surge='warning'] .core-heart,
+  .reactor-face[data-surge='active'] .core-heart {
+    opacity: 0;
+  }
+
+  .core-num {
+    font-size: 2.75rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--gold-ink);
+    text-shadow: 0 0 18px color-mix(in srgb, var(--gold) 70%, transparent);
+  }
+
+  .reactor-face[data-surge='warning'] .core-num {
+    color: var(--gold);
+  }
+
+  .core-unit {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: color-mix(in srgb, var(--gold) 65%, var(--ink-primary));
+  }
+
+  /* Each countdown second lands with a snap. */
+  .core-num.is-tick {
+    animation: core-tick 500ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes core-tick {
+    0% {
+      opacity: 0;
+      transform: scale(1.6);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* --- Sparks (one burst per overdrive press) -------------------------------- */
+
+  .sparks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  /* A short streak that flies out from the core's rim along its own angle.
+     Placed at the core's centre by the script; rotate, then travel. */
+  .sparks :global(.spark) {
+    position: absolute;
+    width: 14px;
+    height: 2px;
+    border-radius: 1px;
+    background: linear-gradient(to right, transparent, var(--gold-ink));
+    box-shadow: 0 0 6px color-mix(in srgb, var(--gold) 80%, transparent);
+    transform-origin: 0 50%;
+    animation: spark 480ms ease-out forwards;
+  }
+
+  @keyframes spark {
+    0% {
+      opacity: 1;
+      transform: rotate(var(--a)) translateX(var(--r0));
+    }
+    100% {
+      opacity: 0;
+      transform: rotate(var(--a)) translateX(var(--r1)) scaleX(0.3);
+    }
+  }
+
   .state-label {
     z-index: 1;
     display: flex;
@@ -1068,6 +1207,14 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
 
   .state-noun {
     color: var(--ink-muted);
+  }
+
+  /* Stands in for the state label while a surge counts down and runs. */
+  .surge-label {
+    z-index: 1;
+    font-size: var(--text-title-size);
+    font-weight: 700;
+    color: var(--gold);
   }
 
   /* --- Combo meter ----------------------------------------------------------- */
@@ -1174,100 +1321,85 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     text-transform: uppercase;
   }
 
-  /* --- Surge overlay ---------------------------------------------------------- */
+  /* --- Rhythm scope ------------------------------------------------------------ */
 
-  .surge {
+  /* Drawn by the script. The left edge fades out, so old presses scroll away
+     rather than drop off a cliff. */
+  .rhythm-scope {
+    display: block;
+    width: 100%;
+    height: 24px;
+    margin-block-start: 6px;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 30%);
+    mask-image: linear-gradient(to right, transparent, #000 30%);
+  }
+
+  /* --- Surge results card ------------------------------------------------------ */
+
+  .surge-card {
     position: absolute;
-    inset: 0;
-    z-index: 2;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    z-index: 3;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-md);
-    padding: var(--space-lg);
-    background-color: rgb(10 10 11 / 82%);
-    text-align: center;
-  }
-
-  .surge-title {
-    font-size: var(--text-headline-size);
-    font-weight: var(--text-headline-weight);
-  }
-
-  .surge-cps-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
     gap: var(--space-sm);
-    line-height: 1;
+    min-width: min(300px, calc(100vw - 4rem));
+    padding: var(--space-md) var(--space-lg);
+    border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+    border-radius: var(--radius-lg);
+    background-color: var(--panel-01);
+    box-shadow: 0 0 32px color-mix(in srgb, var(--gold) 12%, transparent);
+    text-align: center;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    animation: card-in 360ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .surge-cps {
-    font-size: clamp(3rem, 11vw, 5rem);
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% + 10px));
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  .surge-card-title {
+    font-size: var(--text-label-size);
     font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--signal-green);
+    color: var(--gold);
   }
 
-  .surge-cps-unit {
-    font-size: var(--text-title-size);
-    color: var(--ink-secondary);
-  }
-
-  .surge-meta {
-    margin-block-start: var(--space-sm);
-    color: var(--ink-secondary);
-  }
-
-  .surge-meta .readout {
-    font-weight: 700;
-    color: var(--ink-primary);
-  }
-
-  .surge-track {
-    width: min(320px, 100%);
-    height: 6px;
-    margin-block-start: var(--space-md);
-    margin-inline: auto;
-    border-radius: var(--radius-full);
-    background-color: var(--panel-03);
-    overflow: hidden;
-  }
-
-  .surge-fill {
-    width: 100%;
-    height: 100%;
-    background-color: var(--signal-green);
-    transform-origin: left center;
-    will-change: transform;
-  }
-
-  .surge-summary {
+  .surge-stats {
     display: grid;
-    grid-template-columns: repeat(3, auto);
-    gap: var(--space-lg);
-    justify-content: center;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-md);
+    width: 100%;
   }
 
-  .surge-summary > div {
+  .surge-stats > div {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
   }
 
-  .surge-summary dt {
+  .surge-stats dt {
     font-size: 0.75rem;
     color: var(--ink-muted);
   }
 
-  .surge-summary dd {
+  .surge-stats dd {
     font-size: var(--text-headline-size);
     font-weight: 700;
+    line-height: 1.1;
   }
 
   .surge-best {
-    grid-column: 1 / -1;
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1278,6 +1410,28 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     color: var(--signal-green); /* "your best" */
     font-size: var(--text-label-size);
     font-weight: 600;
+    overflow: hidden;
+  }
+
+  /* One sheen across the chip once the numbers land. */
+  .surge-best.is-shining::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgb(255 255 255 / 40%) 50%,
+      transparent 70%
+    );
+    transform: translateX(-100%);
+    animation: sheen 900ms ease-out forwards;
+  }
+
+  @keyframes sheen {
+    to {
+      transform: translateX(100%);
+    }
   }
 
   /* --- Toast ---------------------------------------------------------------- */
@@ -1798,19 +1952,23 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     .arc-fill.is-sweeping,
     .dial-led.is-new,
     .state-name.is-settling,
+    .core-num.is-tick,
+    .surge-card,
     .toast.is-in,
     .shop-new-tag {
       animation: none;
       transition: none;
     }
 
-    /* Movement goes; the color fade between stages stays, since it is not
-       motion and it carries the change. */
-    .reactor-face.is-warning {
+    /* Movement goes; the color fades stay, since they are not motion and
+       they carry the change. */
+    .reactor-face[data-surge='warning'] {
       transition: var(--stage-fade);
     }
 
     .floats :global(.float),
+    .sparks,
+    .surge-best.is-shining::after,
     .shockwave,
     .grid-wash {
       display: none;
