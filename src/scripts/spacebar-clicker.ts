@@ -71,8 +71,10 @@ import {
 const SAVE_KEY = `${KEY_PREFIX}:spacebar-clicker:save`;
 const SETTINGS_KEY = `${KEY_PREFIX}:spacebar-clicker:settings`;
 
-/** Circumference of the progress arc's circle (r = 47 in a 100-unit viewBox). */
-const ARC_LENGTH = 2 * Math.PI * 47;
+/** How long the dial holds full on a stage change before sweeping back. */
+const ARC_HOLD_MS = 420;
+/** Matches the .arc-fill.is-sweeping transition. */
+const ARC_SWEEP_MS = 800;
 
 interface Settings {
   sound: boolean;
@@ -116,7 +118,16 @@ const epsEl = el('sc-eps');
 const eppEl = el('sc-epp');
 const coreEl = el('sc-core');
 const arcEl = document.getElementById('sc-arc') as SVGCircleElement | null;
+/** Circumference of the progress arc, read from the drawn circle. */
+const ARC_LENGTH = arcEl ? 2 * Math.PI * arcEl.r.baseVal.value : 0;
 const stateEl = el('sc-state');
+const washEl = el('sc-wash');
+const shockEl = el('sc-shockwave');
+/** Dial lights, each paired with the index of the reactor state it marks. */
+const dialLeds = Array.from(document.querySelectorAll<SVGGElement>('.dial-led')).map((node) => ({
+  node,
+  index: REACTOR_STATES.findIndex((s) => s.id === node.dataset.led),
+}));
 const hintEl = el('sc-hint');
 const comboEl = el('sc-combo');
 const comboTierEl = el('sc-combo-tier');
@@ -263,11 +274,11 @@ function showNextToast(): void {
   toastTimer = window.setTimeout(showNextToast, 2600);
 }
 
-/** Restart a one-shot CSS animation on an element. */
-function replay(node: HTMLElement, className: string): void {
+/** Restart a one-shot CSS animation on an element (HTML or SVG). */
+function replay(node: Element, className: string): void {
   if (reducedMotion()) return;
   node.classList.remove(className);
-  void node.offsetWidth;
+  void node.getBoundingClientRect(); // force a reflow so the animation restarts
   node.classList.add(className);
 }
 
@@ -277,6 +288,9 @@ const combo = new ComboTracker(() => state.upgrades.stabiliser > 0);
 let lastPressAt = -Infinity; // performance.now()
 let lastTierMultiplier = 1;
 let reactorIdx = reactorIndex(state.runLifetime);
+/** performance.now() until which the dial shows full after a stage change. */
+let arcHoldUntil = 0;
+let arcTimers: number[] = [];
 
 type SurgePhase = 'idle' | 'warning' | 'active' | 'summary';
 const surge = {
@@ -312,13 +326,54 @@ function renderReactor(): void {
   reactor.dataset.state = def.id;
   coreEl.dataset.state = def.id;
   stateEl.textContent = def.name;
+  for (const led of dialLeds) led.node.classList.toggle('is-lit', led.index <= reactorIdx);
 }
 
 /** The arc around the core fills toward the next reactor state. */
-function renderArc(): void {
+function renderArc(now = performance.now()): void {
   if (!arcEl) return;
-  const fraction = reactorProgress(state.runLifetime);
+  const fraction = now < arcHoldUntil ? 1 : reactorProgress(state.runLifetime);
   arcEl.style.strokeDashoffset = String(ARC_LENGTH * (1 - fraction));
+}
+
+function clearArcTimers(): void {
+  for (const id of arcTimers) window.clearTimeout(id);
+  arcTimers = [];
+  arcEl?.classList.remove('is-complete', 'is-sweeping');
+  arcHoldUntil = 0;
+}
+
+/**
+ * A stage reached. The color fade is CSS (registered custom properties); this
+ * plays the one-shot moments over it: the new lights pop on, a ring rolls out
+ * from the core, the grid lights in a travelling band, the name settles, and
+ * the dial holds full before sweeping back to the start of the new stage.
+ */
+function celebrateStage(prevIdx: number): void {
+  for (const led of dialLeds) {
+    if (led.index > prevIdx && led.index <= reactorIdx) replay(led.node, 'is-new');
+  }
+  replay(stateEl, 'is-settling');
+  replay(shockEl, 'is-firing');
+
+  const face = reactor.getBoundingClientRect();
+  const core = coreEl.getBoundingClientRect();
+  washEl.style.setProperty('--wash-x', `${core.left - face.left + core.width / 2}px`);
+  washEl.style.setProperty('--wash-y', `${core.top - face.top + core.height / 2}px`);
+  replay(washEl, 'is-washing');
+
+  if (!arcEl) return;
+  clearArcTimers();
+  arcHoldUntil = performance.now() + ARC_HOLD_MS;
+  arcEl.classList.add('is-complete');
+  renderArc();
+  arcTimers.push(
+    window.setTimeout(() => {
+      arcEl.classList.replace('is-complete', 'is-sweeping');
+      renderArc();
+      arcTimers.push(window.setTimeout(() => arcEl.classList.remove('is-sweeping'), ARC_SWEEP_MS));
+    }, ARC_HOLD_MS)
+  );
 }
 
 function renderCombo(now: number): void {
@@ -465,9 +520,11 @@ function spawnFloat(value: number, doubled: boolean, e?: Event): void {
 function afterEarn(): void {
   const idx = reactorIndex(state.runLifetime);
   if (idx !== reactorIdx) {
+    const prevIdx = reactorIdx;
     reactorIdx = idx;
     renderReactor();
     replay(coreEl, 'is-stepped');
+    if (idx > prevIdx) celebrateStage(prevIdx);
     const name = REACTOR_STATES[idx]!.name;
     toast(`Reactor is now ${name}`);
     announce(`Reactor is now ${name}.`);
@@ -731,6 +788,7 @@ function restartRun(): void {
   combo.reset();
   lastTierMultiplier = 1;
   reactorIdx = reactorIndex(state.runLifetime);
+  clearArcTimers();
   surge.phase = 'idle';
   surgeEl.hidden = true;
   reactor.classList.remove('is-surging', 'is-warning');
@@ -911,10 +969,15 @@ hintEl.textContent = isTouchInput
   : 'Press the spacebar to generate energy. Keep a steady beat to build a combo.';
 if (isTouchInput) reactor.classList.add('touch-key');
 
+// The markup ships as Dormant; the saved stage should apply on first paint
+// rather than fade up from green. Transitions return two frames later.
+reactor.classList.add('is-booting');
 updateSoundIcon();
 updateReveals(state);
+renderReactor();
 settleAbsence();
 selectTab('stats');
 selectShopTab('press');
 renderAll();
+requestAnimationFrame(() => requestAnimationFrame(() => reactor.classList.remove('is-booting')));
 requestAnimationFrame(frame);

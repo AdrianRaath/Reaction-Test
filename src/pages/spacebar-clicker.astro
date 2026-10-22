@@ -10,6 +10,7 @@ import {
   AUTO_TAPPERS,
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
+  REACTOR_STATES,
 } from '../games/spacebar-clicker/config';
 import '../styles/content.css';
 import '../styles/instrument.css';
@@ -38,6 +39,22 @@ const faqSchema = {
 };
 
 const whole = (v: number) => v.toLocaleString('en-US');
+
+// The dial around the core, in its SVG's 100-unit box. The progress arc sits
+// just outside the core; beyond it, one indicator light per reactor state past
+// Dormant, spaced evenly clockwise from the top (the SVG is turned -90deg, so
+// angle 0 is twelve o'clock). The script reads the arc length from the circle.
+const ARC_R = 41;
+const ARC_LEN = Number((2 * Math.PI * ARC_R).toFixed(2));
+const LED_R = 45.5;
+const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
+  const angle = (i / all.length) * 2 * Math.PI;
+  return {
+    id: s.id,
+    x: Number((50 + LED_R * Math.cos(angle)).toFixed(2)),
+    y: Number((50 + LED_R * Math.sin(angle)).toFixed(2)),
+  };
+});
 ---
 
 <BaseLayout
@@ -85,6 +102,9 @@ const whole = (v: number) => v.toLocaleString('en-US');
           role="button"
           aria-label="Reactor. Press the spacebar, or tap here, to generate energy."
         >
+          <!-- Stage change: the graticule lights in a band travelling out from the core. -->
+          <div class="grid-wash" id="sc-wash" aria-hidden="true"></div>
+
           <div class="energy-block">
             <p class="energy-row">
               <span class="energy-value readout" id="sc-energy">0</span>
@@ -97,11 +117,28 @@ const whole = (v: number) => v.toLocaleString('en-US');
           </div>
 
           <div class="core-wrap">
-            <!-- Progress to the next reactor state, drawn as an arc outside the core. -->
+            <!-- The dial: progress to the next state as an arc, and one light per
+                 state reached, so the run's history reads at a glance. -->
             <svg class="core-arc" viewBox="0 0 100 100" aria-hidden="true">
-              <circle class="arc-track" cx="50" cy="50" r="47"></circle>
-              <circle class="arc-fill" id="sc-arc" cx="50" cy="50" r="47"></circle>
+              <circle class="arc-track" cx="50" cy="50" r={ARC_R}></circle>
+              <circle
+                class="arc-fill"
+                id="sc-arc"
+                cx="50"
+                cy="50"
+                r={ARC_R}
+                stroke-dasharray={ARC_LEN}
+                stroke-dashoffset={ARC_LEN}></circle>
+              {
+                dialLeds.map((led) => (
+                  <g class={`dial-led led-${led.id}`} data-led={led.id}>
+                    <circle class="led-halo" cx={led.x} cy={led.y} r="3.4" />
+                    <circle class="led-dot" cx={led.x} cy={led.y} r="1.5" />
+                  </g>
+                ))
+              }
             </svg>
+            <span class="shockwave" id="sc-shockwave" aria-hidden="true"></span>
             <div class="core" id="sc-core" data-state="dormant" aria-hidden="true">
               <span class="core-ring core-ring-outer"></span>
               <span class="core-ring core-ring-inner"></span>
@@ -536,16 +573,33 @@ const whole = (v: number) => v.toLocaleString('en-US');
 
   /* --- Reactor face ------------------------------------------------------------- */
 
-  /* State is carried by custom properties set per data-state, so the core, the
-     glow and the pulse all read one source. Every state is Signal Green: the
-     reactor means "active", and green getting hotter and whiter is the whole
-     visual arc (One Signal Rule; maintainer decision 2026-10-21). Nothing
-     flickers. */
+  /* State is carried by custom properties set per data-state, so the core,
+     dial, lights, gains and stage name all read one source.
+
+     The Reactor-Ramp Exception (DESIGN.md): the reactor climbs a closed
+     five-step ramp grounded in Cherenkov glow, the blue light of a working
+     water-cooled reactor. Green, teal, cyan, Cherenkov blue, then blue-white
+     at Supercritical. No red, no amber; every color change is paired with the
+     stage name. Nothing flickers.
+
+     The color properties are registered, so a stage change fades between
+     colors rather than swapping. Without @property support they simply swap. */
   .reactor-face {
-    --core-alpha: 0.14;
+    --ramp-green: #22c55e;
+    --ramp-teal: #2dd4bf;
+    --ramp-cyan: #22d3ee;
+    --ramp-blue: #38bdf8;
+    --ramp-white: #e0f2fe;
+
+    --stage: var(--ramp-green);
+    --halo: var(--ramp-green);
+    --core-heart: color-mix(in srgb, var(--ramp-green) 45%, transparent);
+    --core-alpha: 14%;
     --core-glow: 0px;
     --core-pulse: 0s;
-    --core-heart: rgb(34 197 94 / 45%);
+    --stage-fade:
+      --stage 800ms ease, --halo 800ms ease, --core-heart 800ms ease, --core-alpha 800ms ease,
+      --core-glow 800ms ease;
 
     position: relative;
     display: flex;
@@ -565,7 +619,13 @@ const whole = (v: number) => v.toLocaleString('en-US');
     cursor: pointer;
     transition:
       border-color var(--duration-base) var(--ease),
-      box-shadow var(--duration-base) var(--ease);
+      box-shadow var(--duration-base) var(--ease),
+      var(--stage-fade);
+  }
+
+  /* On first paint the saved stage applies without fading up from Dormant. */
+  .reactor-face.is-booting {
+    transition: none;
   }
 
   .reactor-face:focus-visible {
@@ -574,43 +634,55 @@ const whole = (v: number) => v.toLocaleString('en-US');
   }
 
   .reactor-face[data-state='warming'] {
-    --core-alpha: 0.26;
+    --core-alpha: 26%;
     --core-glow: 14px;
     --core-pulse: 3.2s;
   }
   .reactor-face[data-state='stable'] {
-    --core-alpha: 0.4;
+    --core-alpha: 40%;
     --core-glow: 22px;
     --core-pulse: 2.4s;
   }
   .reactor-face[data-state='charged'] {
-    --core-alpha: 0.55;
+    --stage: var(--ramp-teal);
+    --halo: var(--ramp-teal);
+    --core-heart: rgb(153 246 228 / 85%);
+    --core-alpha: 55%;
     --core-glow: 30px;
     --core-pulse: 1.8s;
   }
   .reactor-face[data-state='unstable'] {
-    --core-alpha: 0.7;
+    --stage: var(--ramp-cyan);
+    --halo: var(--ramp-cyan);
+    --core-heart: rgb(165 243 252 / 90%);
+    --core-alpha: 70%;
     --core-glow: 40px;
     --core-pulse: 1.3s;
-    --core-heart: rgb(134 239 172 / 80%);
   }
   .reactor-face[data-state='critical'] {
-    --core-alpha: 0.85;
+    --stage: var(--ramp-blue);
+    --halo: var(--ramp-blue);
+    --core-heart: rgb(186 230 253 / 95%);
+    --core-alpha: 85%;
     --core-glow: 52px;
     --core-pulse: 0.95s;
-    --core-heart: rgb(220 252 231 / 92%);
   }
+  /* Supercritical: a blue-white core inside a Cherenkov-blue halo. */
   .reactor-face[data-state='supercritical'] {
-    --core-alpha: 1;
+    --stage: var(--ramp-white);
+    --halo: var(--ramp-blue);
+    --core-heart: var(--ink-primary);
+    --core-alpha: 100%;
     --core-glow: 68px;
     --core-pulse: 0.75s;
-    --core-heart: var(--ink-primary);
   }
 
   /* Warning: the border eases to green over the three-second countdown. */
   .reactor-face.is-warning {
     border-color: var(--signal-green);
-    transition: border-color 3s linear;
+    transition:
+      border-color 3s linear,
+      var(--stage-fade);
   }
 
   /* Surge: the sanctioned "active" treatment the speed tests use. */
@@ -658,7 +730,7 @@ const whole = (v: number) => v.toLocaleString('en-US');
     color: var(--ink-primary);
   }
 
-  /* The core: a disc of green light inside two rings. Depth is tonal; the only
+  /* The core: a disc of light inside two rings. Depth is tonal; the only
      shadow is the glow, which reports state. */
   .core-wrap {
     --core-size: 168px;
@@ -669,26 +741,27 @@ const whole = (v: number) => v.toLocaleString('en-US');
     align-items: center;
     justify-content: center;
     width: 100%;
-    /* Room for the arc outside the core. */
-    padding: 14px 0;
+    /* Room for the dial and its lights outside the core. */
+    padding: 28px 0;
   }
 
-  /* The progress arc: a thin dial just outside the outer ring that fills
-     toward the next reactor state. Green here is the live "active" reading,
-     the same licence the speed tests' live readouts use. */
+  /* The dial: the arc fills toward the next state; the lights record each
+     state reached this run. */
   .core-arc {
     position: absolute;
     inset-block-start: 50%;
     inset-inline-start: 50%;
-    width: calc(var(--core-size) + 28px);
-    height: calc(var(--core-size) + 28px);
+    width: calc(var(--core-size) + 56px);
+    height: calc(var(--core-size) + 56px);
+    overflow: visible;
     transform: translate(-50%, -50%) rotate(-90deg);
     pointer-events: none;
   }
 
-  .core-arc circle {
+  .arc-track,
+  .arc-fill {
     fill: none;
-    stroke-width: 2.5;
+    stroke-width: 2.2;
   }
 
   .arc-track {
@@ -696,11 +769,165 @@ const whole = (v: number) => v.toLocaleString('en-US');
   }
 
   .arc-fill {
-    stroke: var(--signal-green);
+    stroke: var(--stage);
     stroke-linecap: round;
-    stroke-dasharray: 295.31; /* 2π × 47 */
-    stroke-dashoffset: 295.31;
     transition: stroke-dashoffset var(--duration-base) linear;
+  }
+
+  /* Stage reached: the arc snaps full and holds, then sweeps back to the
+     start of the new stage. */
+  .arc-fill.is-complete {
+    transition-duration: 180ms;
+  }
+
+  .arc-fill.is-sweeping {
+    transition: stroke-dashoffset 800ms cubic-bezier(0.65, 0, 0.35, 1);
+  }
+
+  .led-dot,
+  .led-halo {
+    stroke: none;
+  }
+
+  .led-dot {
+    fill: var(--ink-disabled);
+    transition: fill 400ms var(--ease);
+  }
+
+  .led-halo {
+    fill: var(--led);
+    opacity: 0;
+    transition: opacity 400ms var(--ease);
+  }
+
+  /* Each light keeps the color of the state it marks, so a lit dial reads as
+     the run's own ramp. */
+  .led-warming,
+  .led-stable {
+    --led: var(--ramp-green);
+  }
+  .led-charged {
+    --led: var(--ramp-teal);
+  }
+  .led-unstable {
+    --led: var(--ramp-cyan);
+  }
+  .led-critical {
+    --led: var(--ramp-blue);
+  }
+  .led-supercritical {
+    --led: var(--ramp-white);
+  }
+
+  .dial-led.is-lit .led-dot {
+    fill: var(--led);
+  }
+
+  .dial-led.is-lit .led-halo {
+    opacity: 0.3;
+  }
+
+  .dial-led.is-new {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: led-pop 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes led-pop {
+    0% {
+      transform: scale(2.6);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* One ring of light rolling out from the core on a stage change. */
+  .shockwave {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    width: var(--core-size);
+    height: var(--core-size);
+    border: 2px solid var(--stage);
+    border-radius: var(--radius-full);
+    box-shadow:
+      0 0 24px color-mix(in srgb, var(--stage) 40%, transparent),
+      inset 0 0 24px color-mix(in srgb, var(--stage) 25%, transparent);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .shockwave.is-firing {
+    animation: shockwave 1000ms cubic-bezier(0.2, 0.6, 0.3, 1);
+  }
+
+  @keyframes shockwave {
+    0% {
+      opacity: 0.9;
+      transform: translate(-50%, -50%) scale(0.9);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(3.4);
+    }
+  }
+
+  /* The graticule lit in the stage color, masked to a soft band whose radius
+     travels outward. The script centres it on the core. */
+  .grid-wash {
+    --wash-x: 50%;
+    --wash-y: 45%;
+
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--stage) 45%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--stage) 45%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 32px 32px;
+    background-position: center;
+    opacity: 0;
+    pointer-events: none;
+    -webkit-mask-image: radial-gradient(
+      circle at var(--wash-x) var(--wash-y),
+      transparent calc(var(--wash-r) - 140px),
+      #000 calc(var(--wash-r) - 50px),
+      transparent var(--wash-r)
+    );
+    mask-image: radial-gradient(
+      circle at var(--wash-x) var(--wash-y),
+      transparent calc(var(--wash-r) - 140px),
+      #000 calc(var(--wash-r) - 50px),
+      transparent var(--wash-r)
+    );
+  }
+
+  .grid-wash.is-washing {
+    animation: grid-wash 1100ms ease-out;
+  }
+
+  @keyframes grid-wash {
+    0% {
+      --wash-r: 0px;
+      opacity: 1;
+    }
+    75% {
+      opacity: 0.9;
+    }
+    100% {
+      --wash-r: 760px;
+      opacity: 0;
+    }
   }
 
   .core {
@@ -710,17 +937,14 @@ const whole = (v: number) => v.toLocaleString('en-US');
     border-radius: var(--radius-full);
     background: radial-gradient(
       circle at center,
-      rgb(34 197 94 / var(--core-alpha)) 0%,
-      rgb(34 197 94 / calc(var(--core-alpha) * 0.45)) 42%,
-      rgb(34 197 94 / 0%) 72%
+      color-mix(in srgb, var(--stage) var(--core-alpha), transparent) 0%,
+      color-mix(in srgb, var(--halo) calc(var(--core-alpha) * 0.45), transparent) 42%,
+      transparent 72%
     );
     box-shadow:
-      0 0 var(--core-glow) rgb(34 197 94 / 25%),
-      0 0 calc(var(--core-glow) * 2) rgb(34 197 94 / 12%);
+      0 0 var(--core-glow) color-mix(in srgb, var(--halo) 25%, transparent),
+      0 0 calc(var(--core-glow) * 2) color-mix(in srgb, var(--halo) 12%, transparent);
     animation: core-breathe var(--core-pulse) ease-in-out infinite;
-    transition:
-      box-shadow var(--duration-base) var(--ease),
-      background var(--duration-base) var(--ease);
   }
 
   .core[data-state='dormant'] {
@@ -736,7 +960,7 @@ const whole = (v: number) => v.toLocaleString('en-US');
 
   .core-ring-inner {
     inset: 22px;
-    border-color: rgb(34 197 94 / calc(var(--core-alpha) * 0.6));
+    border-color: color-mix(in srgb, var(--stage) calc(var(--core-alpha) * 0.6), transparent);
   }
 
   .core-heart {
@@ -747,7 +971,6 @@ const whole = (v: number) => v.toLocaleString('en-US');
     border-radius: var(--radius-full);
     background-color: var(--core-heart);
     transform: translate(-50%, -50%);
-    transition: background-color var(--duration-base) var(--ease);
   }
 
   .core.is-pressed {
@@ -797,7 +1020,7 @@ const whole = (v: number) => v.toLocaleString('en-US');
     position: absolute;
     font-size: var(--text-title-size);
     font-weight: 700;
-    color: var(--signal-green); /* live gain = "active", the speed tests' live readout rule */
+    color: var(--stage); /* a gain takes the reactor's current stage color */
     white-space: nowrap;
     transform: translate(-50%, -50%);
     animation: float-rise 720ms ease-out forwards;
@@ -822,9 +1045,25 @@ const whole = (v: number) => v.toLocaleString('en-US');
     font-size: var(--text-title-size);
   }
 
+  /* Tinted toward the stage color, so the name and the glow read together. */
   .state-name {
     font-weight: 700;
-    color: var(--ink-primary);
+    color: color-mix(in srgb, var(--stage) 50%, var(--ink-primary));
+  }
+
+  .state-name.is-settling {
+    animation: name-settle 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes name-settle {
+    0% {
+      opacity: 0;
+      letter-spacing: 0.3em;
+    }
+    100% {
+      opacity: 1;
+      letter-spacing: 0;
+    }
   }
 
   .state-noun {
@@ -1556,15 +1795,63 @@ const whole = (v: number) => v.toLocaleString('en-US');
     .core.is-stepped,
     .combo-tier.is-up,
     .arc-fill,
+    .arc-fill.is-sweeping,
+    .dial-led.is-new,
+    .state-name.is-settling,
     .toast.is-in,
-    .shop-new-tag,
-    .reactor-face.is-warning {
+    .shop-new-tag {
       animation: none;
       transition: none;
     }
 
-    .floats :global(.float) {
+    /* Movement goes; the color fade between stages stays, since it is not
+       motion and it carries the change. */
+    .reactor-face.is-warning {
+      transition: var(--stage-fade);
+    }
+
+    .floats :global(.float),
+    .shockwave,
+    .grid-wash {
       display: none;
     }
+  }
+
+  /* Registered so stage changes fade between values instead of swapping, and
+     so the wash's radius can animate. Browsers without @property swap. */
+  @property --stage {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #22c55e;
+  }
+
+  @property --halo {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: #22c55e;
+  }
+
+  @property --core-heart {
+    syntax: '<color>';
+    inherits: true;
+    initial-value: transparent;
+  }
+
+  @property --core-alpha {
+    syntax: '<percentage>';
+    inherits: true;
+    initial-value: 14%;
+  }
+
+  @property --core-glow {
+    syntax: '<length>';
+    inherits: true;
+    initial-value: 0px;
+  }
+
+  @property --wash-r {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
   }
 </style>
