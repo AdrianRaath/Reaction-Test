@@ -1,5 +1,7 @@
 # Spacebar Reactor: Game Design
 
+> **Historical.** This is the pre-build spec, plus the build decisions in §16. The running doc for the game, covering how it works now and what is planned, is `SPACEBAR-CLICKER.md` (2026-10-22). Where the two disagree, that doc is current.
+
 A spacebar clicker game page for ReflexLab (reflexlab.co). Target keyword: "Spacebar Clicker". This document covers concept and mechanics only. Execution, stack and visual design are left to the implementer, with the constraint that the whole thing stays lean, single-page, no backend, progress saved locally.
 
 ## 1. Core concept

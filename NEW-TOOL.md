@@ -44,7 +44,8 @@ must not be forced. The agreed shape:
 - Balance the economy by simulation before styling anything, and record the
   method in the config header.
 
-See `SPACEBAR-CLICKER-DESIGN.md` §16 for the full set of decisions.
+See `SPACEBAR-CLICKER-DESIGN.md` §16 for the full set of decisions, and
+`SPACEBAR-CLICKER.md` for the game's running product doc.
 
 ---
 
