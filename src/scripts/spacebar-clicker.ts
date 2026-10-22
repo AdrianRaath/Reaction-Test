@@ -143,6 +143,11 @@ const coreNum = el('sc-core-num');
 const coreUnit = el('sc-core-unit');
 const sparksEl = el('sc-sparks');
 const scopeEl = document.getElementById('sc-scope') as HTMLCanvasElement | null;
+const keycapEl = el('sc-keycap');
+const bezelEl = document.getElementById('sc-bezel') as SVGSVGElement | null;
+const shelfEl = el('sc-shelf');
+const pelletsEl = el('sc-pellets');
+const shelfMoreEl = el('sc-shelf-more');
 const surgeSummary = el('sc-surge-summary');
 const surgePresses = el('sc-surge-presses');
 const surgeRate = el('sc-surge-rate');
@@ -237,6 +242,7 @@ const SOUND = {
   reactorUp: () => chord([659, 880, 1046]),
   achievement: () => chord([784, 1175]),
   prestige: () => chord([523, 659, 784, 1046], 110),
+  collect: () => chord([523, 659, 784], 80),
 };
 
 function updateSoundIcon(): void {
@@ -315,9 +321,20 @@ scheduleSurge();
 
 // --- Rendering ------------------------------------------------------------------
 
+/** How long collected away-energy takes to count into the readout. */
+const ROLL_MS = 900;
+/** Away-energy still counting in: the readout trails the real balance by it. */
+let energyRoll: { amount: number; start: number } | null = null;
+
 function renderReadouts(): void {
   const mult = comboTier(combo.combo).multiplier;
-  energyEl.textContent = formatEnergy(state.energy);
+  let shown = state.energy;
+  if (energyRoll) {
+    const p = (performance.now() - energyRoll.start) / ROLL_MS;
+    if (p >= 1) energyRoll = null;
+    else shown -= energyRoll.amount * Math.pow(1 - p, 3);
+  }
+  energyEl.textContent = formatEnergy(shown);
   epsEl.textContent = formatRate(energyPerSecond(state, mult));
   eppEl.textContent = formatEnergy(energyPerPress(state, mult, surge.phase === 'active'));
 }
@@ -502,6 +519,28 @@ function renderPanels(): void {
   renderPrestige();
 }
 
+/** Pellets shown on the shelf before the rest collapse into "+N". */
+const SHELF_MAX = 10;
+
+/** The trophy shelf: one bead per isotope, kept across every reset. */
+function renderShelf(): void {
+  const count = state.isotopes;
+  shelfEl.hidden = count === 0;
+  const label = `${count} isotope${count === 1 ? '' : 's'}, +${count * 10}% to all gains`;
+  shelfEl.setAttribute('aria-label', count ? label : 'No isotopes yet');
+  shelfEl.title = count ? label : '';
+
+  const shown = Math.min(count, SHELF_MAX);
+  while (pelletsEl.childElementCount < shown) {
+    const pellet = document.createElement('span');
+    pellet.className = 'pellet';
+    pelletsEl.appendChild(pellet);
+  }
+  while (pelletsEl.childElementCount > shown) pelletsEl.lastElementChild!.remove();
+  shelfMoreEl.hidden = count <= SHELF_MAX;
+  shelfMoreEl.textContent = `+${count - SHELF_MAX}`;
+}
+
 function renderAll(now = performance.now()): void {
   renderReadouts();
   renderReactor();
@@ -509,17 +548,19 @@ function renderAll(now = performance.now()): void {
   renderCombo(now);
   renderShop();
   renderPanels();
+  renderShelf();
 }
 
 // --- Press feedback ---------------------------------------------------------------
 
 const MAX_FLOATS = 14;
 
-function spawnFloat(value: number, doubled: boolean, e?: Event): void {
+/** A press's gain rising off the core. A lucky Double Tap press rises in gold. */
+function spawnFloat(value: number, lucky: boolean, e?: Event): void {
   if (reducedMotion() || floats.childElementCount >= MAX_FLOATS) return;
   const span = document.createElement('span');
-  span.className = 'float readout';
-  span.textContent = `+${formatEnergy(value)}${doubled ? ' x2' : ''}`;
+  span.className = lucky ? 'float is-lucky readout' : 'float readout';
+  span.textContent = `+${formatEnergy(value)}${lucky ? ' x2' : ''}`;
 
   // Rise from where the press landed, or from around the core on a key press.
   const rect = reactor.getBoundingClientRect();
@@ -534,6 +575,40 @@ function spawnFloat(value: number, doubled: boolean, e?: Event): void {
   span.style.top = `${y}px`;
   span.addEventListener('animationend', () => span.remove());
   floats.appendChild(span);
+}
+
+/** Seconds of auto-tapper output gathered into each idle float. */
+const IDLE_FLOAT_S = 1.2;
+let idleAccum = 0;
+let idleTimer = 0;
+
+/** Auto-tapper income made visible: a small dim gain drifting off the rim. */
+function spawnIdleFloat(amount: number): void {
+  if (reducedMotion() || floats.childElementCount >= MAX_FLOATS) return;
+  const box = floats.getBoundingClientRect();
+  const core = coreEl.getBoundingClientRect();
+  // Somewhere on the upper half of the rim, so it drifts up and away.
+  const angle = (-160 + Math.random() * 140) * (Math.PI / 180);
+  const r = core.width * 0.48;
+  const span = document.createElement('span');
+  span.className = 'float is-idle readout';
+  span.textContent = `+${formatEnergy(amount)}`;
+  span.style.left = `${core.left - box.left + core.width / 2 + r * Math.cos(angle)}px`;
+  span.style.top = `${core.top - box.top + core.height / 2 + r * Math.sin(angle)}px`;
+  span.addEventListener('animationend', () => span.remove());
+  floats.appendChild(span);
+}
+
+/** The bezel's angle, turned a little each frame by energy per second. */
+let bezelAngle = 0;
+
+/**
+ * Seconds per turn: two minutes at one energy a second, quickening with each
+ * order of magnitude, never faster than sixteen seconds. Still at zero.
+ */
+function bezelDegreesPerSecond(eps: number): number {
+  if (eps <= 0) return 0;
+  return 360 / Math.max(16, 120 - 26 * Math.log10(1 + eps));
 }
 
 const MAX_SPARKS = 60;
@@ -672,9 +747,11 @@ function awardAchievements(ctx: { combo?: number; surgeCps?: number } = {}): voi
 
 function press(e?: Event): void {
   const now = performance.now();
+  if (imploding) return; // the reset sequence owns the core for half a second
   if (now - lastPressAt < MIN_PRESS_GAP_MS) return; // 30 per second cap (spec §2)
   lastPressAt = now;
   beeper.unlock();
+  replay(keycapEl, 'is-down');
 
   const result = combo.press(now);
   const tier = comboTier(result.combo);
@@ -870,6 +947,23 @@ function frame(now: number): void {
     earn(state, eps * dt);
     afterEarn();
     dirty = true;
+
+    // Gather a little output, then let it drift off the core as one gain.
+    idleAccum += eps * dt;
+    idleTimer += dt;
+    if (idleTimer >= IDLE_FLOAT_S && idleAccum >= 1) {
+      spawnIdleFloat(idleAccum);
+      idleAccum = 0;
+      idleTimer = 0;
+    }
+  }
+
+  if (bezelEl && !reducedMotion()) {
+    const speed = bezelDegreesPerSecond(eps);
+    if (speed > 0) {
+      bezelAngle = (bezelAngle + speed * dt) % 360;
+      bezelEl.style.transform = `rotate(${bezelAngle.toFixed(2)}deg)`;
+    }
   }
 
   surgeTick(now);
@@ -911,6 +1005,8 @@ function settleAbsence(): void {
     awayTime.textContent = formatDuration(award.seconds);
     awayEnergy.textContent = formatEnergy(award.energy);
     pendingAway = award.energy;
+    // The reactor idled while you were gone; it wakes when you collect.
+    reactor.classList.add('is-asleep');
     openDialog(awayModal, awayCollect);
   } else if (awayS > 1) {
     earn(state, energyPerSecond(state) * Math.min(awayS, 60));
@@ -920,8 +1016,13 @@ function settleAbsence(): void {
 }
 
 awayCollect.addEventListener('click', () => {
-  earn(state, pendingAway);
+  const amount = pendingAway;
+  earn(state, amount);
   pendingAway = 0;
+  // The core brightens (CSS) while the energy counts into the readout.
+  reactor.classList.remove('is-asleep');
+  if (!reducedMotion()) energyRoll = { amount, start: performance.now() };
+  SOUND.collect();
   afterEarn();
   closeDialog(awayModal);
   renderAll();
@@ -973,7 +1074,89 @@ function restartRun(): void {
   tallyGen++;
   sparksEl.replaceChildren();
   blips.length = 0;
+  energyRoll = null;
+  idleAccum = 0;
+  idleTimer = 0;
   scheduleSurge();
+}
+
+// --- Reset the experiment: the sequence ------------------------------------------------
+
+const IMPLODE_MS = 500;
+const BLOOM_MS = 900;
+const FLY_MS = 700;
+/** True while the core collapses; presses are ignored for that half second. */
+let imploding = false;
+
+/**
+ * The core collapses to a point while the rest of the face dims, then blooms
+ * back as a Dormant reactor while the isotopes just earned fly from the core
+ * to the shelf. The save has already been reset; this only holds the reactor's
+ * old look until the collapse completes. Reduced motion shows the result.
+ */
+function playReset(isotopesBefore: number): void {
+  if (reducedMotion()) {
+    renderAll();
+    return;
+  }
+  imploding = true;
+  reactor.classList.remove('is-blooming');
+  reactor.classList.add('is-imploding');
+  // Everything off the reactor face updates now; the face waits.
+  renderReadouts();
+  renderShop();
+  renderPanels();
+
+  window.setTimeout(() => {
+    imploding = false;
+    renderAll();
+    reactor.classList.replace('is-imploding', 'is-blooming');
+    flyIsotopes(isotopesBefore);
+    window.setTimeout(() => reactor.classList.remove('is-blooming'), BLOOM_MS);
+  }, IMPLODE_MS);
+}
+
+/** Beads fly from the core to each new slot on the shelf, then land. */
+function flyIsotopes(before: number): void {
+  const fresh = Array.from(pelletsEl.children).slice(Math.min(before, SHELF_MAX)) as HTMLElement[];
+  for (const pellet of fresh) pellet.classList.add('is-pending');
+  // Past ten on the shelf, a few beads fly to the "+N" count instead.
+  const extra = Math.min(3, state.isotopes - before - fresh.length);
+  const targets: HTMLElement[] = [...fresh, ...Array.from({ length: extra }, () => shelfMoreEl)];
+
+  const face = reactor.getBoundingClientRect();
+  const core = coreEl.getBoundingClientRect();
+  const fx = core.left - face.left + core.width / 2 - 4;
+  const fy = core.top - face.top + core.height / 2 - 4;
+
+  targets.forEach((target, i) => {
+    const to = target.getBoundingClientRect();
+    const tx = to.left - face.left + to.width / 2 - 4;
+    const ty = to.top - face.top + to.height / 2 - 4;
+    const flyer = document.createElement('span');
+    flyer.className = 'isotope-flyer';
+    reactor.appendChild(flyer);
+    const flight = flyer.animate(
+      [
+        { transform: `translate(${fx}px, ${fy}px) scale(0.4)`, opacity: 0 },
+        { transform: `translate(${fx}px, ${fy - 24}px) scale(1.5)`, opacity: 1, offset: 0.2 },
+        { transform: `translate(${tx}px, ${ty}px) scale(1)`, opacity: 1 },
+      ],
+      {
+        duration: FLY_MS,
+        delay: 150 + i * 90,
+        easing: 'cubic-bezier(0.5, 0, 0.2, 1)',
+        fill: 'backwards',
+      }
+    );
+    flight.onfinish = () => {
+      flyer.remove();
+      if (target !== shelfMoreEl) {
+        target.classList.remove('is-pending');
+        replay(target, 'is-landed');
+      }
+    };
+  });
 }
 
 // Reset everything (top bar). Settings survive, as the dialog promises.
@@ -1002,10 +1185,11 @@ prestigeConfirm.addEventListener('click', () => {
     closeDialog(prestigeModal);
     return;
   }
+  const isotopesBefore = state.isotopes;
   state = prestigeReset(state, gain, Date.now());
   restartRun();
   closeDialog(prestigeModal);
-  renderAll();
+  playReset(isotopesBefore);
   toast(`Experiment reset. ${gain} isotope${gain === 1 ? '' : 's'} gained.`);
   announce(`Experiment reset. You now hold ${state.isotopes} isotopes.`);
   SOUND.prestige();
@@ -1024,6 +1208,9 @@ for (const [key, btn] of shopButtons) {
         : buyTapper(state, id as AutoTapperId);
     if (!bought) return;
     SOUND.purchase();
+    // The item's glyph plays its own motion once (ShopIcon.astro).
+    const glyph = btn.querySelector('.shop-glyph');
+    if (glyph) replay(glyph, 'is-bought');
     const name =
       kind === 'press'
         ? pressUpgrade(id as PressUpgradeId).name

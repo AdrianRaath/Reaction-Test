@@ -47,6 +47,25 @@ const whole = (v: number) => v.toLocaleString('en-US');
 const ARC_R = 41;
 const ARC_LEN = Number((2 * Math.PI * ARC_R).toFixed(2));
 const LED_R = 45.5;
+// The core's bezel: a dashed ring the script turns at a speed tied to energy
+// per second. The dash period divides the circumference exactly, so the ring
+// has no seam where the dashes meet.
+const BEZEL_R = 49.5;
+const BEZEL_SEGMENTS = 60;
+const bezelPeriod = (2 * Math.PI * BEZEL_R) / BEZEL_SEGMENTS;
+const BEZEL_DASH = `${(bezelPeriod * 0.4).toFixed(3)} ${(bezelPeriod * 0.6).toFixed(3)}`;
+
+// Motes orbiting inside the core, more of them at each stage (CSS hides the
+// rest). Spread by a fixed formula rather than Math.random, so the build is
+// stable: radius as a fraction of the core, period, start angle, direction.
+const MOTES = Array.from({ length: 12 }, (_, i) => ({
+  rf: (0.2 + ((i * 7) % 12) * 0.022).toFixed(3),
+  dur: `${(7 + ((i * 5) % 9) * 0.9).toFixed(1)}s`,
+  start: `${(i * 137.5) % 360}deg`,
+  size: `${i % 3 === 0 ? 3 : 2}px`,
+  dir: i % 4 === 3 ? 'reverse' : 'normal',
+}));
+
 const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
   const angle = (i / all.length) * 2 * Math.PI;
   return {
@@ -105,6 +124,13 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
           <!-- Stage change: the graticule lights in a band travelling out from the core. -->
           <div class="grid-wash" id="sc-wash" aria-hidden="true"></div>
 
+          <!-- The trophy shelf: one pellet per isotope (up to ten shown), kept
+               across every reset of the experiment. -->
+          <div class="isotope-shelf" id="sc-shelf" role="img" aria-label="No isotopes yet" hidden>
+            <span class="pellets" id="sc-pellets"></span>
+            <span class="shelf-more readout" id="sc-shelf-more" hidden></span>
+          </div>
+
           <div class="energy-block">
             <p class="energy-row">
               <span class="energy-value readout" id="sc-energy">0</span>
@@ -140,8 +166,20 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
             </svg>
             <span class="shockwave" id="sc-shockwave" aria-hidden="true"></span>
             <div class="core" id="sc-core" data-state="dormant" aria-hidden="true">
-              <span class="core-ring core-ring-outer"></span>
+              <svg class="core-bezel" id="sc-bezel" viewBox="0 0 100 100" aria-hidden="true">
+                <circle cx="50" cy="50" r={BEZEL_R} stroke-dasharray={BEZEL_DASH}></circle>
+              </svg>
               <span class="core-ring core-ring-inner"></span>
+              <span class="motes" aria-hidden="true">
+                {
+                  MOTES.map((m) => (
+                    <span
+                      class="mote"
+                      style={`--rf:${m.rf};--dur:${m.dur};--start:${m.start};--size:${m.size};--dir:${m.dir}`}
+                    />
+                  ))
+                }
+              </span>
               <span class="core-heart"></span>
               <!-- Surge (spec §5): the countdown, then the live rate, read from the core. -->
               <span class="core-readout">
@@ -191,7 +229,7 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
           <p class="test-hint" id="sc-hint">
             Press the spacebar to generate energy. Keep a steady beat to build a combo.
           </p>
-          <p class="keycap" aria-hidden="true">space</p>
+          <p class="keycap" id="sc-keycap" aria-hidden="true">space</p>
 
           <div class="toast" id="sc-toast" hidden>
             <span id="sc-toast-text"></span>
@@ -586,6 +624,8 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
      The color properties are registered, so a stage change fades between
      colors rather than swapping. Without @property support they simply swap. */
   .reactor-face {
+    container: reactor / inline-size;
+
     --ramp-green: #22c55e;
     --ramp-teal: #2dd4bf;
     --ramp-cyan: #22d3ee;
@@ -792,6 +832,9 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     overflow: visible;
     transform: translate(-50%, -50%) rotate(-90deg);
     pointer-events: none;
+    transition:
+      opacity 900ms ease,
+      filter 900ms ease;
   }
 
   .arc-track,
@@ -981,6 +1024,191 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
       0 0 var(--core-glow) color-mix(in srgb, var(--halo) 25%, transparent),
       0 0 calc(var(--core-glow) * 2) color-mix(in srgb, var(--halo) 12%, transparent);
     animation: core-breathe var(--core-pulse) ease-in-out infinite;
+    transition:
+      opacity 900ms ease,
+      filter 900ms ease;
+  }
+
+  /* --- Bezel and motes ---------------------------------------------------------- */
+
+  /* A dashed bezel just inside the core's edge. The script turns it, faster
+     as energy per second climbs; it holds still with no auto-tappers. */
+  .core-bezel {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .core-bezel circle {
+    fill: none;
+    stroke: color-mix(in srgb, var(--stage) 35%, var(--line));
+    stroke-width: 0.9;
+  }
+
+  /* Faint particles orbiting inside the core: none while Dormant, two more
+     with each stage, twelve at Supercritical. */
+  .motes {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .mote {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    display: none;
+    width: var(--size);
+    height: var(--size);
+    margin: calc(var(--size) / -2);
+    border-radius: var(--radius-full);
+    background-color: color-mix(in srgb, var(--stage) 70%, #fff);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--stage) 80%, transparent);
+    opacity: 0.55;
+    animation: mote-orbit var(--dur) linear infinite;
+    animation-direction: var(--dir);
+  }
+
+  .reactor-face[data-state='warming'] .mote:nth-child(-n + 2),
+  .reactor-face[data-state='stable'] .mote:nth-child(-n + 4),
+  .reactor-face[data-state='charged'] .mote:nth-child(-n + 6),
+  .reactor-face[data-state='unstable'] .mote:nth-child(-n + 8),
+  .reactor-face[data-state='critical'] .mote:nth-child(-n + 10),
+  .reactor-face[data-state='supercritical'] .mote {
+    display: block;
+  }
+
+  @keyframes mote-orbit {
+    from {
+      transform: rotate(var(--start)) translateX(calc(var(--core-size) * var(--rf)));
+    }
+    to {
+      transform: rotate(calc(var(--start) + 360deg)) translateX(calc(var(--core-size) * var(--rf)));
+    }
+  }
+
+  /* --- Asleep (while you were away) and the reset sequence ------------------- */
+
+  /* Asleep: the core and dial sit dim behind the "While you were away" dialog,
+     then brighten over the same 0.9 s the energy takes to count in. */
+  .reactor-face.is-asleep .core,
+  .reactor-face.is-asleep .core-arc {
+    opacity: 0.35;
+    filter: saturate(0.3);
+  }
+
+  /* Reset the experiment: everything else on the face dims while the core
+     collapses to a point; then it blooms back as Dormant. No flash. */
+  .reactor-face
+    > :is(.energy-block, .state-label, .surge-label, .combo, .test-hint, .keycap, .isotope-shelf) {
+    transition: opacity 600ms ease;
+  }
+
+  .reactor-face.is-imploding
+    > :is(.energy-block, .state-label, .surge-label, .combo, .test-hint, .keycap, .isotope-shelf) {
+    opacity: 0.3;
+    transition-duration: 400ms;
+  }
+
+  .reactor-face.is-imploding .core {
+    animation: implode 500ms cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  }
+
+  .reactor-face.is-blooming .core {
+    animation: bloom 900ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes implode {
+    0% {
+      transform: scale(1);
+    }
+    25% {
+      transform: scale(1.06);
+    }
+    100% {
+      transform: scale(0.04);
+    }
+  }
+
+  @keyframes bloom {
+    0% {
+      transform: scale(0.04);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* --- Isotope shelf ---------------------------------------------------------- */
+
+  /* When the face is narrow (a phone, or a laptop with the shop beside it),
+     the centred energy readout reaches under the shelf. Once there is a
+     shelf, step the readout down clear of it. Keyed to the face's own width,
+     not the screen's. */
+  @container reactor (max-width: 520px) {
+    .reactor-face:has(> .isotope-shelf:not([hidden])) .energy-block {
+      padding-block-start: 0.875rem;
+    }
+  }
+
+  .isotope-shelf {
+    position: absolute;
+    inset-block-start: 12px;
+    inset-inline-start: 14px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none;
+  }
+
+  .pellets {
+    display: flex;
+    gap: 4px;
+  }
+
+  /* An isotope: a small blue-white bead with the Cherenkov glow. */
+  .pellets :global(.pellet),
+  .reactor-face :global(.isotope-flyer) {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: radial-gradient(
+      circle at 35% 35%,
+      #fff 0,
+      var(--ramp-white) 35%,
+      var(--ramp-blue) 100%
+    );
+    box-shadow: 0 0 6px color-mix(in srgb, var(--ramp-blue) 70%, transparent);
+  }
+
+  .pellets :global(.pellet.is-pending) {
+    opacity: 0;
+  }
+
+  .pellets :global(.pellet.is-landed) {
+    animation: pellet-land 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes pellet-land {
+    0% {
+      transform: scale(1.8);
+    }
+  }
+
+  .reactor-face :global(.isotope-flyer) {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .shelf-more {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-secondary);
   }
 
   .core[data-state='dormant'] {
@@ -992,6 +1220,7 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     inset: 0;
     border-radius: var(--radius-full);
     border: 1px solid var(--line);
+    pointer-events: none;
   }
 
   .core-ring-inner {
@@ -1070,6 +1299,51 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     100% {
       opacity: 0;
       transform: translate(-50%, calc(-50% - 72px));
+    }
+  }
+
+  /* A lucky press (Double Tap): gold, with a small bounce before it rises. */
+  .floats :global(.float.is-lucky) {
+    color: var(--gold);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--gold) 55%, transparent);
+    animation: lucky-rise 820ms cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  }
+
+  @keyframes lucky-rise {
+    0% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(0.6);
+    }
+    18% {
+      transform: translate(-50%, calc(-50% - 10px)) scale(1.25);
+    }
+    32% {
+      transform: translate(-50%, calc(-50% - 16px)) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% - 84px)) scale(1);
+    }
+  }
+
+  /* Idle income: small, dim, slow, drifting off the core's rim. */
+  .floats :global(.float.is-idle) {
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    animation: idle-drift 1700ms ease-out forwards;
+  }
+
+  @keyframes idle-drift {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%);
+    }
+    20% {
+      opacity: 0.5;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% - 40px));
     }
   }
 
@@ -1310,15 +1584,31 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     width: min(320px, 70%);
     padding: var(--space-sm) 0;
     border: 1px solid var(--line);
-    border-block-end-width: 3px;
     border-radius: var(--radius-md);
     background-color: var(--panel-01);
+    /* The key's lip is a shadow, not a border, so pressing it moves nothing
+       around it. */
+    box-shadow: 0 2px 0 var(--line);
     color: var(--ink-muted);
     font-size: var(--text-label-size);
     font-weight: var(--text-label-weight);
     letter-spacing: 0.24em;
     text-align: center;
     text-transform: uppercase;
+  }
+
+  /* Every press bottoms the key out for a moment, lit in the stage color. */
+  .keycap.is-down {
+    animation: key-down 170ms var(--ease);
+  }
+
+  @keyframes key-down {
+    0% {
+      transform: translateY(2px);
+      box-shadow: 0 0 0 var(--line);
+      border-color: color-mix(in srgb, var(--stage) 45%, var(--line));
+      color: var(--stage);
+    }
   }
 
   /* --- Rhythm scope ------------------------------------------------------------ */
@@ -1954,6 +2244,10 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     .state-name.is-settling,
     .core-num.is-tick,
     .surge-card,
+    .keycap.is-down,
+    .pellets :global(.pellet.is-landed),
+    .reactor-face.is-imploding .core,
+    .reactor-face.is-blooming .core,
     .toast.is-in,
     .shop-new-tag {
       animation: none;
@@ -1968,6 +2262,7 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
 
     .floats :global(.float),
     .sparks,
+    .motes,
     .surge-best.is-shining::after,
     .shockwave,
     .grid-wash {
