@@ -16,3 +16,7 @@ node_modules/
 # Astro build output
 dist/
 .astro/
+
+# Playwright output
+test-results/
+playwright-report/

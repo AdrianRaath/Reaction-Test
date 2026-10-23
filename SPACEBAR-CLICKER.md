@@ -62,20 +62,24 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 
 ## 3. Code map
 
-| File                                                  | Responsibility                                                                                                                                                           |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, offline, achievements. Pure data.                                            |
-| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, reactor state and progress, prestige gain, offline award, buying, shop reveals, shop-tab notices.  |
-| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo. Takes timestamps from the caller, so it has no clock of its own.                                                                       |
-| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`.                                                                                                             |
-| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                         |
-| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                   |
-| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for all of the above (41 as of 2026-10-22).                                                                                                                   |
-| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine. |
-| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS. The frontmatter computes the dial, bezel and mote geometry.                                                                                     |
-| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                               |
-| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`.                                                                                                   |
-| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                      |
+| File                                                  | Responsibility                                                                                                                                                                      |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, offline, achievements. Pure data.                                                       |
+| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, reactor state and progress, prestige gain, offline award, buying, shop reveals, shop-tab notices.             |
+| `src/games/spacebar-clicker/mods.ts`                  | A run's modifiers: every rule a perk can bend, in one object. `BASE_MODS` is the shipped game; `modsOf(state)` folds in the Stabiliser and Synchronisation, and will fold in perks. |
+| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo. Takes timestamps from the caller, so it has no clock of its own, and reads the run's rules on every press.                                        |
+| `src/games/spacebar-clicker/rng.ts`                   | A seeded random generator (mulberry32). Pure; for perk drops, so a reload can't reroll them.                                                                                        |
+| `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together. Perk prices will be set in it.                                              |
+| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`.                                                                                                                        |
+| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                    |
+| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                              |
+| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for all of the above (66 as of 2026-10-23).                                                                                                                              |
+| `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, and every reactor state (§7).                                                                          |
+| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine.            |
+| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS. The frontmatter computes the dial, bezel and mote geometry.                                                                                                |
+| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                          |
+| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`.                                                                                                              |
+| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                 |
 
 ## 4. How the game works
 
@@ -109,6 +113,12 @@ Energy per second = sum of auto-tapper output x sync x milestone x isotope
   gold.
 - `earn()` is the one place energy is credited. It moves `energy`,
   `runLifetime` and `totalLifetime` together.
+- **Modifiers.** The formulas above read their rules from the run's modifiers
+  (`mods.ts`), not straight from the constants. With no perks the modifiers
+  equal the constants, and unit tests hold them there. `energyPerPress` and
+  `energyPerSecond` take a play context: the combo count, whether a surge is
+  in overdrive, whether presses are in an afterglow, and seconds since the last
+  press.
 
 ### 4.3 The rhythm combo
 
@@ -365,14 +375,27 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ## 7. Testing
 
-- `npm test` runs Vitest, including the 41 clicker tests.
+- `npm test` runs Vitest, including the 66 clicker tests.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
-- **Browser checks are not in the repo.** The Playwright scripts used during
-  the build lived in a session scratchpad and are gone. They covered
-  load, press, buy, save and reload, away, prestige, surge phases, all seven
-  stages, reduced motion, pass 3, and layout at 1440 and 390 wide. Re-create
-  them, or add them to the repo, before the next big change.
+- `npm run test:browser` runs the Playwright checks in `tests/browser/`,
+  16 as of 2026-10-23, in about five minutes.
+  - **Coverage:** the page shell, presses and the combo, buying, the shop tabs
+    and "New" tag, save and reload, away progress, prestige, the full reset,
+    the phone layout, a whole surge on a fake clock with and without reduced
+    motion, every reactor state, and a live stage change.
+  - **Browser:** your installed Chrome (`channel: 'chrome'`), so there is
+    nothing to download.
+  - **Dev server:** a server already on port 4321 is reused; otherwise one is
+    started. Astro backgrounds its dev server when an AI agent launches it, so
+    an agent should start one first with `npm run dev`. Stop it with
+    `npx astro dev stop`.
+  - **Speed:** one worker, because several checks press on a real-time beat.
+    The surge checks take a few minutes, because they run minutes of fake
+    time frame by frame.
+  - **Naming:** the files are `*.e2e.ts`, not `*.spec.ts`, so Vitest leaves
+    them alone.
+- Run every check at the end of each step.
 - **Never verified**: a real touch device, Firefox and Safari, long-session
   feel, and a human playtest of the balance.
 - **Jump to prestige** for testing. Paste this in the console, then use the
@@ -394,11 +417,11 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ## 8. Roadmap
 
-### 8.1 Perk system: planning, nothing built
+### 8.1 Perk system: phase 1 in progress
 
-**Status (2026-10-23).** The maintainer answered the design questions
-(§8.1.6). The build plan (§8.1.7) and the follow-up questions it raises
-(§8.1.8) await approval. Don't build until both are approved.
+**Status (2026-10-23).** Design and build plan approved, follow-ups answered.
+Step 1 of 6, the groundwork, is done. Next is step 2, perk logic and the save.
+Check in with the maintainer after each step.
 
 **Scope note.** The original spec called the game "shallow on purpose", and
 its §15 ruled out a prestige shop. The maintainer asked for perks on
@@ -613,21 +636,27 @@ where the decisions come from.
 7. Isotope tie-ins, such as an extra slot, a reroll or keeping a perk?
    **Answer: revisit after phase 1.**
 
-#### 8.1.7 Build plan: phase 1, awaiting approval
+#### 8.1.7 Build plan: phase 1, approved 2026-10-23
 
-Six steps. Each ends with tests passing and a check-in, so the maintainer can
-review before the next one, as with the delight passes.
+Six steps. Each ends with every check passing and a check-in, so the
+maintainer can review before the next one, as with the delight passes.
 
-1. **Groundwork, no visible change.**
-   - Economy functions take a modifiers object that defaults to "no perks".
-   - `ComboTracker` takes its rules, and `comboTier` takes its tier list,
-     instead of reading the constants.
-   - The surge scheduler and multiplier read their values through modifiers.
-   - A seeded random generator, as a pure module.
-   - A rolling income meter in the script: energy earned over the last 10 s,
-     presses included.
-   - Every existing test passes unchanged, and new tests prove the defaults
-     behave exactly as today.
+1. **Groundwork, no visible change.** _Done 2026-10-23._
+   - `mods.ts`: a `Mods` object holding every rule a perk can bend, and
+     `modsOf(state)`, cached per distinct set. Economy functions take
+     `mods = modsOf(state)` as an optional last argument, which tests use to
+     bend one field at a time.
+   - `ComboTracker` takes a rules callback and reads it on every press.
+     `comboTier` and `nextComboTier` take a tier list.
+   - The surge scheduler, countdown, overdrive and results read the run's
+     surge rules. Each surge fixes its own timings when it starts, and a zero
+     warning skips the countdown, ready for Storm Front.
+   - `rng.ts`, the seeded generator, and `IncomeMeter`, fed by presses and
+     auto-tappers but not away awards.
+   - Existing assertions are unchanged. The energy tests now pass a play
+     context instead of loose arguments.
+   - 25 new unit tests. The browser checks moved into the repo, and the 16 of
+     them pass against the new code.
 2. **Perk logic and save, pure, no UI.**
    - The 25 perks with their three levels go in `config.ts`.
    - `perks.ts` holds the drop meter and pity, rarity weights, offer pricing
@@ -666,18 +695,16 @@ review before the next one, as with the delight passes.
    - Update this doc's sections and changelog.
    - Browser checks at 1440 and 390 wide, then the full check suite.
 
-#### 8.1.8 Follow-up questions: awaiting answers
+#### 8.1.8 Follow-up questions: answered 2026-10-23
 
 Raised by the upgrade caveat in question 3.
 
 1. Three levels per perk, I to III, with a maxed perk leaving the drop pool?
-   _Recommended: yes._ **Answer: pending.**
+   **Answer: yes.**
 2. An upgrade costs 1.5 times the base price for each level already held, and
-   needs no free slot? _Recommended: yes._ **Answer: pending.**
-3. Browser checks: keep them as throwaway scripts, or add Playwright to the
-   repo as a dev dependency so they survive between sessions? The pacing
-   simulation goes in the repo either way, with no new dependency.
-   _Recommended: add Playwright._ **Answer: pending.**
+   needs no free slot? **Answer: yes.**
+3. Add Playwright to the repo as a dev dependency so the browser checks
+   survive between sessions? **Answer: yes.** Done in step 1.
 
 ### 8.2 Unassigned ideas
 
@@ -691,7 +718,6 @@ the maintainer asks.
 
 ### 8.3 Known gaps
 
-- Browser tests are not in the repo (§7).
 - Not playtested, and not checked on real touch devices, Firefox or Safari.
 - Not yet merged to `main`.
 
@@ -713,4 +739,9 @@ the maintainer asks.
   game's running product doc.
 - **2026-10-23.** Perk design questions answered. Slots set at 5, and owned
   perks can drop again as upgrades. Per-level values and a six-step build plan
-  were drafted, both awaiting approval.
+  were drafted, then approved along with three levels per perk, upgrade pricing
+  and Playwright in the repo.
+- **2026-10-23.** Perks step 1, groundwork. Added a modifiers layer, per-run
+  combo and surge rules, a seeded generator and an income meter. No visible
+  change. Playwright added as a dev dependency, with 16 browser checks in
+  `tests/browser/`.

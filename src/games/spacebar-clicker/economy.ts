@@ -7,6 +7,10 @@
  *
  * Double Tap is a per-press roll, applied by the caller with `doubleTapChance`
  * so the formula here stays deterministic and testable.
+ *
+ * Every rule a perk can bend is read from the run's modifiers (mods.ts), not
+ * from the constants. Functions that need them take `mods = modsOf(state)`
+ * last; the game never passes it, tests do.
  */
 
 import {
@@ -14,12 +18,10 @@ import {
   COMBO_TIERS,
   ISOTOPE_BONUS,
   MILESTONE_BONUS,
-  OFFLINE,
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
   REACTOR_STATES,
   REVEAL_FRACTION,
-  SURGE,
   type AutoTapperDef,
   type AutoTapperId,
   type ComboTierDef,
@@ -29,7 +31,20 @@ import {
   type ShopItemId,
   type ShopTab,
 } from './config';
+import { modsOf } from './mods';
 import type { SaveState } from './save';
+
+/** What is happening in play at the moment a gain is worked out. */
+export interface PlayContext {
+  /** The current combo count. */
+  combo?: number;
+  /** A surge is in overdrive. */
+  surging?: boolean;
+  /** Presses are inside a surge's afterglow. */
+  afterglow?: boolean;
+  /** Seconds since the last press. */
+  idleS?: number;
+}
 
 const upgradeById = new Map(PRESS_UPGRADES.map((u) => [u.id, u]));
 const tapperById = new Map(AUTO_TAPPERS.map((t) => [t.id, t]));
@@ -52,18 +67,25 @@ export function upgradeCost(state: SaveState, id: PressUpgradeId): number {
   return scaledCost(def.baseCost, def.scale, state.upgrades[id]);
 }
 
-export function tapperCost(state: SaveState, id: AutoTapperId): number {
+export function tapperCost(state: SaveState, id: AutoTapperId, mods = modsOf(state)): number {
   const def = autoTapper(id);
-  return scaledCost(def.baseCost, def.scale, state.tappers[id]);
+  return Math.round(scaledCost(def.baseCost, def.scale, state.tappers[id]) * mods.tapperCostMult);
 }
 
-export function comboTier(combo: number): ComboTierDef {
-  return COMBO_TIERS.find((t) => combo >= t.min) ?? COMBO_TIERS[COMBO_TIERS.length - 1]!;
+/** The tier a combo sits in. Pass a run's `mods.tiers` when perks may have changed them. */
+export function comboTier(
+  combo: number,
+  tiers: readonly ComboTierDef[] = COMBO_TIERS
+): ComboTierDef {
+  return tiers.find((t) => combo >= t.min) ?? tiers[tiers.length - 1]!;
 }
 
 /** The tier above the current combo, or null at the top. */
-export function nextComboTier(combo: number): ComboTierDef | null {
-  const ascending = [...COMBO_TIERS].reverse();
+export function nextComboTier(
+  combo: number,
+  tiers: readonly ComboTierDef[] = COMBO_TIERS
+): ComboTierDef | null {
+  const ascending = [...tiers].reverse();
   return ascending.find((t) => t.min > combo) ?? null;
 }
 
@@ -105,33 +127,66 @@ export function isotopeBonus(isotopes: number): number {
 }
 
 /** Energy one press is worth before the Double Tap roll. */
-export function energyPerPress(state: SaveState, comboMultiplier = 1, surging = false): number {
-  const base = 1 + state.upgrades.finger;
-  const spring = Math.pow(1.5, state.upgrades.spring);
-  const surge = surging ? SURGE.multiplier : 1;
+export function energyPerPress(
+  state: SaveState,
+  ctx: PlayContext = {},
+  mods = modsOf(state)
+): number {
+  const combo = ctx.combo ?? 0;
+  const base = 1 + state.upgrades.finger * mods.fingerPerLevel;
+  const spring = Math.pow(mods.springPerLevel, state.upgrades.spring);
+  const tier = comboTier(combo, mods.tiers).multiplier;
+  const momentum = 1 + mods.pressPerCombo * combo;
+  const surge = ctx.surging ? mods.surge.multiplier : 1;
+  const afterglow = ctx.afterglow ? mods.afterglowMult : 1;
   return (
     base *
     spring *
-    comboMultiplier *
+    tier *
+    momentum *
+    mods.pressMult *
     surge *
+    afterglow *
     milestoneBonus(state.runLifetime) *
     isotopeBonus(state.isotopes)
   );
 }
 
 /** Probability a press counts twice: 5% per Double Tap level, capped at 50%. */
-export function doubleTapChance(state: SaveState): number {
-  return Math.min(0.5, 0.05 * state.upgrades.double);
+export function doubleTapChance(state: SaveState, mods = modsOf(state)): number {
+  return Math.min(mods.doubleTapCap, 0.05 * state.upgrades.double + mods.doubleTapBonus);
 }
 
 /**
  * Auto-tapper output per second. Combo only matters here once
  * Synchronisation is owned, and then at half strength (spec §4, §6a).
  */
-export function energyPerSecond(state: SaveState, comboMultiplier = 1): number {
-  const raw = AUTO_TAPPERS.reduce((sum, t) => sum + t.eps * state.tappers[t.id], 0);
-  const sync = state.upgrades.sync > 0 ? 1 + (comboMultiplier - 1) * 0.5 : 1;
-  return raw * sync * milestoneBonus(state.runLifetime) * isotopeBonus(state.isotopes);
+export function energyPerSecond(
+  state: SaveState,
+  ctx: PlayContext = {},
+  mods = modsOf(state)
+): number {
+  let owned = 0;
+  let raw = 0;
+  for (const t of AUTO_TAPPERS) {
+    owned += state.tappers[t.id];
+    raw += t.eps * state.tappers[t.id] * mods.tapperMultById[t.id];
+  }
+  const comboBonus = comboTier(ctx.combo ?? 0, mods.tiers).multiplier - 1;
+  const idle = (ctx.idleS ?? 0) >= mods.idleBoostAfterS ? mods.idleBoostMult : 1;
+  const surge = ctx.surging && mods.surgeHitsTappers ? mods.surge.multiplier : 1;
+  return (
+    raw *
+    (1 + mods.tapperPerOwned * owned) *
+    (1 + mods.tapperPerState * reactorIndex(state.runLifetime)) *
+    (1 + mods.tapperDoubleTapShare * doubleTapChance(state, mods)) *
+    (1 + comboBonus * mods.syncShare) *
+    mods.tapperMult *
+    idle *
+    surge *
+    milestoneBonus(state.runLifetime) *
+    isotopeBonus(state.isotopes)
+  );
 }
 
 /** Spec §9: floor(sqrt(run lifetime / 1M)); zero below the unlock. */
@@ -155,11 +210,15 @@ export interface OfflineAward {
  * least one auto-tapper and more than a minute away. Null means nothing to
  * show.
  */
-export function offlineAward(state: SaveState, awayS: number): OfflineAward | null {
+export function offlineAward(
+  state: SaveState,
+  awayS: number,
+  mods = modsOf(state)
+): OfflineAward | null {
   const owned = AUTO_TAPPERS.some((t) => state.tappers[t.id] > 0);
-  if (!owned || awayS <= OFFLINE.minAwayS) return null;
-  const seconds = Math.min(awayS, OFFLINE.capS);
-  return { seconds, energy: energyPerSecond(state) * seconds * OFFLINE.rate };
+  if (!owned || awayS <= mods.offline.minAwayS) return null;
+  const seconds = Math.min(awayS, mods.offline.capS);
+  return { seconds, energy: energyPerSecond(state, {}, mods) * seconds * mods.offline.rate };
 }
 
 /** Credit energy to the run. The one place both lifetime counters move. */

@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { checkAchievements } from './achievements';
 import { ComboTracker } from './combo';
-import { AUTO_TAPPERS, COMBO, PRESS_UPGRADES, REACTOR_STATES } from './config';
+import {
+  AUTO_TAPPERS,
+  COMBO,
+  COMBO_TIERS,
+  OFFLINE,
+  PRESS_UPGRADES,
+  REACTOR_STATES,
+  SURGE,
+  type ComboTierDef,
+} from './config';
 import {
   buyTapper,
   buyUpgrade,
@@ -24,6 +33,9 @@ import {
   upgradeCost,
 } from './economy';
 import { formatDuration, formatEnergy, formatMultiplier, formatRate } from './format';
+import { IncomeMeter } from './income';
+import { BASE_MODS, modsOf, type Mods } from './mods';
+import { newSeed, nextRandom } from './rng';
 import { defaultSave, parseSave, prestigeReset, serializeSave } from './save';
 
 const NOW = 1_700_000_000_000;
@@ -90,7 +102,7 @@ describe('energy per press', () => {
     s.runLifetime = 10_000; // Stable: 2 states past Dormant → × 1.10
     s.isotopes = 3; // × 1.3
     const expected = 5 * 2.25 * 2 * 10 * 1.1 * 1.3; // combo x2, surging
-    expect(energyPerPress(s, 2, true)).toBeCloseTo(expected, 6);
+    expect(energyPerPress(s, { combo: 25, surging: true })).toBeCloseTo(expected, 6);
   });
 
   it('caps the Double Tap chance at 50%', () => {
@@ -107,14 +119,14 @@ describe('energy per second', () => {
     const s = defaultSave(NOW);
     s.tappers.assistant = 4; // 2
     s.tappers.pneumatic = 1; // 3
-    expect(energyPerSecond(s, 3)).toBe(5);
+    expect(energyPerSecond(s, { combo: 100 })).toBe(5);
   });
 
   it('gives auto-tappers half the combo multiplier with Synchronisation', () => {
     const s = defaultSave(NOW);
     s.tappers.pneumatic = 2; // 6
     s.upgrades.sync = 1;
-    expect(energyPerSecond(s, 3)).toBe(6 * 2); // 1 + (3 - 1) / 2
+    expect(energyPerSecond(s, { combo: 100 })).toBe(6 * 2); // 1 + (3 - 1) / 2
   });
 });
 
@@ -490,5 +502,240 @@ describe('format', () => {
     expect(formatDuration(45)).toBe('45s');
     expect(formatDuration(725)).toBe('12m 05s');
     expect(formatDuration(15_120)).toBe('4h 12m');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Run modifiers: the layer perks will bend. With no perks it must be the game
+// exactly as it shipped.
+// ---------------------------------------------------------------------------
+
+/** A fresh run's modifiers with some fields bent, as a perk would. */
+function bent(patch: Partial<Mods>): Mods {
+  return { ...modsOf(defaultSave(NOW)), ...patch };
+}
+
+describe('run modifiers', () => {
+  it('are the shipped rules with nothing bought', () => {
+    expect(modsOf(defaultSave(NOW))).toEqual(BASE_MODS);
+    expect(BASE_MODS.combo).toBe(COMBO);
+    expect(BASE_MODS.surge).toBe(SURGE);
+    expect(BASE_MODS.offline).toBe(OFFLINE);
+    expect(BASE_MODS.tiers).toBe(COMBO_TIERS);
+  });
+
+  it('fold in the Stabiliser and Synchronisation', () => {
+    const s = defaultSave(NOW);
+    expect(modsOf(s).stabiliser).toBe(false);
+    expect(modsOf(s).syncShare).toBe(0);
+    s.upgrades.stabiliser = 1;
+    s.upgrades.sync = 1;
+    expect(modsOf(s).stabiliser).toBe(true);
+    expect(modsOf(s).syncShare).toBe(0.5);
+  });
+
+  it('are built once per distinct set', () => {
+    expect(modsOf(defaultSave(NOW))).toBe(modsOf(defaultSave(NOW + 1)));
+  });
+
+  it('bend each term of a press', () => {
+    const s = defaultSave(NOW);
+    s.upgrades.finger = 4;
+    s.upgrades.spring = 2;
+    expect(energyPerPress(s, {}, bent({ fingerPerLevel: 2 }))).toBeCloseTo(9 * 2.25);
+    expect(energyPerPress(s, {}, bent({ springPerLevel: 2 }))).toBeCloseTo(5 * 4);
+    expect(energyPerPress(s, {}, bent({ pressMult: 3 }))).toBeCloseTo(5 * 2.25 * 3);
+    // +0.5% a point of combo on top of Harmonic's x3.
+    expect(energyPerPress(s, { combo: 100 }, bent({ pressPerCombo: 0.005 }))).toBeCloseTo(
+      5 * 2.25 * 3 * 1.5
+    );
+    expect(energyPerPress(s, { afterglow: true }, bent({ afterglowMult: 3 }))).toBeCloseTo(
+      5 * 2.25 * 3
+    );
+    const storm = bent({ surge: { ...SURGE, multiplier: 25 } });
+    expect(energyPerPress(s, { surging: true }, storm)).toBeCloseTo(5 * 2.25 * 25);
+  });
+
+  it('let a run carry its own combo tiers', () => {
+    const tiers: ComboTierDef[] = [{ min: 200, multiplier: 4, label: 'Overtone' }, ...COMBO_TIERS];
+    expect(comboTier(200, tiers).label).toBe('Overtone');
+    expect(nextComboTier(150, tiers)).toMatchObject({ min: 200 });
+    expect(energyPerPress(defaultSave(NOW), { combo: 250 }, bent({ tiers }))).toBe(4);
+  });
+
+  it('bend the Double Tap chance and its cap', () => {
+    const s = defaultSave(NOW);
+    s.upgrades.double = 10;
+    const dice = bent({ doubleTapBonus: 0.15, doubleTapCap: 0.75 });
+    expect(doubleTapChance(s, dice)).toBeCloseTo(0.65);
+    expect(doubleTapChance(s, { ...dice, doubleTapBonus: 0.35 })).toBe(0.75);
+  });
+
+  it('bend auto-tapper output', () => {
+    const s = defaultSave(NOW);
+    s.tappers.assistant = 10; // 5 a second
+    const byId = { ...BASE_MODS.tapperMultById, assistant: 4 };
+    expect(energyPerSecond(s, {}, bent({ tapperMultById: byId }))).toBeCloseTo(20);
+    expect(energyPerSecond(s, {}, bent({ tapperMult: 4 }))).toBeCloseTo(20);
+    expect(energyPerSecond(s, {}, bent({ tapperPerOwned: 0.01 }))).toBeCloseTo(5 * 1.1);
+    s.upgrades.double = 4; // 20%
+    expect(energyPerSecond(s, {}, bent({ tapperDoubleTapShare: 1 }))).toBeCloseTo(5 * 1.2);
+  });
+
+  it('scale auto-tappers by reactor state on top of the milestone bonus', () => {
+    const s = defaultSave(NOW);
+    s.tappers.assistant = 10;
+    s.runLifetime = 10_000; // Stable, index 2
+    expect(energyPerSecond(s, {}, bent({ tapperPerState: 0.1 }))).toBeCloseTo(5 * 1.2 * 1.1);
+  });
+
+  it('give auto-tappers any share of the combo bonus', () => {
+    const s = defaultSave(NOW);
+    s.tappers.pneumatic = 2; // 6
+    expect(energyPerSecond(s, { combo: 100 }, bent({ syncShare: 1 }))).toBeCloseTo(18);
+    expect(energyPerSecond(s, { combo: 100 }, bent({ syncShare: 1.5 }))).toBeCloseTo(24);
+  });
+
+  it('boost auto-tappers once play goes idle', () => {
+    const s = defaultSave(NOW);
+    s.tappers.pneumatic = 2;
+    const idle = bent({ idleBoostMult: 2.5, idleBoostAfterS: 10 });
+    expect(energyPerSecond(s, { idleS: 9.9 }, idle)).toBeCloseTo(6);
+    expect(energyPerSecond(s, { idleS: 10 }, idle)).toBeCloseTo(15);
+  });
+
+  it('let surges reach auto-tappers only when bent to', () => {
+    const s = defaultSave(NOW);
+    s.tappers.pneumatic = 2;
+    expect(energyPerSecond(s, { surging: true })).toBe(6);
+    expect(energyPerSecond(s, { surging: true }, bent({ surgeHitsTappers: true }))).toBe(60);
+  });
+
+  it('discount auto-tappers, rounded to a whole price', () => {
+    const s = defaultSave(NOW);
+    expect(tapperCost(s, 'assistant', bent({ tapperCostMult: 0.8 }))).toBe(60);
+    s.tappers.assistant = 1; // 90
+    expect(tapperCost(s, 'assistant', bent({ tapperCostMult: 0.7 }))).toBe(63);
+  });
+
+  it('bend away progress', () => {
+    const s = defaultSave(NOW);
+    s.tappers.pneumatic = 2; // 6
+    const night = bent({ offline: { ...OFFLINE, rate: 1, capS: 8 * 3600 } });
+    expect(offlineAward(s, 600, night)).toEqual({ seconds: 600, energy: 3600 });
+    expect(offlineAward(s, 10 * 3600, night)!.seconds).toBe(8 * 3600);
+  });
+});
+
+describe('combo tracker with per-run rules', () => {
+  it('keeps a press a wider tolerance allows', () => {
+    const strict = new ComboTracker();
+    const loose = new ComboTracker(undefined, () => ({ ...COMBO, tolerance: 0.4 }));
+    const a = cadence(strict, 0, 200, 10);
+    const b = cadence(loose, 0, 200, 10);
+    expect(strict.press(a.t + 270).kept).toBe(false); // +35%
+    expect(loose.press(b.t + 270).kept).toBe(true);
+  });
+
+  it('holds through a longer pause with a longer grace', () => {
+    const c = new ComboTracker(undefined, () => ({ ...COMBO, graceMs: 2000 }));
+    const { t } = cadence(c, 0, 200, 15);
+    expect(c.tick(t + 1500)).toBe(false);
+    expect(c.combo).toBe(15);
+    expect(c.graceRemaining(t + 1000)).toBeCloseTo(0.5);
+  });
+
+  it('breaks on the first miss when allowed none', () => {
+    const c = new ComboTracker(undefined, () => ({ ...COMBO, missesToBreak: 1 }));
+    const { t } = cadence(c, 0, 200, 20);
+    expect(c.press(t + 500).broke).toBe(true);
+    expect(c.combo).toBe(0);
+  });
+
+  it('reads the rules on every press, so a change applies at once', () => {
+    let tolerance = 0.25;
+    const c = new ComboTracker(undefined, () => ({ ...COMBO, tolerance }));
+    const { t } = cadence(c, 0, 200, 10);
+    tolerance = 0.4;
+    expect(c.press(t + 270).kept).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Seeded random generator
+// ---------------------------------------------------------------------------
+
+describe('seeded random', () => {
+  it('replays the same sequence from the same seed', () => {
+    const run = (seed: number) => {
+      const out: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        const d = nextRandom(seed);
+        out.push(d.value);
+        seed = d.seed;
+      }
+      return out;
+    };
+    expect(run(42)).toEqual(run(42));
+    expect(run(42)).not.toEqual(run(43));
+  });
+
+  it('draws uniformly in [0, 1) and keeps a 32-bit state', () => {
+    let seed = 7;
+    let sum = 0;
+    const bins = new Array<number>(10).fill(0);
+    for (let i = 0; i < 20_000; i++) {
+      const d = nextRandom(seed);
+      expect(d.value).toBeGreaterThanOrEqual(0);
+      expect(d.value).toBeLessThan(1);
+      expect(Number.isInteger(d.seed) && d.seed >= 0 && d.seed < 2 ** 32).toBe(true);
+      sum += d.value;
+      bins[Math.floor(d.value * 10)]!++;
+      seed = d.seed;
+    }
+    expect(sum / 20_000).toBeCloseTo(0.5, 1);
+    for (const n of bins) expect(Math.abs(n - 2000)).toBeLessThan(200);
+  });
+
+  it('makes whole 32-bit seeds', () => {
+    expect(newSeed(() => 0)).toBe(0);
+    expect(newSeed(() => 0.999999999)).toBe(4294967291);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Income meter
+// ---------------------------------------------------------------------------
+
+describe('income meter', () => {
+  it('reads zero before anything is earned', () => {
+    expect(new IncomeMeter().rate(5000)).toBe(0);
+  });
+
+  it('measures a steady income over its window', () => {
+    const m = new IncomeMeter(10);
+    for (let t = 0; t < 30_000; t += 100) m.add(t, 10); // 100 a second
+    expect(m.rate(29_999)).toBeCloseTo(100, 0);
+  });
+
+  it('averages a fresh run over the time it has run, not the whole window', () => {
+    const m = new IncomeMeter(10);
+    for (let t = 0; t < 2000; t += 100) m.add(t, 10);
+    expect(m.rate(1999)).toBeCloseTo(100, 0);
+  });
+
+  it('forgets gains older than its window', () => {
+    const m = new IncomeMeter(10);
+    for (let t = 0; t < 5000; t += 100) m.add(t, 10);
+    expect(m.rate(20_000)).toBe(0);
+    m.add(20_000, 50);
+    expect(m.rate(20_000)).toBe(5);
+  });
+
+  it('starts over on reset', () => {
+    const m = new IncomeMeter(10);
+    m.add(0, 100);
+    m.reset();
+    expect(m.rate(0)).toBe(0);
   });
 });

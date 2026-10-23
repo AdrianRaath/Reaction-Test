@@ -17,3 +17,7 @@ package-lock.json
 /PRODUCT.md
 /REVAMP.md
 /NEW-TOOL.md
+
+# Playwright output.
+test-results/
+playwright-report/

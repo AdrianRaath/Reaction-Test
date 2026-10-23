@@ -24,7 +24,6 @@ import {
   PRESTIGE_UNLOCK,
   REACTOR_STATES,
   SAVE_INTERVAL_MS,
-  SURGE,
   type AutoTapperId,
   type PressUpgradeId,
   type ShopTab,
@@ -53,6 +52,7 @@ import {
   tapperCost,
   updateReveals,
   upgradeCost,
+  type PlayContext,
 } from '../games/spacebar-clicker/economy';
 import {
   formatDuration,
@@ -60,6 +60,8 @@ import {
   formatMultiplier,
   formatRate,
 } from '../games/spacebar-clicker/format';
+import { IncomeMeter } from '../games/spacebar-clicker/income';
+import { modsOf } from '../games/spacebar-clicker/mods';
 import {
   defaultSave,
   parseSave,
@@ -291,7 +293,13 @@ function replay(node: Element, className: string): void {
 
 // --- Run state ------------------------------------------------------------------
 
-const combo = new ComboTracker(() => state.upgrades.stabiliser > 0);
+// The tracker reads the run's rules on every press, so a perk applies at once.
+const combo = new ComboTracker(
+  () => modsOf(state).stabiliser,
+  () => modsOf(state).combo
+);
+/** Energy per second actually being earned; perk prices are set in it. */
+const income = new IncomeMeter();
 let lastPressAt = -Infinity; // performance.now()
 let lastTierMultiplier = 1;
 let reactorIdx = reactorIndex(state.runLifetime);
@@ -310,12 +318,25 @@ const surge = {
   earned: 0,
   /** Whole seconds left on the warning the last time a tick sounded. */
   lastTick: 0,
+  /** This surge's timings, fixed as it starts so a perk bought mid-surge cannot skew its clock. */
+  warningS: 0,
+  durationS: 0,
 };
 /** Seconds of active play: page visible and a press within the last minute. */
 let activeS = 0;
 
 function scheduleSurge(): void {
-  surge.dueAt = activeS + SURGE.minGapS + Math.random() * (SURGE.maxGapS - SURGE.minGapS);
+  const { minGapS, maxGapS } = modsOf(state).surge;
+  surge.dueAt = activeS + minGapS + Math.random() * (maxGapS - minGapS);
+}
+
+/** What is happening in play right now, for the economy's formulas. */
+function playContext(now = performance.now()): PlayContext {
+  return {
+    combo: combo.combo,
+    surging: surge.phase === 'active',
+    idleS: (now - lastPressAt) / 1000,
+  };
 }
 scheduleSurge();
 
@@ -327,7 +348,6 @@ const ROLL_MS = 900;
 let energyRoll: { amount: number; start: number } | null = null;
 
 function renderReadouts(): void {
-  const mult = comboTier(combo.combo).multiplier;
   let shown = state.energy;
   if (energyRoll) {
     const p = (performance.now() - energyRoll.start) / ROLL_MS;
@@ -335,8 +355,9 @@ function renderReadouts(): void {
     else shown -= energyRoll.amount * Math.pow(1 - p, 3);
   }
   energyEl.textContent = formatEnergy(shown);
-  epsEl.textContent = formatRate(energyPerSecond(state, mult));
-  eppEl.textContent = formatEnergy(energyPerPress(state, mult, surge.phase === 'active'));
+  const play = playContext();
+  epsEl.textContent = formatRate(energyPerSecond(state, play));
+  eppEl.textContent = formatEnergy(energyPerPress(state, play));
 }
 
 function renderReactor(): void {
@@ -355,9 +376,9 @@ function renderArc(now = performance.now()): void {
   if (!arcEl) return;
   let fraction: number;
   if (surge.phase === 'warning') {
-    fraction = (surge.phaseEndsAt - now) / (SURGE.warningS * 1000);
+    fraction = (surge.phaseEndsAt - now) / (surge.warningS * 1000);
   } else if (surge.phase === 'active') {
-    fraction = (surge.phaseEndsAt - now) / (SURGE.durationS * 1000);
+    fraction = (surge.phaseEndsAt - now) / (surge.durationS * 1000);
   } else {
     fraction = now < arcHoldUntil ? 1 : reactorProgress(state.runLifetime);
   }
@@ -415,8 +436,9 @@ function celebrateStage(prevIdx: number): void {
 }
 
 function renderCombo(now: number): void {
-  const tier = comboTier(combo.combo);
-  const next = nextComboTier(combo.combo);
+  const { tiers } = modsOf(state);
+  const tier = comboTier(combo.combo, tiers);
+  const next = nextComboTier(combo.combo, tiers);
   comboEl.textContent = String(combo.combo);
   comboTierEl.textContent = tier.label || 'combo';
   comboTierEl.classList.toggle('is-tiered', tier.multiplier > 1);
@@ -476,12 +498,12 @@ function renderShopNotices(): void {
 }
 
 function renderStats(): void {
-  const mult = comboTier(combo.combo).multiplier;
+  const play = { combo: combo.combo };
   statEls.presses.textContent = state.totalPresses.toLocaleString('en-US');
   statEls.run.textContent = formatEnergy(state.runLifetime);
   statEls.lifetime.textContent = formatEnergy(state.totalLifetime);
-  statEls.eps.textContent = formatRate(energyPerSecond(state, mult));
-  statEls.epp.textContent = formatEnergy(energyPerPress(state, mult));
+  statEls.eps.textContent = formatRate(energyPerSecond(state, play));
+  statEls.epp.textContent = formatEnergy(energyPerPress(state, play));
   statEls.bestCombo.textContent = String(state.bestCombo);
   statEls.bestSurge.textContent = state.surges ? state.bestSurgeCps.toFixed(1) : '—';
   statEls.isotopes.textContent = String(state.isotopes);
@@ -754,7 +776,7 @@ function press(e?: Event): void {
   replay(keycapEl, 'is-down');
 
   const result = combo.press(now);
-  const tier = comboTier(result.combo);
+  const tier = comboTier(result.combo, modsOf(state).tiers);
   if (tier.multiplier > lastTierMultiplier) {
     SOUND.tierUp();
     replay(comboTierEl, 'is-up');
@@ -762,11 +784,12 @@ function press(e?: Event): void {
   lastTierMultiplier = tier.multiplier;
 
   const surging = surge.phase === 'active';
-  let value = energyPerPress(state, tier.multiplier, surging);
+  let value = energyPerPress(state, { combo: result.combo, surging });
   const doubled = Math.random() < doubleTapChance(state);
   if (doubled) value *= 2;
 
   earn(state, value);
+  income.add(now, value);
   state.totalPresses++;
   if (result.combo > state.bestCombo) state.bestCombo = result.combo;
   if (surging) {
@@ -792,7 +815,7 @@ function press(e?: Event): void {
 }
 
 function onComboBroke(): void {
-  lastTierMultiplier = comboTier(combo.combo).multiplier;
+  lastTierMultiplier = comboTier(combo.combo, modsOf(state).tiers).multiplier;
 }
 
 // --- Surge ---------------------------------------------------------------------------
@@ -845,17 +868,27 @@ function tally(node: HTMLElement, to: number, format: (v: number) => string, gen
 
 function surgeTick(now: number): void {
   switch (surge.phase) {
-    case 'idle':
-      if (activeS >= surge.dueAt && now - lastPressAt < SURGE.idleAfterS * 1000) {
-        setSurgePhase('warning');
-        surge.phaseEndsAt = now + SURGE.warningS * 1000;
-        surge.lastTick = SURGE.warningS;
-        surgeLabel.textContent = 'Surge incoming';
-        showCount(SURGE.warningS);
-        announce(`Surge in ${SURGE.warningS} seconds. Every press is worth ten times more.`);
-        SOUND.warningTick();
+    case 'idle': {
+      const rules = modsOf(state).surge;
+      if (activeS < surge.dueAt || now - lastPressAt >= rules.idleAfterS * 1000) break;
+      surge.warningS = rules.warningS;
+      surge.durationS = rules.durationS;
+      // A surge with no countdown strikes at once.
+      if (surge.warningS <= 0) {
+        startOverdrive(now);
+        break;
       }
+      setSurgePhase('warning');
+      surge.phaseEndsAt = now + surge.warningS * 1000;
+      surge.lastTick = surge.warningS;
+      surgeLabel.textContent = 'Surge incoming';
+      showCount(surge.warningS);
+      announce(
+        `Surge in ${surge.warningS} seconds. Every press is worth ${rules.multiplier} times more.`
+      );
+      SOUND.warningTick();
       break;
+    }
     case 'warning': {
       const left = Math.ceil((surge.phaseEndsAt - now) / 1000);
       if (left < surge.lastTick && left >= 1) {
@@ -863,22 +896,11 @@ function surgeTick(now: number): void {
         showCount(left);
         SOUND.warningTick();
       }
-      if (now >= surge.phaseEndsAt) {
-        setSurgePhase('active');
-        surge.phaseEndsAt = now + SURGE.durationS * 1000;
-        surge.presses = 0;
-        surge.earned = 0;
-        surgeLabel.textContent = `Surge x${SURGE.multiplier}`;
-        coreNum.textContent = '0.0';
-        coreUnit.textContent = 'per second';
-        replay(coreNum, 'is-tick');
-        announce('Surge. Press as fast as you can for five seconds.');
-        SOUND.surgeStart();
-      }
+      if (now >= surge.phaseEndsAt) startOverdrive(now);
       break;
     }
     case 'active': {
-      const elapsed = (SURGE.durationS * 1000 - (surge.phaseEndsAt - now)) / 1000;
+      const elapsed = (surge.durationS * 1000 - (surge.phaseEndsAt - now)) / 1000;
       coreNum.textContent = (surge.presses / Math.max(elapsed, 0.3)).toFixed(1);
       if (now >= surge.phaseEndsAt) endSurge(now);
       break;
@@ -892,8 +914,21 @@ function surgeTick(now: number): void {
   }
 }
 
+function startOverdrive(now: number): void {
+  setSurgePhase('active');
+  surge.phaseEndsAt = now + surge.durationS * 1000;
+  surge.presses = 0;
+  surge.earned = 0;
+  surgeLabel.textContent = `Surge x${modsOf(state).surge.multiplier}`;
+  coreNum.textContent = '0.0';
+  coreUnit.textContent = 'per second';
+  replay(coreNum, 'is-tick');
+  announce(`Surge. Press as fast as you can for ${surge.durationS} seconds.`);
+  SOUND.surgeStart();
+}
+
 function endSurge(now: number): void {
-  const cps = Math.round((surge.presses / SURGE.durationS) * 10) / 10;
+  const cps = Math.round((surge.presses / surge.durationS) * 10) / 10;
   const isBest = cps > state.bestSurgeCps;
   state.surges++;
   if (isBest) state.bestSurgeCps = cps;
@@ -937,14 +972,15 @@ function frame(now: number): void {
 
   if (!document.hidden) {
     state.playedS += dt;
-    if (now - lastPressAt < SURGE.idleAfterS * 1000) activeS += dt;
+    if (now - lastPressAt < modsOf(state).surge.idleAfterS * 1000) activeS += dt;
   }
 
   if (combo.tick(now)) onComboBroke();
 
-  const eps = energyPerSecond(state, comboTier(combo.combo).multiplier);
+  const eps = energyPerSecond(state, playContext(now));
   if (eps > 0) {
     earn(state, eps * dt);
+    income.add(now, eps * dt);
     afterEarn();
     dirty = true;
 
@@ -1077,6 +1113,7 @@ function restartRun(): void {
   energyRoll = null;
   idleAccum = 0;
   idleTimer = 0;
+  income.reset();
   scheduleSurge();
 }
 

@@ -8,10 +8,12 @@
  * The first five presses after a break always count, so a combo can start.
  *
  * Timestamps come from the caller (performance.now() in the browser, plain
- * numbers in tests), so the tracker has no clock of its own.
+ * numbers in tests), so the tracker has no clock of its own. So do the rules:
+ * a run's perks can bend them (mods.ts), and the tracker reads them on every
+ * press, so a perk bought mid-combo applies from the next press.
  */
 
-import { COMBO } from './config';
+import { COMBO, type ComboRules } from './config';
 
 export interface PressResult {
   combo: number;
@@ -29,12 +31,16 @@ export class ComboTracker {
   /** Presses since the last break, for the free starts. */
   private sinceBreak = 0;
 
-  constructor(private readonly stabiliser: () => boolean = () => false) {}
+  constructor(
+    private readonly stabiliser: () => boolean = () => false,
+    private readonly rules: () => Readonly<ComboRules> = () => COMBO
+  ) {}
 
   press(now: number): PressResult {
+    const rules = this.rules();
     let broke = false;
 
-    if (this.lastPressAt !== null && now - this.lastPressAt > COMBO.graceMs) {
+    if (this.lastPressAt !== null && now - this.lastPressAt > rules.graceMs) {
       // tick() normally catches this first; a press after a long pause may
       // arrive before the next frame does.
       this.break();
@@ -45,16 +51,16 @@ export class ComboTracker {
     this.lastPressAt = now;
 
     let kept: boolean;
-    if (interval === null || this.sinceBreak < COMBO.freeStarts) {
+    if (interval === null || this.sinceBreak < rules.freeStarts) {
       kept = true;
     } else {
       const mean = this.intervals.reduce((a, b) => a + b, 0) / this.intervals.length;
-      kept = interval < COMBO.maxIntervalMs && Math.abs(interval - mean) <= COMBO.tolerance * mean;
+      kept = interval < rules.maxIntervalMs && Math.abs(interval - mean) <= rules.tolerance * mean;
     }
 
     if (interval !== null) {
       this.intervals.push(interval);
-      if (this.intervals.length > COMBO.window) this.intervals.shift();
+      if (this.intervals.length > rules.window) this.intervals.shift();
     }
     this.sinceBreak++;
 
@@ -63,7 +69,7 @@ export class ComboTracker {
       this.misses = 0;
     } else {
       this.misses++;
-      if (this.misses >= COMBO.missesToBreak) {
+      if (this.misses >= rules.missesToBreak) {
         this.break();
         broke = true;
       }
@@ -75,7 +81,7 @@ export class ComboTracker {
   /** Call every frame. Returns true on the frame the grace window expires. */
   tick(now: number): boolean {
     if (this.lastPressAt === null) return false;
-    if (now - this.lastPressAt <= COMBO.graceMs) return false;
+    if (now - this.lastPressAt <= this.rules().graceMs) return false;
     const had = this.combo > 0;
     this.break();
     this.lastPressAt = null;
@@ -85,12 +91,13 @@ export class ComboTracker {
   /** 1 right after a press, falling to 0 as the grace window runs out. */
   graceRemaining(now: number): number {
     if (this.lastPressAt === null) return 0;
-    return Math.max(0, 1 - (now - this.lastPressAt) / COMBO.graceMs);
+    return Math.max(0, 1 - (now - this.lastPressAt) / this.rules().graceMs);
   }
 
   /** Spec §4 + §6a: reset to zero, or drop by ten with the Stabiliser. */
   private break(): void {
-    this.combo = this.stabiliser() ? Math.max(0, this.combo - COMBO.stabiliserDrop) : 0;
+    const drop = this.rules().stabiliserDrop;
+    this.combo = this.stabiliser() ? Math.max(0, this.combo - drop) : 0;
     this.intervals = [];
     this.misses = 0;
     this.sinceBreak = 0;

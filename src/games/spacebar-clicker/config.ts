@@ -77,6 +77,43 @@ export interface ReactorStateDef {
   threshold: number;
 }
 
+/** The rhythm rules a run plays by (spec §4). Perks may bend a run's copy. */
+export interface ComboRules {
+  /** Fraction of the rolling mean interval a press may miss by. */
+  tolerance: number;
+  /** Intervals in the rolling mean. */
+  window: number;
+  /** An interval at or above this is never rhythmic. */
+  maxIntervalMs: number;
+  /** A pause longer than this breaks the combo. */
+  graceMs: number;
+  /** Presses after a break that count regardless, so a combo can start. */
+  freeStarts: number;
+  /** Consecutive off-rhythm presses that break the combo. */
+  missesToBreak: number;
+  /** Combo lost on a break with the Stabiliser owned. */
+  stabiliserDrop: number;
+}
+
+/** Surge timing and strength (spec §5). Perks may bend a run's copy. */
+export interface SurgeRules {
+  minGapS: number;
+  maxGapS: number;
+  /** Countdown before the surge. Zero means it strikes without warning. */
+  warningS: number;
+  durationS: number;
+  multiplier: number;
+  /** Seconds since the last press before play counts as idle. */
+  idleAfterS: number;
+}
+
+/** Away progress (spec §7). Perks may bend a run's copy. */
+export interface OfflineRules {
+  capS: number;
+  rate: number;
+  minAwayS: number;
+}
+
 export interface AchievementDef {
   id: AchievementId;
   name: string;
@@ -186,33 +223,25 @@ export const COMBO_TIERS: readonly ComboTierDef[] = [
  * (sloppy) breaks about three times a minute, and a 20% tolerance would have
  * punished ordinary players. Pauses, not jitter, are what end most combos.
  */
-export const COMBO = {
-  /** Fraction of the rolling mean interval a press may miss by. */
+export const COMBO: Readonly<ComboRules> = {
   tolerance: 0.25,
-  /** Intervals in the rolling mean. */
   window: 5,
-  /** An interval at or above this is never rhythmic. */
   maxIntervalMs: 600,
-  /** A pause longer than this breaks the combo. */
   graceMs: 800,
-  /** Presses after a break that count regardless, so a combo can start. */
   freeStarts: 5,
-  /** Consecutive off-rhythm presses that break the combo. */
   missesToBreak: 3,
-  /** Combo lost on a break with the Stabiliser owned. */
   stabiliserDrop: 10,
-} as const;
+};
 
 /** Spec §5. */
-export const SURGE = {
+export const SURGE: Readonly<SurgeRules> = {
   minGapS: 90,
   maxGapS: 180,
   warningS: 3,
   durationS: 5,
   multiplier: 10,
-  /** Seconds since the last press before play counts as idle. */
   idleAfterS: 60,
-} as const;
+};
 
 /** Spec §8. Each state past Dormant adds MILESTONE_BONUS to every gain. */
 export const REACTOR_STATES: readonly ReactorStateDef[] = [
@@ -226,16 +255,19 @@ export const REACTOR_STATES: readonly ReactorStateDef[] = [
 ];
 export const MILESTONE_BONUS = 0.05;
 
+/** Spec §6a: Synchronisation gives auto-tappers this share of the combo bonus. */
+export const SYNC_SHARE = 0.5;
+
 /** Spec §9. */
 export const PRESTIGE_UNLOCK = 1_000_000;
 export const ISOTOPE_BONUS = 0.1;
 
 /** Spec §7. */
-export const OFFLINE = {
+export const OFFLINE: Readonly<OfflineRules> = {
   capS: 4 * 3600,
   rate: 0.5,
   minAwayS: 60,
-} as const;
+};
 
 /** Spec §2. Presses closer together than this are discarded. */
 export const PRESS_CAP_PER_S = 30;
