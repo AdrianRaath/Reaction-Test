@@ -18,6 +18,8 @@ import {
   COMBO_TIERS,
   ISOTOPE_BONUS,
   MILESTONE_BONUS,
+  PERK_EFFECT,
+  PERKS,
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
   REACTOR_STATES,
@@ -25,6 +27,8 @@ import {
   type AutoTapperDef,
   type AutoTapperId,
   type ComboTierDef,
+  type PerkDef,
+  type PerkId,
   type PressUpgradeDef,
   type PressUpgradeId,
   type ReactorStateDef,
@@ -32,7 +36,7 @@ import {
   type ShopTab,
 } from './config';
 import { modsOf } from './mods';
-import type { SaveState } from './save';
+import type { PerkOffer, SaveState } from './save';
 
 /** What is happening in play at the moment a gain is worked out. */
 export interface PlayContext {
@@ -48,6 +52,7 @@ export interface PlayContext {
 
 const upgradeById = new Map(PRESS_UPGRADES.map((u) => [u.id, u]));
 const tapperById = new Map(AUTO_TAPPERS.map((t) => [t.id, t]));
+const perkById = new Map(PERKS.map((p) => [p.id, p]));
 
 export function pressUpgrade(id: PressUpgradeId): PressUpgradeDef {
   return upgradeById.get(id)!;
@@ -55,6 +60,10 @@ export function pressUpgrade(id: PressUpgradeId): PressUpgradeDef {
 
 export function autoTapper(id: AutoTapperId): AutoTapperDef {
   return tapperById.get(id)!;
+}
+
+export function perk(id: PerkId): PerkDef {
+  return perkById.get(id)!;
 }
 
 /** Spec §6: base × scaling ^ owned, rounded to a whole number. */
@@ -126,20 +135,25 @@ export function isotopeBonus(isotopes: number): number {
   return 1 + ISOTOPE_BONUS * isotopes;
 }
 
+/** The combo the formulas see: none at all when a perk switches it off. */
+function comboOf(ctx: PlayContext, mods: ReturnType<typeof modsOf>): number {
+  return mods.comboOff ? 0 : (ctx.combo ?? 0);
+}
+
 /** Energy one press is worth before the Double Tap roll. */
 export function energyPerPress(
   state: SaveState,
   ctx: PlayContext = {},
   mods = modsOf(state)
 ): number {
-  const combo = ctx.combo ?? 0;
+  const combo = comboOf(ctx, mods);
   const base = 1 + state.upgrades.finger * mods.fingerPerLevel;
   const spring = Math.pow(mods.springPerLevel, state.upgrades.spring);
   const tier = comboTier(combo, mods.tiers).multiplier;
   const momentum = 1 + mods.pressPerCombo * combo;
   const surge = ctx.surging ? mods.surge.multiplier : 1;
   const afterglow = ctx.afterglow ? mods.afterglowMult : 1;
-  return (
+  const press =
     base *
     spring *
     tier *
@@ -148,13 +162,35 @@ export function energyPerPress(
     surge *
     afterglow *
     milestoneBonus(state.runLifetime) *
-    isotopeBonus(state.isotopes)
-  );
+    isotopeBonus(state.isotopes);
+  // Feedback Loop: each press also pays a share of a second's income.
+  const feedback =
+    mods.pressPaysEps > 0 ? mods.pressPaysEps * energyPerSecond(state, ctx, mods) : 0;
+  return press + feedback;
 }
 
 /** Probability a press counts twice: 5% per Double Tap level, capped at 50%. */
 export function doubleTapChance(state: SaveState, mods = modsOf(state)): number {
   return Math.min(mods.doubleTapCap, 0.05 * state.upgrades.double + mods.doubleTapBonus);
+}
+
+/**
+ * A press's luck, rolled once per press: x1, or x2 on a Double Tap. With
+ * Chain Reaction a Double Tap rolls again at a share of the chance, doubling
+ * each time, up to x8. The cap keeps the expected value finite: at a 75%
+ * chance an uncapped chain would pay out without limit.
+ */
+export function luckyMultiplier(
+  state: SaveState,
+  random: () => number = Math.random,
+  mods = modsOf(state)
+): number {
+  const chance = doubleTapChance(state, mods);
+  if (random() >= chance) return 1;
+  const again = chance * mods.chainShare;
+  let mult = 2;
+  while (mult < PERK_EFFECT.chainMax && random() < again) mult *= 2;
+  return mult;
 }
 
 /**
@@ -172,7 +208,7 @@ export function energyPerSecond(
     owned += state.tappers[t.id];
     raw += t.eps * state.tappers[t.id] * mods.tapperMultById[t.id];
   }
-  const comboBonus = comboTier(ctx.combo ?? 0, mods.tiers).multiplier - 1;
+  const comboBonus = comboTier(comboOf(ctx, mods), mods.tiers).multiplier - 1;
   const idle = (ctx.idleS ?? 0) >= mods.idleBoostAfterS ? mods.idleBoostMult : 1;
   const surge = ctx.surging && mods.surgeHitsTappers ? mods.surge.multiplier : 1;
   return (
@@ -252,6 +288,20 @@ export function buyTapper(state: SaveState, id: AutoTapperId): boolean {
   return true;
 }
 
+/** The revealed auto-tapper with the lowest price right now (Self-Replicator). */
+export function cheapestTapper(state: SaveState, mods = modsOf(state)): AutoTapperId | null {
+  let best: AutoTapperId | null = null;
+  let bestCost = Infinity;
+  for (const id of state.revealed) {
+    const cost = tapperCost(state, id, mods);
+    if (cost < bestCost) {
+      best = id;
+      bestCost = cost;
+    }
+  }
+  return best;
+}
+
 /**
  * Shop-tab notices (DESIGN.md, the Shop-Signal Exception). A tab has news
  * when it holds something the player has not looked at: an auto-tapper newly
@@ -259,6 +309,9 @@ export function buyTapper(state: SaveState, id: AutoTapperId): boolean {
  * affordable at. The open tab is always "looked at". Remembering the level,
  * not a yes/no, means spending energy elsewhere and earning it back never
  * re-announces the same item at the same price.
+ *
+ * A perk offer is news when it drops, and again the first time it is
+ * affordable, until its tab is looked at.
  */
 interface ShopRow {
   id: ShopItemId;
@@ -285,8 +338,19 @@ function isNews(state: SaveState, row: ShopRow): boolean {
   return row.affordable && state.announced[row.id] !== row.level;
 }
 
+/** The perk on offer in a tab, if any. */
+export function offerOn(state: SaveState, tab: ShopTab): PerkOffer | undefined {
+  return state.perks.offers.find((o) => perk(o.id).tab === tab);
+}
+
+function offerIsNews(state: SaveState, offer: PerkOffer | undefined): boolean {
+  if (!offer) return false;
+  return !offer.seen || (state.energy >= offer.price && !offer.seenAffordable);
+}
+
 export function shopTabHasNews(state: SaveState, tab: ShopTab): boolean {
   if (tab === 'auto' && state.revealed.some((id) => !state.seen.includes(id))) return true;
+  if (offerIsNews(state, offerOn(state, tab))) return true;
   return shopRows(state, tab).some((row) => isNews(state, row));
 }
 
@@ -306,6 +370,12 @@ export function markShopTabSeen(state: SaveState, tab: ShopTab): boolean {
       state.announced[row.id] = row.level;
       changed = true;
     }
+  }
+  const offer = offerOn(state, tab);
+  if (offer && offerIsNews(state, offer)) {
+    offer.seen = true;
+    if (state.energy >= offer.price) offer.seenAffordable = true;
+    changed = true;
   }
   return changed;
 }

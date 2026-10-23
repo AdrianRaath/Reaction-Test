@@ -51,14 +51,20 @@ export class ComboTracker {
     this.lastPressAt = now;
 
     let kept: boolean;
+    // A rest (a perk allows them) neither keeps nor misses, and stays out of
+    // the mean, so the beat picks up where it left off.
+    let rest = false;
     if (interval === null || this.sinceBreak < rules.freeStarts) {
       kept = true;
+    } else if (interval > rules.restMs) {
+      kept = false;
+      rest = true;
     } else {
       const mean = this.intervals.reduce((a, b) => a + b, 0) / this.intervals.length;
       kept = interval < rules.maxIntervalMs && Math.abs(interval - mean) <= rules.tolerance * mean;
     }
 
-    if (interval !== null) {
+    if (interval !== null && !rest) {
       this.intervals.push(interval);
       if (this.intervals.length > rules.window) this.intervals.shift();
     }
@@ -67,7 +73,7 @@ export class ComboTracker {
     if (kept) {
       this.combo++;
       this.misses = 0;
-    } else {
+    } else if (!rest) {
       this.misses++;
       if (this.misses >= rules.missesToBreak) {
         this.break();

@@ -10,7 +10,7 @@
  * The two one-off upgrades that change rules, the Stabiliser and
  * Synchronisation, are folded in here too, so a perk that overrides them
  * (Glass Rhythm, Full Sync) has one field to change rather than a special case
- * in the economy.
+ * in the economy. Then each owned perk applies its effect at its level.
  *
  * Economy functions take `mods = modsOf(state)` as an optional last argument:
  * the game never passes it, tests pass it to exercise one field directly.
@@ -21,12 +21,15 @@ import {
   COMBO,
   COMBO_TIERS,
   OFFLINE,
+  PERK_EFFECT,
+  PERKS,
   SURGE,
   SYNC_SHARE,
   type AutoTapperId,
   type ComboRules,
   type ComboTierDef,
   type OfflineRules,
+  type PerkId,
   type SurgeRules,
 } from './config';
 import type { SaveState } from './save';
@@ -45,9 +48,13 @@ export interface Mods {
   doubleTapBonus: number;
   /** Highest the Double Tap chance can go. */
   doubleTapCap: number;
+  /** Share of the Double Tap chance a lucky press rolls again at; 0 never. */
+  chainShare: number;
   /** Seconds after a surge that presses keep `afterglowMult`. */
   afterglowS: number;
   afterglowMult: number;
+  /** Share of per-second income each press also pays. */
+  pressPaysEps: number;
 
   // --- Combo -------------------------------------------------------------
   combo: Readonly<ComboRules>;
@@ -55,6 +62,8 @@ export interface Mods {
   tiers: readonly ComboTierDef[];
   /** A break drops the combo by `combo.stabiliserDrop` instead of to zero. */
   stabiliser: boolean;
+  /** The combo counts for nothing: every formula sees a combo of zero. */
+  comboOff: boolean;
 
   // --- Surges ------------------------------------------------------------
   surge: Readonly<SurgeRules>;
@@ -79,6 +88,8 @@ export interface Mods {
   idleBoostAfterS: number;
   /** Multiplier on auto-tapper prices. */
   tapperCostMult: number;
+  /** Seconds between free copies of the cheapest auto-tapper; 0 never. */
+  replicateEveryS: number;
 
   // --- Away --------------------------------------------------------------
   offline: Readonly<OfflineRules>;
@@ -94,11 +105,14 @@ export const BASE_MODS: Readonly<Mods> = Object.freeze({
   pressPerCombo: 0,
   doubleTapBonus: 0,
   doubleTapCap: 0.5,
+  chainShare: 0,
   afterglowS: 0,
   afterglowMult: 1,
+  pressPaysEps: 0,
   combo: COMBO,
   tiers: COMBO_TIERS,
   stabiliser: false,
+  comboOff: false,
   surge: SURGE,
   surgeHitsTappers: false,
   tapperMult: 1,
@@ -110,8 +124,128 @@ export const BASE_MODS: Readonly<Mods> = Object.freeze({
   idleBoostMult: 1,
   idleBoostAfterS: 10,
   tapperCostMult: 1,
+  replicateEveryS: 0,
   offline: OFFLINE,
 });
+
+/** Mods while perks are applied: the nested rule sets are this run's own copies. */
+type Draft = Omit<Mods, 'combo' | 'surge' | 'offline' | 'tapperMultById'> & {
+  combo: ComboRules;
+  surge: SurgeRules;
+  offline: OfflineRules;
+  tapperMultById: Record<AutoTapperId, number>;
+};
+
+/**
+ * What each perk does at its level's value (config.ts, PERKS). Applied in
+ * PERKS order, so Overtone adds its tier before Glass Rhythm scales them all.
+ */
+const EFFECTS: Record<PerkId, (m: Draft, v: number) => void> = {
+  metronome: (m, v) => {
+    m.combo.tolerance = v;
+  },
+  'held-breath': (m, v) => {
+    m.combo.graceMs = v * 1000;
+    m.combo.restMs = m.combo.maxIntervalMs;
+  },
+  overtone: (m, v) => {
+    m.tiers = [{ min: PERK_EFFECT.overtoneMin, multiplier: v, label: 'Overtone' }, ...m.tiers];
+  },
+  momentum: (m, v) => {
+    m.pressPerCombo = v;
+  },
+  'glass-rhythm': (m, v) => {
+    m.tiers = m.tiers.map((t) => (t.min > 0 ? { ...t, multiplier: t.multiplier * v } : t));
+    m.combo.missesToBreak = 1;
+    m.stabiliser = false;
+  },
+  'finger-memory': (m, v) => {
+    m.fingerPerLevel = v;
+  },
+  'coiled-spring': (m, v) => {
+    m.springPerLevel = v;
+  },
+  'brute-force': (m, v) => {
+    m.comboOff = true;
+    m.pressMult *= v;
+  },
+  'loaded-dice': (m, v) => {
+    m.doubleTapBonus = v;
+    m.doubleTapCap = PERK_EFFECT.loadedDiceCap;
+  },
+  'chain-reaction': (m, v) => {
+    m.chainShare = v;
+  },
+  'lightning-rod': (m, v) => {
+    m.surge.minGapS /= v;
+    m.surge.maxGapS /= v;
+  },
+  afterglow: (m, v) => {
+    m.afterglowS = v;
+    m.afterglowMult = PERK_EFFECT.afterglowMult;
+  },
+  'storm-front': (m, v) => {
+    m.surge.multiplier = v;
+    m.surge.warningS = 0;
+  },
+  overtime: (m, v) => {
+    m.tapperMultById.assistant = v;
+  },
+  'assembly-line': (m, v) => {
+    m.tapperPerOwned = v;
+  },
+  'bulk-order': (m, v) => {
+    m.tapperCostMult = 1 - v;
+  },
+  'critical-load': (m, v) => {
+    m.tapperPerState = v;
+  },
+  'ghost-presses': (m, v) => {
+    m.tapperDoubleTapShare = v;
+  },
+  'full-sync': (m, v) => {
+    m.syncShare = Math.max(m.syncShare, v);
+  },
+  'surge-lines': (m, v) => {
+    m.surgeHitsTappers = true;
+    m.surge.durationS = v;
+  },
+  'idle-hands': (m, v) => {
+    m.idleBoostMult = v;
+    m.idleBoostAfterS = PERK_EFFECT.idleAfterS;
+  },
+  'night-shift': (m, v) => {
+    m.offline.rate = PERK_EFFECT.nightShiftRate;
+    m.offline.capS = v * 3600;
+  },
+  'feedback-loop': (m, v) => {
+    m.pressPaysEps = v;
+  },
+  'self-replicator': (m, v) => {
+    m.replicateEveryS = v;
+  },
+  autopilot: (m, v) => {
+    m.pressMult *= 0.5;
+    m.tapperMult *= v;
+  },
+};
+
+function build(state: SaveState): Readonly<Mods> {
+  const m: Draft = {
+    ...BASE_MODS,
+    combo: { ...BASE_MODS.combo },
+    surge: { ...BASE_MODS.surge },
+    offline: { ...BASE_MODS.offline },
+    tapperMultById: { ...BASE_MODS.tapperMultById },
+    stabiliser: state.upgrades.stabiliser > 0,
+    syncShare: state.upgrades.sync > 0 ? SYNC_SHARE : 0,
+  };
+  for (const def of PERKS) {
+    const level = state.perks.owned.find((o) => o.id === def.id)?.level ?? 0;
+    if (level > 0) EFFECTS[def.id](m, def.values[level - 1]!);
+  }
+  return Object.freeze(m);
+}
 
 const cache = new Map<string, Readonly<Mods>>();
 
@@ -120,12 +254,11 @@ const cache = new Map<string, Readonly<Mods>>();
  * each distinct set is built once and reused.
  */
 export function modsOf(state: SaveState): Readonly<Mods> {
-  const stabiliser = state.upgrades.stabiliser > 0;
-  const sync = state.upgrades.sync > 0;
-  const key = `${+stabiliser}${+sync}`;
+  const perks = state.perks.owned.map((o) => `${o.id}:${o.level}`).join(',');
+  const key = `${state.upgrades.stabiliser > 0 ? 1 : 0}${state.upgrades.sync > 0 ? 1 : 0}|${perks}`;
   let mods = cache.get(key);
   if (!mods) {
-    mods = Object.freeze({ ...BASE_MODS, stabiliser, syncShare: sync ? SYNC_SHARE : 0 });
+    mods = build(state);
     cache.set(key, mods);
   }
   return mods;

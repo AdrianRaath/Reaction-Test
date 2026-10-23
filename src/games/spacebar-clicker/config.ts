@@ -24,6 +24,37 @@ export type AutoTapperId = 'assistant' | 'pneumatic' | 'arm' | 'quantum' | 'coll
 export type ShopItemId = PressUpgradeId | AutoTapperId;
 /** The shop's two tabs. */
 export type ShopTab = 'press' | 'auto';
+export type PerkId =
+  | 'metronome'
+  | 'held-breath'
+  | 'overtone'
+  | 'momentum'
+  | 'glass-rhythm'
+  | 'finger-memory'
+  | 'coiled-spring'
+  | 'brute-force'
+  | 'loaded-dice'
+  | 'chain-reaction'
+  | 'lightning-rod'
+  | 'afterglow'
+  | 'storm-front'
+  | 'overtime'
+  | 'assembly-line'
+  | 'bulk-order'
+  | 'critical-load'
+  | 'ghost-presses'
+  | 'full-sync'
+  | 'surge-lines'
+  | 'idle-hands'
+  | 'night-shift'
+  | 'feedback-loop'
+  | 'self-replicator'
+  | 'autopilot';
+/** A perk's family sets its color (SPACEBAR-CLICKER.md §8.1). */
+export type PerkFamily = 'rhythm' | 'press' | 'luck' | 'surge' | 'machines';
+export type PerkRarity = 'common' | 'rare' | 'keystone';
+/** How a perk's value reads: 0.4 as "40%", 2 as "x2", 10 as "10 s"... */
+export type PerkUnit = 'percent' | 'times' | 'seconds' | 'hours' | 'plain';
 export type ReactorStateId =
   'dormant' | 'warming' | 'stable' | 'charged' | 'unstable' | 'critical' | 'supercritical';
 export type AchievementId =
@@ -93,6 +124,12 @@ export interface ComboRules {
   missesToBreak: number;
   /** Combo lost on a break with the Stabiliser owned. */
   stabiliserDrop: number;
+  /**
+   * A gap longer than this, but inside the grace, is a rest: it neither keeps
+   * nor misses, and stays out of the rolling mean, so the beat picks up where
+   * it left off. Infinity (no rests) unless a perk allows them.
+   */
+  restMs: number;
 }
 
 /** Surge timing and strength (spec §5). Perks may bend a run's copy. */
@@ -112,6 +149,20 @@ export interface OfflineRules {
   capS: number;
   rate: number;
   minAwayS: number;
+}
+
+export interface PerkDef {
+  id: PerkId;
+  name: string;
+  /** The shop tab it drops into. */
+  tab: ShopTab;
+  family: PerkFamily;
+  rarity: PerkRarity;
+  /** The perk's number at levels I, II and III. */
+  values: readonly [number, number, number];
+  /** What it does, with {v} standing for the level's value. */
+  detail: string;
+  unit: PerkUnit;
 }
 
 export interface AchievementDef {
@@ -231,6 +282,7 @@ export const COMBO: Readonly<ComboRules> = {
   freeStarts: 5,
   missesToBreak: 3,
   stabiliserDrop: 10,
+  restMs: Infinity,
 };
 
 /** Spec §5. */
@@ -279,6 +331,309 @@ export const REVEAL_FRACTION = 0.5;
 /** Spec §13. */
 export const SAVE_INTERVAL_MS = 5000;
 export const SAVE_VERSION = 1;
+
+/**
+ * Perks (SPACEBAR-CLICKER.md §8.1), phase 1. Random drops into the shop that
+ * last the run. Values are starting points; the pacing simulation tunes them.
+ * The effects are applied in mods.ts, the drops and buying live in perks.ts.
+ */
+export const PERKS: readonly PerkDef[] = [
+  // --- Upgrades tab --------------------------------------------------------
+  {
+    id: 'metronome',
+    name: 'Metronome',
+    tab: 'press',
+    family: 'rhythm',
+    rarity: 'rare',
+    values: [0.4, 0.5, 0.6],
+    detail: 'Rhythm tolerance widens from 25% to {v}',
+    unit: 'percent',
+  },
+  {
+    id: 'held-breath',
+    name: 'Held Breath',
+    tab: 'press',
+    family: 'rhythm',
+    rarity: 'common',
+    values: [2, 3, 5],
+    detail: 'A pause of up to {v} keeps the combo, up from 0.8 s',
+    unit: 'seconds',
+  },
+  {
+    id: 'overtone',
+    name: 'Overtone',
+    tab: 'press',
+    family: 'rhythm',
+    rarity: 'rare',
+    values: [4, 4.5, 5],
+    detail: 'A new tier above Harmonic: 200 combo for {v}',
+    unit: 'times',
+  },
+  {
+    id: 'momentum',
+    name: 'Momentum',
+    tab: 'press',
+    family: 'rhythm',
+    rarity: 'rare',
+    values: [0.005, 0.0075, 0.01],
+    detail: '+{v} press value per point of combo, no ceiling',
+    unit: 'percent',
+  },
+  {
+    id: 'glass-rhythm',
+    name: 'Glass Rhythm',
+    tab: 'press',
+    family: 'rhythm',
+    rarity: 'keystone',
+    values: [2, 2.5, 3],
+    detail:
+      'Combo multipliers {v}, but one off-beat press breaks the combo and the Stabiliser stops working',
+    unit: 'times',
+  },
+  {
+    id: 'finger-memory',
+    name: 'Finger Memory',
+    tab: 'press',
+    family: 'press',
+    rarity: 'common',
+    values: [2, 3, 4],
+    detail: 'Each Finger Strength level adds {v} energy a press instead of 1',
+    unit: 'plain',
+  },
+  {
+    id: 'coiled-spring',
+    name: 'Coiled Spring',
+    tab: 'press',
+    family: 'press',
+    rarity: 'rare',
+    values: [2, 2.25, 2.5],
+    detail: 'Spring Keys give {v} a level instead of x1.5',
+    unit: 'times',
+  },
+  {
+    id: 'brute-force',
+    name: 'Brute Force',
+    tab: 'press',
+    family: 'press',
+    rarity: 'keystone',
+    values: [3, 4, 5],
+    detail: 'No combo at all, but press value {v}',
+    unit: 'times',
+  },
+  {
+    id: 'loaded-dice',
+    name: 'Loaded Dice',
+    tab: 'press',
+    family: 'luck',
+    rarity: 'common',
+    values: [0.15, 0.25, 0.35],
+    detail: 'Double Tap +{v}, and its cap rises from 50% to 75%',
+    unit: 'percent',
+  },
+  {
+    id: 'chain-reaction',
+    name: 'Chain Reaction',
+    tab: 'press',
+    family: 'luck',
+    rarity: 'rare',
+    values: [0.5, 0.75, 1],
+    detail: 'A Double Tap rolls again at {v} of your Double Tap chance, up to x8',
+    unit: 'percent',
+  },
+  {
+    id: 'lightning-rod',
+    name: 'Lightning Rod',
+    tab: 'press',
+    family: 'surge',
+    rarity: 'rare',
+    values: [2, 2.5, 3],
+    detail: 'Surges come {v} times as often',
+    unit: 'plain',
+  },
+  {
+    id: 'afterglow',
+    name: 'Afterglow',
+    tab: 'press',
+    family: 'surge',
+    rarity: 'common',
+    values: [10, 15, 20],
+    detail: 'Presses keep x3 for {v} after a surge',
+    unit: 'seconds',
+  },
+  {
+    id: 'storm-front',
+    name: 'Storm Front',
+    tab: 'press',
+    family: 'surge',
+    rarity: 'keystone',
+    values: [25, 35, 50],
+    detail: 'Surges hit {v} but strike with no warning',
+    unit: 'times',
+  },
+
+  // --- Auto-tappers tab -----------------------------------------------------
+  {
+    id: 'overtime',
+    name: 'Overtime',
+    tab: 'auto',
+    family: 'machines',
+    rarity: 'common',
+    values: [4, 7, 10],
+    detail: 'Lab Assistants produce {v}',
+    unit: 'times',
+  },
+  {
+    id: 'assembly-line',
+    name: 'Assembly Line',
+    tab: 'auto',
+    family: 'machines',
+    rarity: 'common',
+    values: [0.01, 0.015, 0.02],
+    detail: '+{v} auto-tapper output per auto-tapper owned',
+    unit: 'percent',
+  },
+  {
+    id: 'bulk-order',
+    name: 'Bulk Order',
+    tab: 'auto',
+    family: 'machines',
+    rarity: 'common',
+    values: [0.2, 0.3, 0.4],
+    detail: 'Auto-tappers cost {v} less',
+    unit: 'percent',
+  },
+  {
+    id: 'critical-load',
+    name: 'Critical Load',
+    tab: 'auto',
+    family: 'machines',
+    rarity: 'common',
+    values: [0.1, 0.15, 0.2],
+    detail: '+{v} auto-tapper output per reactor state reached',
+    unit: 'percent',
+  },
+  {
+    id: 'ghost-presses',
+    name: 'Ghost Presses',
+    tab: 'auto',
+    family: 'luck',
+    rarity: 'common',
+    values: [1, 1.5, 2],
+    detail: 'Auto-tappers add {v} of your Double Tap chance to their output',
+    unit: 'percent',
+  },
+  {
+    id: 'full-sync',
+    name: 'Full Sync',
+    tab: 'auto',
+    family: 'rhythm',
+    rarity: 'rare',
+    values: [1, 1.25, 1.5],
+    detail: 'Auto-tappers get {v} of your combo bonus, no Synchronisation needed',
+    unit: 'percent',
+  },
+  {
+    id: 'surge-lines',
+    name: 'Surge Lines',
+    tab: 'auto',
+    family: 'surge',
+    rarity: 'rare',
+    values: [5, 7, 9],
+    detail: 'Surges multiply auto-tappers too, and last {v}',
+    unit: 'seconds',
+  },
+  {
+    id: 'idle-hands',
+    name: 'Idle Hands',
+    tab: 'auto',
+    family: 'machines',
+    rarity: 'rare',
+    values: [2.5, 3.5, 5],
+    detail: 'Auto-tappers {v} after 10 s without a press',
+    unit: 'times',
+  },
+  {
+    id: 'night-shift',
+    name: 'Night Shift',
+    tab: 'auto',
+    family: 'machines',
+    rarity: 'rare',
+    values: [8, 12, 24],
+    detail: 'Away progress pays 100% instead of 50%, capped at {v} instead of 4 h',
+    unit: 'hours',
+  },
+  {
+    id: 'feedback-loop',
+    name: 'Feedback Loop',
+    tab: 'auto',
+    family: 'machines',
+    rarity: 'rare',
+    values: [0.05, 0.08, 0.12],
+    detail: 'Each press also pays {v} of your per-second income',
+    unit: 'percent',
+  },
+  {
+    id: 'self-replicator',
+    name: 'Self-Replicator',
+    tab: 'auto',
+    family: 'machines',
+    rarity: 'rare',
+    values: [60, 45, 30],
+    detail: 'A free copy of your cheapest auto-tapper every {v}',
+    unit: 'seconds',
+  },
+  {
+    id: 'autopilot',
+    name: 'Autopilot',
+    tab: 'auto',
+    family: 'machines',
+    rarity: 'keystone',
+    values: [4, 5, 6],
+    detail: 'Presses earn half, but auto-tappers {v}',
+    unit: 'times',
+  },
+];
+
+/** Fixed parts of some perks' effects, quoted in their `detail`. */
+export const PERK_EFFECT = {
+  /** Loaded Dice's raised Double Tap cap. */
+  loadedDiceCap: 0.75,
+  /** Chain Reaction's highest multiplier: x2, x4, x8. */
+  chainMax: 8,
+  /** Afterglow's press multiplier. */
+  afterglowMult: 3,
+  /** Idle Hands' seconds without a press. */
+  idleAfterS: 10,
+  /** Night Shift's away rate. */
+  nightShiftRate: 1,
+  /** Overtone's tier. */
+  overtoneMin: 200,
+} as const;
+
+/** Slots, levels and upgrade pricing (SPACEBAR-CLICKER.md §8.1.2). */
+export const PERK_SLOTS = 5;
+export const PERK_MAX_LEVEL = 3;
+/** An upgrade costs this many times more for each level already held. */
+export const PERK_UPGRADE_SCALE = 1.5;
+
+/**
+ * Drops, prices and windows. Prices and windows are in seconds of the run's
+ * income at the moment a perk drops, so they mean the same early and late.
+ */
+export const PERK_DROPS = {
+  /** Run energy at which a run's first roll comes. It always drops. */
+  firstRollAt: 300,
+  /** Seconds of income between scheduled rolls. A reactor state change also rolls. */
+  rollEveryS: 60,
+  /** Odds of a roll dropping a perk, rising by `pityStep` for each miss in a row. */
+  baseChance: 0.35,
+  pityStep: 0.2,
+  /** Income below this counts as this, so prices and windows never collapse to zero. */
+  minIncome: 1,
+  weight: { common: 6, rare: 3, keystone: 1 } as Readonly<Record<PerkRarity, number>>,
+  priceS: { common: 45, rare: 90, keystone: 150 } as Readonly<Record<PerkRarity, number>>,
+  windowS: { common: 90, rare: 180, keystone: 300 } as Readonly<Record<PerkRarity, number>>,
+} as const;
 
 /** Spec §10. Cosmetic; the checks live in achievements.ts. */
 export const ACHIEVEMENTS: readonly AchievementDef[] = [

@@ -73,7 +73,9 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 | `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`.                                                                                                                        |
 | `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                    |
 | `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                              |
-| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for all of the above (66 as of 2026-10-23).                                                                                                                              |
+| `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap, away deferral, perk text. Pure.                                                                 |
+| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks (66 as of 2026-10-23).                                                                                                                        |
+| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (56 as of 2026-10-23).                                                                           |
 | `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, and every reactor state (§7).                                                                          |
 | `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine.            |
 | `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS. The frontmatter computes the dial, bezel and mote geometry.                                                                                                |
@@ -248,7 +250,16 @@ Fresh Start (1 prestige) and Veteran (5).
 - **Fields**: `energy`, `runLifetime`, `totalLifetime`, `totalPresses`,
   `upgrades`, `tappers`, `revealed`, `seen`, `announced`, `isotopes`,
   `prestiges`, `bestCombo`, `bestSurgeCps`, `surges`, `achievements`,
-  `playedS`, `lastSeen` and `createdAt`.
+  `playedS`, `lastSeen`, `createdAt` and `perks`.
+- **`perks`** holds:
+  - `owned`, in slot order, with levels.
+  - `offers`, at most one per tab, with price, window, and whether they've
+    been seen.
+  - `rng`, the drop generator's state.
+  - `nextRollAt`, `misses`, `drops` and `stage`, which run the drop schedule.
+  - `codex`: every perk ever dropped, with the best level held.
+  - Prestige clears everything except `rng` and `codex`. A save from before
+    perks loads with an empty block.
 - **Settings**: `reflexlab:spacebar-clicker:settings`, holding the sound toggle.
 - Adding a field means adding it to `SaveState`, `defaultSave`, `parseSave`
   (defensively), deciding whether `prestigeReset` keeps it, and adding tests.
@@ -420,8 +431,10 @@ The visuals were built in three passes, all shipped 2026-10-22.
 ### 8.1 Perk system: phase 1 in progress
 
 **Status (2026-10-23).** Design and build plan approved, follow-ups answered.
-Step 1 of 6, the groundwork, is done. Next is step 2, perk logic and the save.
-Check in with the maintainer after each step.
+Steps 1 and 2 of 6, the groundwork and the perk logic, are done. Nothing drops
+in the live game yet, because the script doesn't call the perk logic until
+step 4. Next is step 3, the pacing simulation. Check in with the maintainer
+after each step.
 
 **Scope note.** The original spec called the game "shallow on purpose", and
 its §15 ruled out a prestige shop. The maintainer asked for perks on
@@ -463,24 +476,35 @@ are proposals carried into the build plan.
     and the "While you were away" dialog mentions a waiting offer.
   - Commons are cheaper with shorter windows; keystones dearer with longer
     ones. Exact numbers come from simulation.
-- **Drops**
-  - Drops roll as the run earns, roughly one every 2 to 3 minutes of play: 8
-    to 10 offers in a first run.
-  - The first drop is guaranteed early so every player meets the system.
-  - A missed roll raises the next one's odds, so dry spells stay short. A
-    reactor state change always rolls.
-  - At most one live offer per tab.
+- **Drops**, as built in step 2. The numbers are in `PERK_DROPS` and are
+  starting points for step 3's simulation.
+  - Rolls come every 60 s of income, roughly one every 2 to 3 minutes of play.
+    A reactor state change also rolls.
+  - A run's first roll comes at 300 energy and always drops a common, so
+    every run meets the system early.
+  - After that a roll drops at 35%, plus 20% for each miss in a row. No more
+    than four misses can come in a row, and about half of rolls drop.
+  - Drops are weighted by rarity, 6 : 3 : 1 for common, rare and keystone.
+    With 9 commons, 12 rares and 4 keystones, that is about 57%, 38% and 4%
+    of drops.
+  - At most one live offer per tab. A roll with both tabs taken is skipped
+    and doesn't count as a miss.
+  - Prices are 45, 90 and 150 s of income by rarity, with windows of 90, 180
+    and 300 s.
 - **Slots: 5.** _Decided._ At most 5 active perks, and one keystone at a time.
   - Buying a new perk with all 5 slots full asks which perk to drop. The
     dropped perk is gone for the run, levels and all. Cancelling keeps the
     offer open.
   - Buying a keystone while holding one swaps the two.
+  - If the dropped perk had an upgrade on offer, that offer turns back into a
+    level I offer at the base price.
 - **Perk levels.** _Decided:_ if an owned perk drops again, buying it upgrades
   the existing perk instead of taking a new slot.
-  - Proposed: three levels, I to III. A perk at level III leaves the drop pool
+  - _Decided:_ three levels, I to III. A perk at level III leaves the drop pool
     for the rest of the run.
-  - Proposed: an upgrade costs 1.5 times the base price for each level already
-    held, in seconds of income, and needs no free slot.
+  - _Decided:_ an upgrade costs 1.5 times more for each level already held, and
+    needs no free slot. Built as compounding: level II costs 1.5 times the base
+    price, level III 2.25 times.
   - Owned perks drop at normal odds. With 25 perks and 5 owned, about one
     offer in five is an upgrade, so roughly two a run. The simulation checks
     this.
@@ -521,42 +545,57 @@ are proposals carried into the build plan.
 #### 8.1.3 Starter pool (25 perks)
 
 Values are given as level I / II / III. They are starting points for the
-simulation, not final.
+simulation, not final. The live table is `PERKS` in `config.ts`, and its
+wording is what the game will show. These rows mirror it as of step 2.
+
+How a few effects were built in step 2:
+
+- **Held Breath.** A pause longer than 600 ms but inside the grace is a
+  rest. It neither keeps nor misses, and it stays out of the rhythm average.
+  Without rests, the pause would inflate the average and the next presses
+  would break the combo anyway.
+- **Brute Force.** Every formula sees a combo of zero, so Momentum, Full Sync
+  and Synchronisation give nothing.
+- **Chain Reaction.** The chain stops at x8. Uncapped, the expected payout at a
+  75% chance has no limit.
+- **Glass Rhythm.** Applied after Overtone, so it scales the Overtone tier too.
+- **Feedback Loop.** Adds its share of energy per second to each press. Double
+  Tap applies to that share too.
 
 Upgrades tab:
 
-| Perk           | Effect at level I / II / III                                                                                         | Rarity   | Family |
-| -------------- | -------------------------------------------------------------------------------------------------------------------- | -------- | ------ |
-| Metronome      | Rhythm tolerance widens from 25% to 40% / 50% / 60%                                                                  | Rare     | Rhythm |
-| Held Breath    | A pause can last 2 / 3 / 5 s before the combo breaks, up from 0.8 s                                                  | Common   | Rhythm |
-| Overtone       | A new tier above Harmonic: 200 combo for x4 / x4.5 / x5                                                              | Rare     | Rhythm |
-| Momentum       | +0.5% / 0.75% / 1% press value per point of combo, no ceiling                                                        | Rare     | Rhythm |
-| Glass Rhythm   | Combo multipliers x2 / x2.5 / x3, but one off-beat press breaks the combo and the Stabiliser stops working           | Keystone | Rhythm |
-| Finger Memory  | Each Finger Strength level counts x2 / x3 / x4                                                                       | Common   | Press  |
-| Coiled Spring  | Spring Keys give x2 / x2.25 / x2.5 per level instead of x1.5                                                         | Rare     | Press  |
-| Brute Force    | No combo at all; press value x3 / x4 / x5                                                                            | Keystone | Press  |
-| Loaded Dice    | Double Tap +15% / 25% / 35%, and its cap rises from 50% to 75%                                                       | Common   | Luck   |
-| Chain Reaction | A Double Tap rolls again at half / three-quarters / all of your Double Tap chance, and can keep chaining: x2, x4, x8 | Rare     | Luck   |
-| Lightning Rod  | Surges come 2 / 2.5 / 3 times as often                                                                               | Rare     | Surge  |
-| Afterglow      | Presses keep x3 for 10 / 15 / 20 s after a surge                                                                     | Common   | Surge  |
-| Storm Front    | Surges hit x25 / x35 / x50 but come with no warning                                                                  | Keystone | Surge  |
+| Perk           | Effect at level I / II / III                                                                               | Rarity   | Family |
+| -------------- | ---------------------------------------------------------------------------------------------------------- | -------- | ------ |
+| Metronome      | Rhythm tolerance widens from 25% to 40% / 50% / 60%                                                        | Rare     | Rhythm |
+| Held Breath    | A pause of up to 2 s / 3 s / 5 s keeps the combo, up from 0.8 s                                            | Common   | Rhythm |
+| Overtone       | A new tier above Harmonic: 200 combo for x4 / x4.5 / x5                                                    | Rare     | Rhythm |
+| Momentum       | +0.5% / 0.75% / 1% press value per point of combo, no ceiling                                              | Rare     | Rhythm |
+| Glass Rhythm   | Combo multipliers x2 / x2.5 / x3, but one off-beat press breaks the combo and the Stabiliser stops working | Keystone | Rhythm |
+| Finger Memory  | Each Finger Strength level adds 2 / 3 / 4 energy a press instead of 1                                      | Common   | Press  |
+| Coiled Spring  | Spring Keys give x2 / x2.25 / x2.5 a level instead of x1.5                                                 | Rare     | Press  |
+| Brute Force    | No combo at all, but press value x3 / x4 / x5                                                              | Keystone | Press  |
+| Loaded Dice    | Double Tap +15% / 25% / 35%, and its cap rises from 50% to 75%                                             | Common   | Luck   |
+| Chain Reaction | A Double Tap rolls again at 50% / 75% / 100% of your Double Tap chance, up to x8                           | Rare     | Luck   |
+| Lightning Rod  | Surges come 2 / 2.5 / 3 times as often                                                                     | Rare     | Surge  |
+| Afterglow      | Presses keep x3 for 10 s / 15 s / 20 s after a surge                                                       | Common   | Surge  |
+| Storm Front    | Surges hit x25 / x35 / x50 but strike with no warning                                                      | Keystone | Surge  |
 
 Auto-tappers tab:
 
-| Perk            | Effect at level I / II / III                                                                          | Rarity   | Family   |
-| --------------- | ----------------------------------------------------------------------------------------------------- | -------- | -------- |
-| Overtime        | Lab Assistants produce x4 / x7 / x10                                                                  | Common   | Machines |
-| Assembly Line   | +1% / 1.5% / 2% output per auto-tapper owned                                                          | Common   | Machines |
-| Bulk Order      | Auto-tappers cost 20% / 30% / 40% less                                                                | Common   | Machines |
-| Critical Load   | +10% / 15% / 20% output per reactor state reached                                                     | Common   | Machines |
-| Ghost Presses   | Auto-tappers get 1x / 1.5x / 2x your Double Tap chance as bonus output                                | Common   | Luck     |
-| Full Sync       | Auto-tappers get your whole combo multiplier, then x1 / x1.25 / x1.5 of it; no Synchronisation needed | Rare     | Rhythm   |
-| Surge Lines     | Surges multiply auto-tappers too, and last 5 / 7 / 9 s                                                | Rare     | Surge    |
-| Idle Hands      | Auto-tappers x2.5 / x3.5 / x5 after 10 s without a press                                              | Rare     | Machines |
-| Night Shift     | Away progress pays 100% instead of 50%, capped at 8 / 12 / 24 h instead of 4                          | Rare     | Machines |
-| Feedback Loop   | Each press also pays 5% / 8% / 12% of your per-second income                                          | Rare     | Machines |
-| Self-Replicator | A free copy of your cheapest auto-tapper every 60 / 45 / 30 s                                         | Rare     | Machines |
-| Autopilot       | Presses earn half; auto-tappers x4 / x5 / x6                                                          | Keystone | Machines |
+| Perk            | Effect at level I / II / III                                                       | Rarity   | Family   |
+| --------------- | ---------------------------------------------------------------------------------- | -------- | -------- |
+| Overtime        | Lab Assistants produce x4 / x7 / x10                                               | Common   | Machines |
+| Assembly Line   | +1% / 1.5% / 2% auto-tapper output per auto-tapper owned                           | Common   | Machines |
+| Bulk Order      | Auto-tappers cost 20% / 30% / 40% less                                             | Common   | Machines |
+| Critical Load   | +10% / 15% / 20% auto-tapper output per reactor state reached                      | Common   | Machines |
+| Ghost Presses   | Auto-tappers add 100% / 150% / 200% of your Double Tap chance to their output      | Common   | Luck     |
+| Full Sync       | Auto-tappers get 100% / 125% / 150% of your combo bonus, no Synchronisation needed | Rare     | Rhythm   |
+| Surge Lines     | Surges multiply auto-tappers too, and last 5 s / 7 s / 9 s                         | Rare     | Surge    |
+| Idle Hands      | Auto-tappers x2.5 / x3.5 / x5 after 10 s without a press                           | Rare     | Machines |
+| Night Shift     | Away progress pays 100% instead of 50%, capped at 8 h / 12 h / 24 h instead of 4 h | Rare     | Machines |
+| Feedback Loop   | Each press also pays 5% / 8% / 12% of your per-second income                       | Rare     | Machines |
+| Self-Replicator | A free copy of your cheapest auto-tapper every 60 s / 45 s / 30 s                  | Rare     | Machines |
+| Autopilot       | Presses earn half, but auto-tappers x4 / x5 / x6                                   | Keystone | Machines |
 
 The builds these make:
 
@@ -657,14 +696,19 @@ maintainer can review before the next one, as with the delight passes.
      context instead of loose arguments.
    - 25 new unit tests. The browser checks moved into the repo, and the 16 of
      them pass against the new code.
-2. **Perk logic and save, pure, no UI.**
-   - The 25 perks with their three levels go in `config.ts`.
-   - `perks.ts` holds the drop meter and pity, rarity weights, offer pricing
-     and windows, expiry, buying, upgrading, the slot limit and swap, the
-     keystone rule, and turning owned perks into modifiers.
-   - The save gets its perks block, with defensive parsing, prestige clearing
-     and the codex.
-   - Unit tests for all of it.
+2. **Perk logic and save, pure, no UI.** _Done 2026-10-23._
+   - `PERKS`, `PERK_EFFECT`, `PERK_DROPS` and the slot and level constants in
+     `config.ts`.
+   - `mods.ts` applies each owned perk at its level.
+   - `economy.ts` gained `luckyMultiplier`, the Double Tap and chain roll, and
+     `cheapestTapper`. It counts perk offers as shop-tab news, and handles
+     Brute Force's combo-off and Feedback Loop.
+   - `perks.ts`: `perkTick` for drops and expiry, `buyPerk` and `needsSlot`,
+     `deferPerks`, `replicate`, `offerRemaining`, and the perk text.
+   - `combo.ts` gained rests, for Held Breath.
+   - The save's `perks` block (§4.10).
+   - 56 new unit tests in `perks.test.ts`. Drops are seeded, so a test
+     replays a run through a save and reload and gets the same drops.
 3. **Pacing simulation, in the repo.**
    - A pure simulation module, with a Vitest pacing test that asserts first
      prestige stays within a band, both with no perks and for each build.
@@ -745,3 +789,8 @@ the maintainer asks.
   combo and surge rules, a seeded generator and an income meter. No visible
   change. Playwright added as a dev dependency, with 16 browser checks in
   `tests/browser/`.
+- **2026-10-23.** Perks step 2, the logic and the save. Added the 25 perks with
+  three levels each, their effects through the modifiers, drops with pity and
+  rarity weights, offers priced and timed in seconds of income, buying and
+  upgrading, five slots with one keystone, and the save block with the codex.
+  No visible change yet.
