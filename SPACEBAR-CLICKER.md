@@ -396,13 +396,14 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ### 8.1 Perk system: planning, nothing built
 
-**Status (2026-10-22).** Ideas stage. The maintainer has not answered the open
-questions in §8.1.6. Don't build until they do and approve a plan.
+**Status (2026-10-23).** The maintainer answered the design questions
+(§8.1.6). The build plan (§8.1.7) and the follow-up questions it raises
+(§8.1.8) await approval. Don't build until both are approved.
 
 **Scope note.** The original spec called the game "shallow on purpose", and
 its §15 ruled out a prestige shop. The maintainer asked for perks on
-2026-10-22, so the first rule is deliberately relaxed. Question 7 below would
-bend the second; flag that when it comes up.
+2026-10-22, so the first rule is deliberately relaxed. Isotope tie-ins would
+bend the second, and are deferred to after phase 1 (question 7).
 
 #### 8.1.1 The maintainer's brief
 
@@ -417,13 +418,14 @@ bend the second; flag that when it comes up.
 - There should be quite a few perks. They should interact with existing
   mechanics to make build-defining choices, so each run plays differently.
 
-#### 8.1.2 Proposed design
+#### 8.1.2 Design
 
-These are recommendations, not yet approved.
+Items marked _Decided_ were settled by the maintainer on 2026-10-23. The rest
+are proposals carried into the build plan.
 
-- **Perks last the whole run** and clear on reset. That is what makes them
-  build-defining, and it gives resetting a new appeal: each run is a fresh
-  build.
+- **Perks last the whole run** and clear on reset. _Decided._ That is what
+  makes them build-defining, and it gives resetting a new appeal: each run is a
+  fresh build.
 - **Price and time limit are counted in seconds of income** at the moment the
   perk drops, presses included.
   - Energy grows exponentially, so fixed amounts would be huge early and
@@ -433,6 +435,9 @@ These are recommendations, not yet approved.
     pace.
   - Spending in the shop meanwhile risks not affording it. A surge drains the
     window ten times faster. If the player stops, the offer waits.
+  - Energy collected after being away does not drain an offer. _Decided._
+    Collect pushes each live offer's expiry forward by the amount collected,
+    and the "While you were away" dialog mentions a waiting offer.
   - Commons are cheaper with shorter windows; keystones dearer with longer
     ones. Exact numbers come from simulation.
 - **Drops**
@@ -441,28 +446,44 @@ These are recommendations, not yet approved.
   - The first drop is guaranteed early so every player meets the system.
   - A missed roll raises the next one's odds, so dry spells stay short. A
     reactor state change always rolls.
-  - At most one live offer per tab. No perk repeats within a run.
+  - At most one live offer per tab.
+- **Slots: 5.** _Decided._ At most 5 active perks, and one keystone at a time.
+  - Buying a new perk with all 5 slots full asks which perk to drop. The
+    dropped perk is gone for the run, levels and all. Cancelling keeps the
+    offer open.
+  - Buying a keystone while holding one swaps the two.
+- **Perk levels.** _Decided:_ if an owned perk drops again, buying it upgrades
+  the existing perk instead of taking a new slot.
+  - Proposed: three levels, I to III. A perk at level III leaves the drop pool
+    for the rest of the run.
+  - Proposed: an upgrade costs 1.5 times the base price for each level already
+    held, in seconds of income, and needs no free slot.
+  - Owned perks drop at normal odds. With 25 perks and 5 owned, about one
+    offer in five is an upgrade, so roughly two a run. The simulation checks
+    this.
+  - Commons and rares grow their number at each level. Keystones keep their
+    downside and grow their upside.
 - **In the shop**
   - An offer sits at the top of its tab. Its glyph tile lights in the perk's
     color, with a ring that drains as the window runs down.
+  - An upgrade offer shows the level it leads to and the effect now and next.
   - A closed tab gets the existing "New" tag. A drop plays a short chime.
   - An expired offer fades out.
-- **Slots.** At most 6 active perks. Buying a seventh asks which to drop. One
-  keystone at a time.
 - **Rarity**
   - Common: a number boost.
   - Rare: changes a rule.
   - Keystone: breaks a rule, with a real downside.
-- **Color by family, glyph per perk.** Green, the reactor blues, Surge Gold
-  and the Shop-Signal amber are taken. That leaves about five hues that read on
-  black, so 25 perks would repeat colors anyway.
+- **Color by family, glyph per perk.** _Decided._ Green, the reactor blues,
+  Surge Gold and the Shop-Signal amber are taken. That leaves about five hues
+  that read on black, so 25 perks would repeat colors anyway.
   - Proposed: violet for rhythm, orange for surges, fuchsia for luck, rose for
     press power, lime for machines.
   - Lime sits near the signal green and orange near the amber. Check both
     before settling.
   - The payoff: the shelf reads as the build at a glance.
   - This needs a new `DESIGN.md` exception.
-- **Shelf and tooltips.** Perks show top-right, mirroring the isotope shelf.
+- **Shelf and tooltips.** _Decided:_ perks show top-right, mirroring the
+  isotope shelf. Each tile shows its level as small pips.
   - Today the whole face is the press target and the isotope shelf ignores the
     pointer. Perk icons must take hover and taps without counting as a press,
     for example by stopping propagation on pointerdown.
@@ -476,40 +497,43 @@ These are recommendations, not yet approved.
 
 #### 8.1.3 Starter pool (25 perks)
 
+Values are given as level I / II / III. They are starting points for the
+simulation, not final.
+
 Upgrades tab:
 
-| Perk           | Effect                                                                                             | Rarity   | Family |
-| -------------- | -------------------------------------------------------------------------------------------------- | -------- | ------ |
-| Metronome      | Rhythm tolerance widens from 25% to 40%                                                            | Rare     | Rhythm |
-| Held Breath    | A pause can last 2 s before the combo breaks, up from 0.8 s                                        | Common   | Rhythm |
-| Overtone       | A new tier above Harmonic: 200 combo for x4                                                        | Rare     | Rhythm |
-| Momentum       | +0.5% press value per point of combo, no ceiling                                                   | Rare     | Rhythm |
-| Glass Rhythm   | Combo multipliers double, but one off-beat press breaks the combo and the Stabiliser stops working | Keystone | Rhythm |
-| Finger Memory  | Each Finger Strength level counts twice                                                            | Common   | Press  |
-| Coiled Spring  | Spring Keys give x2 per level instead of x1.5                                                      | Rare     | Press  |
-| Brute Force    | No combo at all; press value x3                                                                    | Keystone | Press  |
-| Loaded Dice    | Double Tap +15%, and its cap rises from 50% to 75%                                                 | Common   | Luck   |
-| Chain Reaction | A Double Tap rolls again, so a press can count x2, x4, x8                                          | Rare     | Luck   |
-| Lightning Rod  | Surges come twice as often                                                                         | Rare     | Surge  |
-| Afterglow      | Presses keep x3 for 10 s after a surge                                                             | Common   | Surge  |
-| Storm Front    | Surges hit x25 but come with no warning                                                            | Keystone | Surge  |
+| Perk           | Effect at level I / II / III                                                                                         | Rarity   | Family |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- | -------- | ------ |
+| Metronome      | Rhythm tolerance widens from 25% to 40% / 50% / 60%                                                                  | Rare     | Rhythm |
+| Held Breath    | A pause can last 2 / 3 / 5 s before the combo breaks, up from 0.8 s                                                  | Common   | Rhythm |
+| Overtone       | A new tier above Harmonic: 200 combo for x4 / x4.5 / x5                                                              | Rare     | Rhythm |
+| Momentum       | +0.5% / 0.75% / 1% press value per point of combo, no ceiling                                                        | Rare     | Rhythm |
+| Glass Rhythm   | Combo multipliers x2 / x2.5 / x3, but one off-beat press breaks the combo and the Stabiliser stops working           | Keystone | Rhythm |
+| Finger Memory  | Each Finger Strength level counts x2 / x3 / x4                                                                       | Common   | Press  |
+| Coiled Spring  | Spring Keys give x2 / x2.25 / x2.5 per level instead of x1.5                                                         | Rare     | Press  |
+| Brute Force    | No combo at all; press value x3 / x4 / x5                                                                            | Keystone | Press  |
+| Loaded Dice    | Double Tap +15% / 25% / 35%, and its cap rises from 50% to 75%                                                       | Common   | Luck   |
+| Chain Reaction | A Double Tap rolls again at half / three-quarters / all of your Double Tap chance, and can keep chaining: x2, x4, x8 | Rare     | Luck   |
+| Lightning Rod  | Surges come 2 / 2.5 / 3 times as often                                                                               | Rare     | Surge  |
+| Afterglow      | Presses keep x3 for 10 / 15 / 20 s after a surge                                                                     | Common   | Surge  |
+| Storm Front    | Surges hit x25 / x35 / x50 but come with no warning                                                                  | Keystone | Surge  |
 
 Auto-tappers tab:
 
-| Perk            | Effect                                                                  | Rarity   | Family   |
-| --------------- | ----------------------------------------------------------------------- | -------- | -------- |
-| Overtime        | Lab Assistants produce x4                                               | Common   | Machines |
-| Assembly Line   | +1% output per auto-tapper owned                                        | Common   | Machines |
-| Bulk Order      | Auto-tappers cost 20% less                                              | Common   | Machines |
-| Critical Load   | +10% output per reactor state reached                                   | Common   | Machines |
-| Ghost Presses   | Auto-tappers get your Double Tap chance as bonus output                 | Common   | Luck     |
-| Full Sync       | Auto-tappers get your whole combo multiplier, no Synchronisation needed | Rare     | Rhythm   |
-| Surge Lines     | Surges multiply auto-tappers too                                        | Rare     | Surge    |
-| Idle Hands      | Auto-tappers x2.5 after 10 s without a press                            | Rare     | Machines |
-| Night Shift     | Away progress pays 100% instead of 50%, capped at 8 h instead of 4      | Rare     | Machines |
-| Feedback Loop   | Each press also pays 5% of your per-second income                       | Rare     | Machines |
-| Self-Replicator | A free copy of your cheapest auto-tapper every minute                   | Rare     | Machines |
-| Autopilot       | Presses earn half; auto-tappers x4                                      | Keystone | Machines |
+| Perk            | Effect at level I / II / III                                                                          | Rarity   | Family   |
+| --------------- | ----------------------------------------------------------------------------------------------------- | -------- | -------- |
+| Overtime        | Lab Assistants produce x4 / x7 / x10                                                                  | Common   | Machines |
+| Assembly Line   | +1% / 1.5% / 2% output per auto-tapper owned                                                          | Common   | Machines |
+| Bulk Order      | Auto-tappers cost 20% / 30% / 40% less                                                                | Common   | Machines |
+| Critical Load   | +10% / 15% / 20% output per reactor state reached                                                     | Common   | Machines |
+| Ghost Presses   | Auto-tappers get 1x / 1.5x / 2x your Double Tap chance as bonus output                                | Common   | Luck     |
+| Full Sync       | Auto-tappers get your whole combo multiplier, then x1 / x1.25 / x1.5 of it; no Synchronisation needed | Rare     | Rhythm   |
+| Surge Lines     | Surges multiply auto-tappers too, and last 5 / 7 / 9 s                                                | Rare     | Surge    |
+| Idle Hands      | Auto-tappers x2.5 / x3.5 / x5 after 10 s without a press                                              | Rare     | Machines |
+| Night Shift     | Away progress pays 100% instead of 50%, capped at 8 / 12 / 24 h instead of 4                          | Rare     | Machines |
+| Feedback Loop   | Each press also pays 5% / 8% / 12% of your per-second income                                          | Rare     | Machines |
+| Self-Replicator | A free copy of your cheapest auto-tapper every 60 / 45 / 30 s                                         | Rare     | Machines |
+| Autopilot       | Presses earn half; auto-tappers x4 / x5 / x6                                                          | Keystone | Machines |
 
 The builds these make:
 
@@ -540,12 +564,13 @@ where the decisions come from.
 - **Surges.** The scheduler and multiplier live in the script and read
   `SURGE`. Lightning Rod, Storm Front, Surge Lines and Afterglow need them to
   take modifiers.
-- **Save.** Add a perks block: owned ids, live offers, the RNG state, the drop
-  meter and pity count, and the codex.
+- **Save.** Add a perks block: owned ids with their levels, live offers, the
+  RNG state, the drop meter and pity count, and the codex.
   - Store each offer's expiry as a `runLifetime` value. The offer is gone once
     `runLifetime` passes it.
-  - If away energy should not drain offers (question 5), Collect pushes each
-    expiry forward by the amount collected.
+  - Away energy must not drain offers (question 5), so Collect pushes each
+    expiry forward by the amount collected. The silent full-rate credit for
+    gaps of a minute or less does the same.
   - `prestigeReset` clears owned perks and offers, and keeps the codex.
   - Parse defensively and drop unknown perk ids.
 - **Income at drop time** needs a rolling measure of what the player actually
@@ -560,36 +585,99 @@ where the decisions come from.
   time, and run each build through it. Starting target: a strong build cuts
   first prestige by about a third.
 - **Tests.** Cover drops and pity, pricing and windows, expiry, each perk's
-  effect, slot limits and the keystone rule, save parsing, and prestige.
+  effect at every level, upgrades, the slot limit and swap, the keystone rule,
+  save parsing, and prestige.
 
 #### 8.1.5 Ideas parked for later
 
-- Isotopes could buy a seventh slot, a reroll, or the right to keep one perk
-  through a reset. See question 7.
+- Isotopes could buy a sixth slot, a reroll, or the right to keep one perk
+  through a reset. Revisit after phase 1 (question 7).
 - Perk achievements, such as owning a keystone, or completing the codex.
 - Visual hooks: Chain Reaction chains of gold floats, a label and color for
   Overtone's tier, and Storm Front striking with no countdown.
 
-#### 8.1.6 Open questions for the maintainer
+#### 8.1.6 Design questions: answered 2026-10-23
 
-Each question carries a recommendation. Record the answer here when it comes.
+1. Does the perk shelf sit top-right, mirroring the isotopes top-left?
+   **Answer: yes.**
+2. Do perks last the run and clear on reset? **Answer: yes.**
+3. Cap active perks, with one keystone at a time? **Answer: yes, at 5 slots.**
+   Caveat from the maintainer: if a perk the player already owns drops again,
+   buying it upgrades the existing perk.
+4. Color by family with a unique glyph per perk, rather than a different color
+   for every perk? **Answer: yes, by family.**
+5. Does energy earned while away count down a live offer? **Answer: no. The
+   offer waits, and the away dialog mentions it.**
+6. Do keystones carry real downsides? **Answer: yes. The maintainer wants it
+   for buildcraft.**
+7. Isotope tie-ins, such as an extra slot, a reroll or keeping a perk?
+   **Answer: revisit after phase 1.**
 
-1. Does the perk shelf sit top-right, mirroring the isotopes top-left? The
-   maintainer referred to a screenshot that did not come through.
+#### 8.1.7 Build plan: phase 1, awaiting approval
+
+Six steps. Each ends with tests passing and a check-in, so the maintainer can
+review before the next one, as with the delight passes.
+
+1. **Groundwork, no visible change.**
+   - Economy functions take a modifiers object that defaults to "no perks".
+   - `ComboTracker` takes its rules, and `comboTier` takes its tier list,
+     instead of reading the constants.
+   - The surge scheduler and multiplier read their values through modifiers.
+   - A seeded random generator, as a pure module.
+   - A rolling income meter in the script: energy earned over the last 10 s,
+     presses included.
+   - Every existing test passes unchanged, and new tests prove the defaults
+     behave exactly as today.
+2. **Perk logic and save, pure, no UI.**
+   - The 25 perks with their three levels go in `config.ts`.
+   - `perks.ts` holds the drop meter and pity, rarity weights, offer pricing
+     and windows, expiry, buying, upgrading, the slot limit and swap, the
+     keystone rule, and turning owned perks into modifiers.
+   - The save gets its perks block, with defensive parsing, prestige clearing
+     and the codex.
+   - Unit tests for all of it.
+3. **Pacing simulation, in the repo.**
+   - A pure simulation module, with a Vitest pacing test that asserts first
+     prestige stays within a band, both with no perks and for each build.
+   - Tune drop rates, prices, windows and perk values until the bands hold.
+   - Report the numbers before any UI work.
+4. **Shop offers and perk effects in play.**
+   - The offer row: family-color tile, draining ring, price, level badge, and
+     the upgrade's effect now and next.
+   - The "New" tag on a drop, the chime, and the fade on expiry.
+   - The swap dialog when slots are full, and the keystone swap.
+   - Glyphs for all 25 perks.
+   - A family-hue exception in `DESIGN.md`, with each hue checked against the
+     reserved colors.
+   - Live effects that need the script, such as Afterglow, Self-Replicator,
+     Idle Hands, Feedback Loop and Storm Front, and the Chain Reaction gold
+     float chain.
+5. **Shelf, tooltips and the Perks panel.**
+   - Up to 5 perk tiles top-right, with level pips. Tooltips on hover, focus
+     and tap, and a tap never counts as a press.
+   - A Perks tab beside Stats and Achievements: active perks in full, and the
+     codex.
+   - The away dialog mentions a waiting offer. Announcements for drops,
+     purchases, upgrades and expiries.
+   - A reduced-motion version of everything.
+6. **Content, docs and verification.**
+   - A perks section in the MDX: a table rendered from config, with rarity and
+     drop odds, and an FAQ answer.
+   - Update this doc's sections and changelog.
+   - Browser checks at 1440 and 390 wide, then the full check suite.
+
+#### 8.1.8 Follow-up questions: awaiting answers
+
+Raised by the upgrade caveat in question 3.
+
+1. Three levels per perk, I to III, with a maxed perk leaving the drop pool?
    _Recommended: yes._ **Answer: pending.**
-2. Do perks last the run and clear on reset? _Recommended: yes._ **Answer:
-   pending.**
-3. Cap active perks at 6, with one keystone at a time? _Recommended: yes._
-   **Answer: pending.**
-4. Color by family with a unique glyph per perk, or a different color for every
-   perk? The brief said per perk. _Recommended: by family._ **Answer:
-   pending.**
-5. Does energy earned while away count down a live offer? _Recommended: no;
-   the offer waits and the away dialog mentions it._ **Answer: pending.**
-6. Do keystones carry real downsides, or is every perk pure upside?
-   _Recommended: real downsides._ **Answer: pending.**
-7. Isotope tie-ins, such as an extra slot, a reroll or keeping a perk: now, or
-   a second phase? _Recommended: second phase._ **Answer: pending.**
+2. An upgrade costs 1.5 times the base price for each level already held, and
+   needs no free slot? _Recommended: yes._ **Answer: pending.**
+3. Browser checks: keep them as throwaway scripts, or add Playwright to the
+   repo as a dev dependency so they survive between sessions? The pacing
+   simulation goes in the repo either way, with no new dependency.
+   _Recommended: add Playwright._ **Answer: pending.**
 
 ### 8.2 Unassigned ideas
 
@@ -623,3 +711,6 @@ the maintainer asks.
     away wake-up.
 - **2026-10-22.** Perk system planning started (§8.1). This doc created as the
   game's running product doc.
+- **2026-10-23.** Perk design questions answered. Slots set at 5, and owned
+  perks can drop again as upgrades. Per-level values and a six-step build plan
+  were drafted, both awaiting approval.
