@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { ComboTracker } from './combo';
-import { COMBO, PERK_DROPS, PERK_SLOTS, PERKS, type PerkId, type ShopTab } from './config';
+import {
+  COMBO,
+  PERK_DROPS,
+  PERK_EFFECT,
+  PERK_SLOTS,
+  PERKS,
+  type PerkId,
+  type ShopTab,
+} from './config';
 import {
   comboTier,
   doubleTapChance,
@@ -39,6 +47,8 @@ import {
 
 const NOW = 1_700_000_000_000;
 const def = (id: PerkId) => PERKS.find((p) => p.id === id)!;
+/** A perk's value at a level, from the table, so tuning never breaks a test of what it does. */
+const v = (id: PerkId, level = 1) => def(id).values[level - 1]!;
 
 /** A fresh save holding the given perks, found in the codex as a real save would have them. */
 function holding(...perks: [PerkId, number][]): SaveState {
@@ -100,19 +110,18 @@ describe('perk table', () => {
   });
 
   it('reads each value in its own unit', () => {
-    expect(perkDetail(def('metronome'), 2)).toBe('Rhythm tolerance widens from 25% to 50%');
-    expect(perkDetail(def('momentum'), 2)).toBe(
-      '+0.75% press value per point of combo, no ceiling'
-    );
-    expect(perkDetail(def('lightning-rod'), 2)).toBe('Surges come 2.5 times as often');
-    expect(perkDetail(def('finger-memory'), 1)).toBe(
-      'Each Finger Strength level adds 2 energy a press instead of 1'
-    );
+    const at = (id: PerkId, detail: string, values: number[]) => ({
+      ...def(id),
+      detail,
+      values: values as [number, number, number],
+    });
+    expect(perkDetail(at('metronome', 'to {v}', [0.4, 0.55, 0.7]), 2)).toBe('to 55%');
+    expect(perkDetail(at('momentum', '{v}', [0.0025, 0, 0]), 1)).toBe('0.25%');
+    expect(perkDetail(at('lightning-rod', '{v} times', [2.5, 0, 0]), 1)).toBe('2.5 times');
+    expect(perkDetail(at('afterglow', 'for {v}', [10, 0, 0]), 1)).toBe('for 10 s');
+    expect(perkDetail(at('overtone', 'for {v}', [3.75, 0, 0]), 1)).toBe('for x3.75');
     expect(perkDetailAllLevels(def('night-shift'))).toBe(
       'Away progress pays 100% instead of 50%, capped at 8 h / 12 h / 24 h instead of 4 h'
-    );
-    expect(perkDetailAllLevels(def('overtone'))).toBe(
-      'A new tier above Harmonic: 200 combo for x4 / x4.5 / x5'
     );
   });
 });
@@ -123,12 +132,12 @@ describe('perk table', () => {
 
 describe('perk effects on presses and the combo', () => {
   it('Metronome widens the rhythm tolerance', () => {
-    expect(modsOf(holding(['metronome', 2])).combo.tolerance).toBe(0.5);
+    expect(modsOf(holding(['metronome', 2])).combo.tolerance).toBe(v('metronome', 2));
   });
 
   it('Held Breath lengthens the grace and lets a pause rest', () => {
     const rules = modsOf(holding(['held-breath', 1])).combo;
-    expect(rules.graceMs).toBe(2000);
+    expect(rules.graceMs).toBe(v('held-breath') * 1000);
     const c = new ComboTracker(undefined, () => rules);
     let t = 0;
     for (let i = 0; i < 15; i++) c.press((t += 200));
@@ -153,64 +162,73 @@ describe('perk effects on presses and the combo', () => {
   it('Overtone adds a tier above Harmonic', () => {
     const { tiers } = modsOf(holding(['overtone', 1]));
     expect(comboTier(199, tiers).label).toBe('Harmonic');
-    expect(comboTier(200, tiers)).toMatchObject({ label: 'Overtone', multiplier: 4 });
+    expect(comboTier(200, tiers)).toMatchObject({ label: 'Overtone', multiplier: v('overtone') });
   });
 
-  it('Momentum pays a little more for every point of combo', () => {
+  it('Momentum pays more for every point of combo, up to its cap', () => {
     const s = holding(['momentum', 1]);
-    expect(energyPerPress(s, { combo: 100 })).toBeCloseTo(3 * 1.5);
+    const per = PERK_EFFECT.momentumPerPoint;
+    expect(energyPerPress(s, { combo: 60 })).toBeCloseTo(
+      2.5 * (1 + Math.min(60 * per, v('momentum')))
+    );
+    expect(energyPerPress(s, { combo: 5000 })).toBeCloseTo(3 * (1 + v('momentum')));
   });
 
-  it('Glass Rhythm multiplies every tier, breaks on one miss, and switches off the Stabiliser', () => {
+  it('Glass Rhythm multiplies every tier, breaks sooner, and switches off the Stabiliser', () => {
     const s = holding(['glass-rhythm', 1]);
     s.upgrades.stabiliser = 1;
     const m = modsOf(s);
-    expect(comboTier(10, m.tiers).multiplier).toBe(3);
-    expect(comboTier(100, m.tiers).multiplier).toBe(6);
+    expect(comboTier(10, m.tiers).multiplier).toBe(1.5 * v('glass-rhythm'));
+    expect(comboTier(100, m.tiers).multiplier).toBe(3 * v('glass-rhythm'));
     expect(comboTier(0, m.tiers).multiplier).toBe(1);
-    expect(m.combo.missesToBreak).toBe(1);
+    expect(m.combo.missesToBreak).toBe(PERK_EFFECT.glassMissesToBreak);
+    expect(m.combo.missesToBreak).toBeLessThan(COMBO.missesToBreak);
     expect(m.stabiliser).toBe(false);
   });
 
   it('Glass Rhythm scales the Overtone tier too', () => {
     const { tiers } = modsOf(holding(['overtone', 1], ['glass-rhythm', 1]));
-    expect(comboTier(200, tiers).multiplier).toBe(8);
+    expect(comboTier(200, tiers).multiplier).toBe(v('overtone') * v('glass-rhythm'));
   });
 
   it('Finger Memory and Coiled Spring strengthen their upgrades', () => {
     const s = holding(['finger-memory', 1], ['coiled-spring', 1]);
     s.upgrades.finger = 4;
     s.upgrades.spring = 2;
-    expect(energyPerPress(s)).toBeCloseTo((1 + 4 * 2) * 2 * 2);
+    const base = 1 + 4 * (1 + v('finger-memory'));
+    expect(energyPerPress(s)).toBeCloseTo(base * v('coiled-spring') ** 2);
   });
 
-  it('Brute Force removes the combo and triples the press', () => {
+  it('Brute Force removes the combo and strengthens the press', () => {
     const s = holding(['brute-force', 1], ['full-sync', 1]);
     s.tappers.pneumatic = 2;
-    expect(energyPerPress(s, { combo: 100 })).toBe(3);
+    expect(energyPerPress(s, { combo: 100 })).toBeCloseTo(v('brute-force'));
     expect(energyPerSecond(s, { combo: 100 }), 'nothing for Full Sync to share').toBe(6);
   });
 
   it('Loaded Dice raises the Double Tap chance and its cap', () => {
     const s = holding(['loaded-dice', 1]);
-    expect(doubleTapChance(s)).toBeCloseTo(0.15);
+    expect(doubleTapChance(s)).toBeCloseTo(v('loaded-dice'));
     s.upgrades.double = 10;
-    expect(doubleTapChance(s)).toBeCloseTo(0.65);
+    expect(doubleTapChance(s)).toBeCloseTo(Math.min(0.5 + v('loaded-dice'), 0.75));
     s.perks.owned = [{ id: 'loaded-dice', level: 3 }];
-    expect(doubleTapChance(s)).toBe(0.75);
+    expect(doubleTapChance(s)).toBe(PERK_EFFECT.loadedDiceCap);
   });
 
   it('Lightning Rod brings surges sooner; Storm Front makes them harder and silent', () => {
-    expect(modsOf(holding(['lightning-rod', 1])).surge).toMatchObject({ minGapS: 45, maxGapS: 90 });
+    expect(modsOf(holding(['lightning-rod', 1])).surge).toMatchObject({
+      minGapS: 90 / v('lightning-rod'),
+      maxGapS: 180 / v('lightning-rod'),
+    });
     const storm = modsOf(holding(['storm-front', 1])).surge;
-    expect(storm).toMatchObject({ multiplier: 25, warningS: 0 });
-    expect(energyPerPress(holding(['storm-front', 1]), { surging: true })).toBe(25);
+    expect(storm).toMatchObject({ multiplier: v('storm-front'), warningS: 0 });
+    expect(energyPerPress(holding(['storm-front', 1]), { surging: true })).toBe(v('storm-front'));
   });
 
   it('Afterglow keeps presses at x3 for a while after a surge', () => {
     const s = holding(['afterglow', 2]);
-    expect(modsOf(s).afterglowS).toBe(15);
-    expect(energyPerPress(s, { afterglow: true })).toBe(3);
+    expect(modsOf(s).afterglowS).toBe(v('afterglow', 2));
+    expect(energyPerPress(s, { afterglow: true })).toBe(PERK_EFFECT.afterglowMult);
     expect(energyPerPress(s)).toBe(1);
   });
 });
@@ -234,96 +252,106 @@ describe('the luck roll', () => {
   });
 
   it('chains with Chain Reaction, up to x8', () => {
-    const s = holding(['chain-reaction', 3]);
-    s.upgrades.double = 10; // 50%, rolled again at 50%
-    expect(luckyMultiplier(s, draws(0.1, 0.9))).toBe(2);
-    expect(luckyMultiplier(s, draws(0.1, 0.1, 0.9))).toBe(4);
-    expect(luckyMultiplier(s, draws(0.1, 0.1, 0.1, 0.1, 0.1))).toBe(8);
+    const s = holding(['chain-reaction', 1]);
+    s.upgrades.double = 4; // 20%, rolled again at 20% x the level's share
+    const again = 0.2 * v('chain-reaction');
+    expect(luckyMultiplier(s, draws(0.1, again + 0.01))).toBe(2);
+    expect(luckyMultiplier(s, draws(0.1, again - 0.01, 0.99))).toBe(4);
+    expect(luckyMultiplier(s, draws(0.1, 0, 0, 0, 0))).toBe(8);
   });
 
-  it('rolls again at only a share of the chance below level III', () => {
-    const s = holding(['chain-reaction', 1]);
-    s.upgrades.double = 10; // again at 25%
-    expect(luckyMultiplier(s, draws(0.1, 0.3))).toBe(2);
-    expect(luckyMultiplier(s, draws(0.1, 0.2, 0.9))).toBe(4);
+  it('never rolls again above its ceiling, however lucky the dice', () => {
+    const s = holding(['chain-reaction', 3], ['loaded-dice', 3]);
+    s.upgrades.double = 10; // 75%, again at most 60%
+    const cap = PERK_EFFECT.chainAgainMax;
+    expect(luckyMultiplier(s, draws(0.1, cap + 0.01))).toBe(2);
+    expect(luckyMultiplier(s, draws(0.1, cap - 0.01, 0.99))).toBe(4);
   });
 });
 
 describe('perk effects on auto-tappers and time away', () => {
-  it('Overtime multiplies Lab Assistants only', () => {
+  it('Overtime multiplies Lab Assistants and Pneumatic Keys', () => {
     const s = holding(['overtime', 1]);
     s.tappers.assistant = 10; // 5
     s.tappers.pneumatic = 1; // 3
-    expect(energyPerSecond(s)).toBeCloseTo(20 + 3);
+    s.tappers.arm = 1; // 15
+    expect(energyPerSecond(s)).toBeCloseTo((5 + 3) * v('overtime') + 15);
   });
 
   it('Assembly Line and Critical Load grow with the run', () => {
     const s = holding(['assembly-line', 1], ['critical-load', 1]);
     s.tappers.assistant = 10;
     s.runLifetime = 10_000; // Stable: state 2, milestone x1.1
-    expect(energyPerSecond(s)).toBeCloseTo(5 * 1.1 * 1.2 * 1.1);
+    const line = 1 + 10 * v('assembly-line');
+    const load = 1 + 2 * v('critical-load');
+    expect(energyPerSecond(s)).toBeCloseTo(5 * line * load * 1.1);
   });
 
   it('Bulk Order discounts auto-tappers', () => {
-    expect(tapperCost(holding(['bulk-order', 1]), 'assistant')).toBe(60);
-    expect(tapperCost(holding(['bulk-order', 3]), 'assistant')).toBe(45);
+    expect(tapperCost(holding(['bulk-order', 1]), 'assistant')).toBe(
+      Math.round(75 * (1 - v('bulk-order')))
+    );
+    expect(tapperCost(holding(['bulk-order', 3]), 'assistant')).toBe(
+      Math.round(75 * (1 - v('bulk-order', 3)))
+    );
   });
 
   it('Ghost Presses turn the Double Tap chance into output', () => {
     const s = holding(['ghost-presses', 2]);
     s.tappers.pneumatic = 2;
-    s.upgrades.double = 4; // 20%, x1.5 of it
-    expect(energyPerSecond(s)).toBeCloseTo(6 * 1.3);
+    s.upgrades.double = 4; // 20%
+    expect(energyPerSecond(s)).toBeCloseTo(6 * (1 + 0.2 * v('ghost-presses', 2)));
   });
 
   it('Full Sync shares the whole combo bonus, and beats Synchronisation', () => {
     const s = holding(['full-sync', 1]);
     s.tappers.pneumatic = 2;
     s.upgrades.sync = 1;
-    expect(energyPerSecond(s, { combo: 100 })).toBeCloseTo(18);
+    expect(energyPerSecond(s, { combo: 100 })).toBeCloseTo(6 * (1 + 2 * v('full-sync')));
   });
 
   it('Surge Lines lets surges reach auto-tappers and lengthens them', () => {
     const s = holding(['surge-lines', 2]);
     s.tappers.pneumatic = 2;
     expect(energyPerSecond(s, { surging: true })).toBe(60);
-    expect(modsOf(s).surge.durationS).toBe(7);
+    expect(modsOf(s).surge.durationS).toBe(v('surge-lines', 2));
   });
 
   it('Idle Hands boosts auto-tappers after ten seconds without a press', () => {
     const s = holding(['idle-hands', 1]);
     s.tappers.pneumatic = 2;
     expect(energyPerSecond(s, { idleS: 5 })).toBe(6);
-    expect(energyPerSecond(s, { idleS: 10 })).toBe(15);
+    expect(energyPerSecond(s, { idleS: PERK_EFFECT.idleAfterS })).toBeCloseTo(6 * v('idle-hands'));
   });
 
   it('Night Shift pays all of away time, for longer', () => {
     const s = holding(['night-shift', 1]);
     s.tappers.pneumatic = 2;
     expect(offlineAward(s, 600)).toEqual({ seconds: 600, energy: 3600 });
-    expect(offlineAward(s, 24 * 3600)!.seconds).toBe(8 * 3600);
+    expect(offlineAward(s, 48 * 3600)!.seconds).toBe(v('night-shift') * 3600);
   });
 
   it('Feedback Loop pays a share of per-second income on every press', () => {
     const s = holding(['feedback-loop', 1]);
     s.tappers.pneumatic = 2; // 6 a second
-    expect(energyPerPress(s)).toBeCloseTo(1 + 0.3);
+    expect(energyPerPress(s)).toBeCloseTo(1 + 6 * v('feedback-loop'));
   });
 
-  it('Self-Replicator copies the cheapest revealed auto-tapper', () => {
+  it('Self-Replicator copies the best auto-tapper owned', () => {
     const s = holding(['self-replicator', 1]);
-    expect(modsOf(s).replicateEveryS).toBe(60);
-    s.revealed = ['assistant', 'pneumatic'];
-    s.tappers.assistant = 20; // dearer than a first Pneumatic Key now
+    expect(modsOf(s).replicateEveryS).toBe(v('self-replicator'));
+    expect(replicate(s), 'nothing owned, nothing to copy').toBeNull();
+    s.tappers.assistant = 20;
+    s.tappers.pneumatic = 2;
     expect(replicate(s)).toBe('pneumatic');
-    expect(s.tappers.pneumatic).toBe(1);
+    expect(s.tappers.pneumatic).toBe(3);
   });
 
   it('Autopilot halves presses and multiplies auto-tappers', () => {
     const s = holding(['autopilot', 1]);
     s.tappers.pneumatic = 2;
     expect(energyPerPress(s)).toBe(0.5);
-    expect(energyPerSecond(s)).toBe(24);
+    expect(energyPerSecond(s)).toBeCloseTo(6 * v('autopilot'));
   });
 });
 
@@ -441,7 +469,11 @@ describe('perk drops', () => {
     const s = holding(...PERKS.map((p): [PerkId, number] => [p.id, p.id === 'metronome' ? 2 : 3]));
     s.perks.nextDropAtS = 0;
     const [o] = perkTick(s, 10, 1).dropped;
-    expect(o).toMatchObject({ id: 'metronome', level: 3, price: Math.round(90 * 10 * 2.25) });
+    expect(o).toMatchObject({
+      id: 'metronome',
+      level: 3,
+      price: Math.round(PERK_DROPS.priceS[def('metronome').rarity] * 10 * 2.25),
+    });
     expect(upgradeFactor(2)).toBe(2.25);
   });
 
@@ -711,7 +743,7 @@ describe('modifiers with perks', () => {
     expect(modsOf(holding(['metronome', 1]))).toBe(one);
     s.perks.owned[0]!.level = 2;
     expect(modsOf(s)).not.toBe(one);
-    expect(modsOf(s).combo.tolerance).toBe(0.5);
+    expect(modsOf(s).combo.tolerance).toBe(v('metronome', 2));
   });
 
   it('never touch the shipped rules', () => {

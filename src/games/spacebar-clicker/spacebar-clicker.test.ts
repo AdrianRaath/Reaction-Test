@@ -52,8 +52,13 @@ describe('config', () => {
     }
   });
 
-  it('makes the first upgrade affordable within the first fifteen presses', () => {
-    expect(PRESS_UPGRADES[0]!.baseCost).toBeLessThanOrEqual(15);
+  it('makes the first upgrade affordable within 15 seconds of steady tapping (spec §12)', () => {
+    // Five presses a second on a steady beat, the combo building from zero.
+    const s = defaultSave(NOW);
+    let presses = 0;
+    let energy = 0;
+    while (energy < PRESS_UPGRADES[0]!.baseCost) energy += energyPerPress(s, { combo: presses++ });
+    expect(presses).toBeLessThanOrEqual(15 * 5);
   });
 
   it('orders reactor states by rising threshold from zero', () => {
@@ -71,16 +76,16 @@ describe('config', () => {
 describe('costs', () => {
   it('scales by the multiplier per level owned and rounds to whole energy', () => {
     const s = defaultSave(NOW);
-    expect(upgradeCost(s, 'finger')).toBe(15);
+    expect(upgradeCost(s, 'finger')).toBe(75);
     s.upgrades.finger = 1;
-    expect(upgradeCost(s, 'finger')).toBe(27); // 15 × 1.8
-    s.upgrades.finger = 2;
-    expect(upgradeCost(s, 'finger')).toBe(49); // 15 × 3.24 = 48.6
+    expect(upgradeCost(s, 'finger')).toBe(135); // 75 × 1.8
+    s.upgrades.finger = 3;
+    expect(upgradeCost(s, 'finger')).toBe(437); // 75 × 5.832 = 437.4
   });
 
   it('keeps one-off upgrades at a fixed price', () => {
     const s = defaultSave(NOW);
-    expect(upgradeCost(s, 'stabiliser')).toBe(5000);
+    expect(upgradeCost(s, 'stabiliser')).toBe(20_000);
   });
 
   it('prices the Nth auto-tapper from the count owned', () => {
@@ -165,7 +170,7 @@ describe('shop tab notices', () => {
 
   it('flags an item that becomes affordable at a price not seen before', () => {
     const s = defaultSave(NOW);
-    s.energy = 20; // Finger Strength costs 15
+    s.energy = 80; // Finger Strength costs 75
     expect(shopTabHasNews(s, 'press')).toBe(true);
     markShopTabSeen(s, 'press');
     expect(shopTabHasNews(s, 'press')).toBe(false);
@@ -173,13 +178,13 @@ describe('shop tab notices', () => {
     // Dipping below the price and earning it back is not news.
     s.energy = 0;
     expect(shopTabHasNews(s, 'press')).toBe(false);
-    s.energy = 20;
+    s.energy = 80;
     expect(shopTabHasNews(s, 'press')).toBe(false);
 
     // The next level is a new price, so it is news once affordable.
-    buyUpgrade(s, 'finger'); // 5 left, next level costs 27
+    buyUpgrade(s, 'finger'); // 5 left, next level costs 135
     expect(shopTabHasNews(s, 'press')).toBe(false);
-    s.energy = 30;
+    s.energy = 140;
     expect(shopTabHasNews(s, 'press')).toBe(true);
   });
 
@@ -282,11 +287,11 @@ describe('buying', () => {
 
   it('charges the current price and raises the level', () => {
     const s = defaultSave(NOW);
-    s.energy = 100;
+    s.energy = 200;
     expect(buyUpgrade(s, 'finger')).toBe(true);
-    expect(s.energy).toBe(85);
+    expect(s.energy).toBe(125);
     expect(buyTapper(s, 'assistant')).toBe(true);
-    expect(s.energy).toBe(10);
+    expect(s.energy).toBe(50);
     expect(s.tappers.assistant).toBe(1);
   });
 

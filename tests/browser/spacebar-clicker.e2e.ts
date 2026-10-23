@@ -48,14 +48,14 @@ test('a click on the reactor counts as a press', async ({ page }) => {
 
 test('buying, the shop tabs, and row alignment', async ({ page }) => {
   await openGame(page);
-  await pressSteady(page, 30, 200);
+  await pressSteady(page, 55, 200); // Finger Strength costs 75
   const e1 = await energy(page);
 
   const finger = page.locator('.shop-item[data-id="finger"] .shop-buy');
   await expect(finger).toHaveClass(/is-affordable/);
   await finger.click();
   await expect(page.locator('.shop-item[data-id="finger"] [data-level]')).toHaveText('1/20');
-  expect(await energy(page)).toBe(e1 - 15);
+  expect(await energy(page)).toBe(e1 - 75);
 
   // The open tab never wears a tag, and nothing is new on the closed one yet.
   await expect(page.locator('#sc-new-press')).toBeHidden();
@@ -91,7 +91,10 @@ test('buying, the shop tabs, and row alignment', async ({ page }) => {
 
 test('the save survives a reload', async ({ page }) => {
   await openGame(page);
-  await pressSteady(page, 20, 200);
+  await editSave(page, (s) => {
+    s.energy = 200;
+    s.lastSeen = Date.now();
+  });
   await page.locator('.shop-item[data-id="finger"] .shop-buy').click();
   await page.reload({ waitUntil: 'networkidle' });
   await expect(page.locator('.shop-item[data-id="finger"] [data-level]')).toHaveText('1/20');

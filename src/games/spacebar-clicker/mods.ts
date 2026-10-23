@@ -44,6 +44,8 @@ export interface Mods {
   pressMult: number;
   /** Press value bonus per point of combo: 0.005 is +0.5% a point. */
   pressPerCombo: number;
+  /** The most that bonus can add: 0.25 is +25%. */
+  momentumCap: number;
   /** Added to the Double Tap chance before the cap. */
   doubleTapBonus: number;
   /** Highest the Double Tap chance can go. */
@@ -88,7 +90,7 @@ export interface Mods {
   idleBoostAfterS: number;
   /** Multiplier on auto-tapper prices. */
   tapperCostMult: number;
-  /** Seconds between free copies of the cheapest auto-tapper; 0 never. */
+  /** Seconds between free copies of the best auto-tapper owned; 0 never. */
   replicateEveryS: number;
 
   // --- Away --------------------------------------------------------------
@@ -103,6 +105,7 @@ export const BASE_MODS: Readonly<Mods> = Object.freeze({
   springPerLevel: 1.5,
   pressMult: 1,
   pressPerCombo: 0,
+  momentumCap: Infinity,
   doubleTapBonus: 0,
   doubleTapCap: 0.5,
   chainShare: 0,
@@ -152,15 +155,16 @@ const EFFECTS: Record<PerkId, (m: Draft, v: number) => void> = {
     m.tiers = [{ min: PERK_EFFECT.overtoneMin, multiplier: v, label: 'Overtone' }, ...m.tiers];
   },
   momentum: (m, v) => {
-    m.pressPerCombo = v;
+    m.pressPerCombo = PERK_EFFECT.momentumPerPoint;
+    m.momentumCap = v;
   },
   'glass-rhythm': (m, v) => {
     m.tiers = m.tiers.map((t) => (t.min > 0 ? { ...t, multiplier: t.multiplier * v } : t));
-    m.combo.missesToBreak = 1;
+    m.combo.missesToBreak = PERK_EFFECT.glassMissesToBreak;
     m.stabiliser = false;
   },
   'finger-memory': (m, v) => {
-    m.fingerPerLevel = v;
+    m.fingerPerLevel = 1 + v;
   },
   'coiled-spring': (m, v) => {
     m.springPerLevel = v;
@@ -190,6 +194,7 @@ const EFFECTS: Record<PerkId, (m: Draft, v: number) => void> = {
   },
   overtime: (m, v) => {
     m.tapperMultById.assistant = v;
+    m.tapperMultById.pneumatic = v;
   },
   'assembly-line': (m, v) => {
     m.tapperPerOwned = v;

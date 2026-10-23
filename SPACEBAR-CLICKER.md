@@ -75,6 +75,8 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 | `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                              |
 | `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap, away deferral, perk text. Pure.                                                                 |
 | `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks (66 as of 2026-10-23).                                                                                                                        |
+| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12).                                                          |
+| `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                      |
 | `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (59 as of 2026-10-23).                                                                           |
 | `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, and every reactor state (§7).                                                                          |
 | `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine.            |
@@ -164,11 +166,14 @@ income. Cost = `round(base x scale ^ owned)`.
 
 | Upgrade         | Effect                                      | Base cost | Scale | Max |
 | --------------- | ------------------------------------------- | --------- | ----- | --- |
-| Finger Strength | +1 energy per press, each level             | 15        | x1.8  | 20  |
-| Double Tap      | +5% chance a press counts twice, each level | 300       | x2.5  | 10  |
-| Spring Keys     | Press value x1.5, each level                | 5,000     | x6    | 5   |
-| Stabiliser      | A broken combo drops by 10 instead of to 0  | 5,000     | n/a   | 1   |
-| Synchronisation | Auto-tappers get half your combo multiplier | 25,000    | n/a   | 1   |
+| Finger Strength | +1 energy per press, each level             | 75        | x1.8  | 20  |
+| Double Tap      | +5% chance a press counts twice, each level | 1,500     | x2.5  | 10  |
+| Spring Keys     | Press value x1.5, each level                | 25,000    | x6    | 5   |
+| Stabiliser      | A broken combo drops by 10 instead of to 0  | 20,000    | n/a   | 1   |
+| Synchronisation | Auto-tappers get half your combo multiplier | 100,000   | n/a   | 1   |
+
+Press-upgrade prices went up four to five times on 2026-10-23, and auto-tapper
+prices stayed put (§4.12).
 
 | Auto-tapper       | Energy/s each | Base cost | Scale |
 | ----------------- | ------------- | --------- | ----- |
@@ -273,22 +278,89 @@ achievement, prestige and away collect.
 
 ### 4.12 Pacing
 
-Simulated 2026-10-21 with a greedy optimal buyer:
+**Decided 2026-10-23: about 24 minutes to first prestige for a steady
+player.** This was option 1, chosen by the maintainer.
 
-| Milestone         | Time                                                              |
-| ----------------- | ----------------------------------------------------------------- |
-| First upgrade     | 3 s                                                               |
-| First auto-tapper | 8 s                                                               |
-| Pneumatic Key     | 1.3 min                                                           |
-| Robot Arm         | 7 min                                                             |
-| Quantum Keyboard  | 30 min                                                            |
-| Particle Collider | 40 min                                                            |
-| First prestige    | 24 min at 5 presses/s with a combo; 48 min mashing; 39 min at 3/s |
+The old out-of-repo simulator had claimed 24 minutes, but by the real rules
+the game took about 14. The fix raised the press upgrades' base costs four to
+five times and left the auto-tappers' alone. The new prices are in §4.5.
 
-- Idle share of income is 47% at 30 minutes and 74% at 60.
-- First prestige is the anchor. If play feels off, tune base costs first,
-  scaling second.
-- The simulator is not in the repo. `config.ts`'s header records the method.
+Raising every price by the same factor was tried first and rejected. It hit 24
+minutes, but auto-tappers fell from 58% to 2% of income in minutes 10 to 15,
+so the game stopped feeling idle. A press's value grows from the combo,
+surges and Finger Strength's cheap levels, none of which get dearer. Auto-tappers
+only grow by being bought. Raising auto-tapper prices at all made the
+simulated buyer drop them.
+
+**The simulator.** `sim.ts` plays whole first runs headless against the real
+rules: economy, combo tracker, surges and perks. Its players:
+
+| Player      | Rate        | Rhythm     | Habits                                                                                   |
+| ----------- | ----------- | ---------- | ---------------------------------------------------------------------------------------- |
+| Steady      | 5 presses/s | 10% jitter | a short break every 40 s or so; checks the shop every 10 s, and stops tapping 2 s to buy |
+| Sloppy      | 5 presses/s | 20% jitter | as steady                                                                                |
+| Masher      | 7 presses/s | 50% jitter | as steady                                                                                |
+| Idler       | 5 presses/s | 10% jitter | taps 20 s, then leaves it 40 s                                                           |
+| Perfect bot | 5 presses/s | 10% jitter | shops every half second without missing a beat                                           |
+
+Every player buys the shop item that adds the most income per energy spent.
+`pacing.test.ts` holds the results in bands (§7).
+
+**First prestige without perks**, median over 8 runs:
+
+| Player      | Minutes                                  |
+| ----------- | ---------------------------------------- |
+| Steady      | 24.6                                     |
+| Sloppy      | 26.5                                     |
+| Masher      | 38.4, about 1.56 times as long as steady |
+| Idler       | 43.2                                     |
+| Perfect bot | 22.7                                     |
+
+**A steady first run.** The first purchase of each item comes at:
+
+| Item              | First bought |
+| ----------------- | ------------ |
+| Finger Strength   | 10 s         |
+| Lab Assistant     | 90 s         |
+| Pneumatic Key     | under 2 min  |
+| Spring Keys       | 5.7 min      |
+| Robot Arm         | 7.0 min      |
+| Stabiliser        | 10.2 min     |
+| Particle Collider | 15.0 min     |
+| Synchronisation   | 17.0 min     |
+| Quantum Keyboard  | 21.1 min     |
+| First prestige    | 24.6 min     |
+
+So a first run sees the whole shop. The Collider pays better per energy than
+the Quantum Keyboard, so it comes first.
+
+**Auto-tappers versus presses.** Auto-tappers overtake presses at about minute
+16 for a steady player, 19 to 20 for a masher, and 7 to 8 for an idler. For a
+steady player they earn 17% of income in minutes 10 to 15, 50% in minutes 15
+to 20, and 85% in minutes 25 to 30.
+
+**Against the spec's §12 targets:**
+
+- **Met:** the first upgrade within 15 s; the first auto-tapper within 30 s
+  (both cost 75, affordable at about 11 s of steady tapping); the Pneumatic
+  Key at about 2 min.
+- **Missed:** the Robot Arm at 7 min against a 5-minute target; the Quantum
+  Keyboard at 21 against 12, and the Particle Collider at 15 against 30;
+  an idle share of 85% at 30 min against the spec's 50%.
+- **Page copy:** the FAQ's "about twice that if you mash" now reads "about
+  half as long again". The overview's "auto-tappers out-earn your fingers
+  after about an hour" now reads "after fifteen or twenty minutes".
+- **Tuning:** if play feels off, tune base costs first, scaling second. Rerun
+  the pacing test after any change.
+
+**History.**
+
+- The old 2026-10-21 table claimed first prestige at 24 min for a 5
+  presses/s tapper, 48 mashing, and 39 at 3 presses/s; the Pneumatic Key at
+  1.3 min, the Robot Arm at 7, the Quantum Keyboard at 30 and the Particle
+  Collider at 40.
+- By the real rules, the old prices gave 14.0 min for a steady player and
+  24.2 for a masher.
 
 ## 5. Presentation
 
@@ -407,6 +479,10 @@ The visuals were built in three passes, all shipped 2026-10-22.
     time frame by frame.
   - **Naming:** the files are `*.e2e.ts`, not `*.spec.ts`, so Vitest leaves
     them alone.
+- `pacing.test.ts` runs with `npm test`, adding about 5 s. To write the full
+  table to a file: `PACING_REPORT=pacing.txt npx vitest run pacing` in Git
+  Bash, or `$env:PACING_REPORT="pacing.txt"; npx vitest run pacing` in
+  PowerShell.
 - Run every check at the end of each step.
 - **Never verified**: a real touch device, Firefox and Safari, long-session
   feel, and a human playtest of the balance.
@@ -432,10 +508,16 @@ The visuals were built in three passes, all shipped 2026-10-22.
 ### 8.1 Perk system: phase 1 in progress
 
 **Status (2026-10-23).** Design and build plan approved, follow-ups answered.
-Steps 1 and 2 of 6, the groundwork and the perk logic, are done. Nothing drops
-in the live game yet, because the script doesn't call the perk logic until
-step 4. Next is step 3, the pacing simulation. Check in with the maintainer
-after each step.
+Steps 1 to 3 of 6 are done: groundwork, perk logic, and pacing simulation.
+Nothing drops in the live game yet, because the script doesn't call the perk
+logic until step 4.
+
+The pace question is settled: 24 minutes, option 1 (§4.12). Waiting on the
+maintainer before step 4: sign-off on the step 3 tuning in §8.1.9,
+especially the reworked Overtime and Self-Replicator, and the softer Glass
+Rhythm.
+
+Check in with the maintainer after each step.
 
 **Scope note.** The original spec called the game "shallow on purpose", and
 its §15 ruled out a prestige shop. The maintainer asked for perks on
@@ -509,8 +591,9 @@ are proposals carried into the build plan.
   - **Checked through the real code.** Simulated 30-minute runs give 5 to 10
     drops, usually 7, with a keystone in about 38% of runs. About one drop in
     two runs is lost to full tabs if the player never buys.
-  - **Prices** are 45, 90 and 150 s of income by rarity, with windows of 90,
-    180 and 300 s.
+  - **Prices** are 15, 30 and 60 s of income by rarity, with windows of 60,
+    90 and 150 s. They were cut from 45, 90 and 150 in step 3: at 45 s of
+    income, a common worth +5% couldn't pay for itself within a first run.
 - **Slots: 5.** _Decided._ At most 5 active perks, and one keystone at a time.
   - Buying a new perk with all 5 slots full asks which perk to drop. The
     dropped perk is gone for the run, levels and all. Cancelling keeps the
@@ -566,7 +649,7 @@ are proposals carried into the build plan.
 
 Values are given as level I / II / III. They are starting points for the
 simulation, not final. The live table is `PERKS` in `config.ts`, and its
-wording is what the game will show. These rows mirror it as of step 2.
+wording is what the game will show. These rows mirror it as of step 3's tuning.
 
 How a few effects were built in step 2:
 
@@ -584,48 +667,53 @@ How a few effects were built in step 2:
 
 Upgrades tab:
 
-| Perk           | Effect at level I / II / III                                                                               | Rarity   | Family |
-| -------------- | ---------------------------------------------------------------------------------------------------------- | -------- | ------ |
-| Metronome      | Rhythm tolerance widens from 25% to 40% / 50% / 60%                                                        | Rare     | Rhythm |
-| Held Breath    | A pause of up to 2 s / 3 s / 5 s keeps the combo, up from 0.8 s                                            | Common   | Rhythm |
-| Overtone       | A new tier above Harmonic: 200 combo for x4 / x4.5 / x5                                                    | Rare     | Rhythm |
-| Momentum       | +0.5% / 0.75% / 1% press value per point of combo, no ceiling                                              | Rare     | Rhythm |
-| Glass Rhythm   | Combo multipliers x2 / x2.5 / x3, but one off-beat press breaks the combo and the Stabiliser stops working | Keystone | Rhythm |
-| Finger Memory  | Each Finger Strength level adds 2 / 3 / 4 energy a press instead of 1                                      | Common   | Press  |
-| Coiled Spring  | Spring Keys give x2 / x2.25 / x2.5 a level instead of x1.5                                                 | Rare     | Press  |
-| Brute Force    | No combo at all, but press value x3 / x4 / x5                                                              | Keystone | Press  |
-| Loaded Dice    | Double Tap +15% / 25% / 35%, and its cap rises from 50% to 75%                                             | Common   | Luck   |
-| Chain Reaction | A Double Tap rolls again at 50% / 75% / 100% of your Double Tap chance, up to x8                           | Rare     | Luck   |
-| Lightning Rod  | Surges come 2 / 2.5 / 3 times as often                                                                     | Rare     | Surge  |
-| Afterglow      | Presses keep x3 for 10 s / 15 s / 20 s after a surge                                                       | Common   | Surge  |
-| Storm Front    | Surges hit x25 / x35 / x50 but strike with no warning                                                      | Keystone | Surge  |
+| Perk           | Effect at level I / II / III                                                                                         | Rarity   | Family |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- | -------- | ------ |
+| Metronome      | Rhythm tolerance widens from 25% to 40% / 55% / 70%                                                                  | Common   | Rhythm |
+| Held Breath    | A pause of up to 2.5 s / 4 s / 6 s keeps the combo, up from 0.8 s                                                    | Common   | Rhythm |
+| Overtone       | A new tier above Harmonic: 200 combo for x3.5 / x3.75 / x4                                                           | Rare     | Rhythm |
+| Momentum       | +0.25% press value per point of combo, up to +25% / 40% / 60%                                                        | Rare     | Rhythm |
+| Glass Rhythm   | Combo multipliers x2 / x2.5 / x3, but two off-beat presses in a row break the combo and the Stabiliser stops working | Keystone | Rhythm |
+| Finger Memory  | Finger Strength gives 10% / 20% / 30% more energy a level                                                            | Common   | Press  |
+| Coiled Spring  | Spring Keys give x1.7 / x1.8 / x1.9 a level instead of x1.5                                                          | Rare     | Press  |
+| Brute Force    | No combo at all, but press value x1.8 / x2 / x2.2                                                                    | Keystone | Press  |
+| Loaded Dice    | Double Tap +15% / 25% / 35%, and its cap rises from 50% to 75%                                                       | Common   | Luck   |
+| Chain Reaction | A Double Tap rolls again at 150% / 200% / 300% of your Double Tap chance (at most 60%), up to x8                     | Rare     | Luck   |
+| Lightning Rod  | Surges come 1.75 / 2 / 2.5 times as often                                                                            | Rare     | Surge  |
+| Afterglow      | Presses keep x3 for 10 s / 15 s / 20 s after a surge                                                                 | Common   | Surge  |
+| Storm Front    | Surges hit x20 / x25 / x32 but strike with no warning                                                                | Keystone | Surge  |
 
 Auto-tappers tab:
 
 | Perk            | Effect at level I / II / III                                                       | Rarity   | Family   |
 | --------------- | ---------------------------------------------------------------------------------- | -------- | -------- |
-| Overtime        | Lab Assistants produce x4 / x7 / x10                                               | Common   | Machines |
+| Overtime        | Lab Assistants and Pneumatic Keys produce x1.75 / x2.5 / x3.25                     | Common   | Machines |
 | Assembly Line   | +1% / 1.5% / 2% auto-tapper output per auto-tapper owned                           | Common   | Machines |
 | Bulk Order      | Auto-tappers cost 20% / 30% / 40% less                                             | Common   | Machines |
 | Critical Load   | +10% / 15% / 20% auto-tapper output per reactor state reached                      | Common   | Machines |
 | Ghost Presses   | Auto-tappers add 100% / 150% / 200% of your Double Tap chance to their output      | Common   | Luck     |
-| Full Sync       | Auto-tappers get 100% / 125% / 150% of your combo bonus, no Synchronisation needed | Rare     | Rhythm   |
+| Full Sync       | Auto-tappers get 75% / 90% / 105% of your combo bonus, no Synchronisation needed   | Rare     | Rhythm   |
 | Surge Lines     | Surges multiply auto-tappers too, and last 5 s / 7 s / 9 s                         | Rare     | Surge    |
-| Idle Hands      | Auto-tappers x2.5 / x3.5 / x5 after 10 s without a press                           | Rare     | Machines |
+| Idle Hands      | Auto-tappers x1.4 / x1.7 / x2 after 10 s without a press                           | Rare     | Machines |
 | Night Shift     | Away progress pays 100% instead of 50%, capped at 8 h / 12 h / 24 h instead of 4 h | Rare     | Machines |
-| Feedback Loop   | Each press also pays 5% / 8% / 12% of your per-second income                       | Rare     | Machines |
-| Self-Replicator | A free copy of your cheapest auto-tapper every 60 s / 45 s / 30 s                  | Rare     | Machines |
-| Autopilot       | Presses earn half, but auto-tappers x4 / x5 / x6                                   | Keystone | Machines |
+| Feedback Loop   | Each press also pays 8% / 12% / 16% of your per-second income                      | Rare     | Machines |
+| Self-Replicator | A free copy of your best auto-tapper every 180 s / 130 s / 90 s                    | Rare     | Machines |
+| Autopilot       | Presses earn half, but auto-tappers x1.7 / x1.95 / x2.2                            | Keystone | Machines |
 
 The builds these make:
 
-| Build  | Perks                                              | How it plays                                         |
-| ------ | -------------------------------------------------- | ---------------------------------------------------- |
-| Rhythm | Metronome, Overtone, Momentum, Full Sync           | One long combo powers presses and auto-tappers alike |
-| Surge  | Lightning Rod, Storm Front, Surge Lines, Afterglow | Play for the bursts                                  |
-| Luck   | Loaded Dice, Chain Reaction, Ghost Presses         | Gold floats everywhere                               |
-| Masher | Brute Force, Finger Memory, Coiled Spring          | Ignore the beat and hit hard                         |
-| Idle   | Idle Hands, Night Shift, Autopilot, Bulk Order     | The reactor runs itself                              |
+| Build  | Perks                                                           | How it plays                                                                                        |
+| ------ | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Rhythm | Glass Rhythm, Full Sync, Momentum, Overtone                     | A precise beat powers presses and auto-tappers alike. Metronome and Held Breath help a looser hand. |
+| Surge  | Storm Front, Lightning Rod, Surge Lines, Afterglow              | Play for the bursts                                                                                 |
+| Luck   | Loaded Dice, Chain Reaction, Ghost Presses                      | Gold floats everywhere                                                                              |
+| Masher | Brute Force, Coiled Spring, Finger Memory                       | Ignore the beat and hit hard                                                                        |
+| Idle   | Autopilot, Idle Hands, Self-Replicator, Bulk Order, Night Shift | The reactor runs itself                                                                             |
+
+Each build is listed strongest first, the order the simulation's perfect run
+takes them. In step 3, Glass Rhythm and Full Sync proved to be the rhythm
+build's core: Glass Rhythm doubles the combo multipliers, and Full Sync passes
+the whole bonus to auto-tappers.
 
 Keystones shut doors on purpose. With Brute Force owned, Metronome and Full
 Sync do nothing, and letting them expire is the right call. Those skips are
@@ -740,13 +828,10 @@ maintainer can review before the next one, as with the delight passes.
    - **Drop rework, same day.** On the maintainer's feedback, the scheduled
      rolls with pity were replaced by the random, Diablo-style model in
      §8.1.2.
-3. **Pacing simulation, in the repo.**
-   - A pure simulation module, with a Vitest pacing test that asserts first
-     prestige stays within a band, both with no perks and for each build.
-   - Tune prices, windows and perk values until the bands hold. The drop
-     timing and tier odds are decided (§8.1.2). Change them only to fix
-     pacing, and check with the maintainer first.
-   - Report the numbers before any UI work.
+3. **Pacing simulation, in the repo.** _Done 2026-10-23._
+   - `sim.ts` and `pacing.test.ts` (§4.12, §7).
+   - Results are in §8.1.9, and the open pacing question is in §4.12.
+   - Drop timing and tier odds were left as decided.
 4. **Shop offers and perk effects in play.**
    - The offer row: family-color tile, draining ring, price, level badge, and
      the upgrade's effect now and next.
@@ -782,6 +867,62 @@ Raised by the upgrade caveat in question 3.
    needs no free slot? **Answer: yes.**
 3. Add Playwright to the repo as a dev dependency so the browser checks
    survive between sessions? **Answer: yes.** Done in step 1.
+
+#### 8.1.9 Step 3 results: tuning, 2026-10-23
+
+These are simulated first runs at the retuned shop prices (§4.12), median
+minutes over 8 seeds, from `pacing.test.ts`. Rerun it to refresh these.
+
+| Run                                    | Minutes | Faster than the same player without perks |
+| -------------------------------------- | ------- | ----------------------------------------- |
+| Steady, takes every perk that suits it | 22.2    | 10%, with 5.5 perks bought                |
+| Rhythm build, perfect run (steady)     | 16.6    | 33%                                       |
+| Surge build, perfect run (steady)      | 17.9    | 27%                                       |
+| Luck build, perfect run (steady)       | 17.6    | 28%                                       |
+| Masher build, perfect run (masher)     | 25.3    | 34%                                       |
+| Idle build, perfect run (idler)        | 26.0    | 40%, right at the band's edge             |
+
+A perfect run means every drop is the build's next perk. Even on one, a masher
+or an idler doesn't catch a steady tapper with no perks (24.6), so rhythm
+stays the best way to play.
+
+The longer runs roughly doubled what a typical player gets from perks: from
+5% to 10% faster, with 5.5 perks bought instead of 3.5.
+
+**One perk held all run**, for the player it suits, % faster at level I / III:
+
+- **Commons:** 2 to 10% at I, 6 to 18% at III.
+- **Rares:** 4 to 15% at I, 14 to 23% at III.
+- **Keystones:** 15 to 28% at I, 28 to 41% at III.
+- Night Shift shows 0%, because the simulation has no time away.
+
+**What tuning changed** (values in §8.1.3):
+
+- **Prices** went from 45, 90 and 150 s of income to 15, 30 and 60. Windows
+  went to 60, 90 and 150 s. At 45 s of income, a common worth +5% couldn't
+  pay for itself within a first run.
+- **Momentum** was 52% faster at level I: with the Stabiliser, a steady
+  combo climbs without limit. It is now +0.25% a point up to a cap.
+- **Finger Memory** was 41% at I. It is now +10%, 20% or 30% Finger Strength.
+- **Brute Force** was 55% for a masher, and let a masher outpace a steady
+  tapper.
+- **Glass Rhythm** was negative for a steady tapper: one miss ended the
+  combo, and a 10% jitter misses about every 16 s. It now breaks on two
+  misses in a row. It still switches off the Stabiliser and still punishes
+  a sloppy hand.
+- **Overtime** did 3%, because it boosted only Lab Assistants. It now boosts
+  Pneumatic Keys too.
+- **Self-Replicator** did 0%, because the cheapest tapper is a Lab Assistant.
+  It now copies your best auto-tapper.
+- **Metronome** is now a common. It and Held Breath stay small: the
+  Stabiliser already forgives most misses. They are comfort perks for a
+  looser hand.
+- **After the shop retune**, auto-tappers carry more of each run, so the
+  machine perks were reined in. Autopilot, Idle Hands, Self-Replicator,
+  Overtime and Full Sync are all lower. Chain Reaction and Coiled Spring went
+  up, because Double Tap and Spring Keys now cost more.
+- **The build lists** were corrected so each opens with its strongest perk.
+  The rhythm build now leads with Glass Rhythm and Full Sync.
 
 ### 8.2 Unassigned ideas
 
@@ -826,6 +967,19 @@ the maintainer asks.
   three levels each, their effects through the modifiers, drops, offers priced
   and timed in seconds of income, buying and upgrading, five slots with one
   keystone, and the save block with the codex. No visible change yet.
+- **2026-10-23.** Perks step 3, the pacing simulation. Added `sim.ts` and
+  `pacing.test.ts` in the repo. Perks tuned (§8.1.9): prices cut to 15, 30
+  and 60 s of income, five overpowered perks reined in, four weak ones
+  reworked, Metronome made a common, and the build lists corrected.
+  Finding: by the real rules a steady player reaches first prestige in about
+  14 minutes, not the 24 the page says. The pace question is open in §4.12.
+- **2026-10-23.** Pace retuned (option 1, §4.12). Press-upgrade base costs
+  went up four to five times, and auto-tapper costs stayed put. First prestige
+  is back to about 24 minutes for a steady player, and the whole shop is
+  reached in a first run. Uniform scaling was rejected: it starved
+  auto-tappers. The machine perks were rebalanced for the new shape. The page
+  copy now says mashing takes "half as long again", and that auto-tappers
+  overtake presses at 15 to 20 minutes.
 - **2026-10-23.** Drops reworked on the maintainer's feedback, to feel like rune
   drops in Diablo II rather than a steady schedule. They are now random in
   active-play time, averaging 6 minutes before a hidden 10-minute ceiling.

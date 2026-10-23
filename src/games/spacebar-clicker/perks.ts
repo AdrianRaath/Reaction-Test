@@ -41,7 +41,7 @@ import {
   type PerkUnit,
   type ShopTab,
 } from './config';
-import { cheapestTapper, offerOn, perk } from './economy';
+import { bestTapper, offerOn, perk } from './economy';
 import { nextRandom } from './rng';
 import type { PerkOffer, PerkState, SaveState } from './save';
 
@@ -137,7 +137,15 @@ function dropPerk(
   const tier = tiers.find((t) => (pick -= odds[t]) < 0) ?? tiers[tiers.length - 1]!;
   const inTier = pool.filter((def) => def.rarity === tier);
   const def = inTier[Math.floor(draw(perks) * inTier.length)]!;
+  return placeOffer(state, def, income);
+}
 
+/**
+ * Put one perk on offer, priced and timed in seconds of `income`, as a drop
+ * does once it has picked the perk. The pacing simulation calls it directly
+ * to stage a build's perfect run.
+ */
+export function placeOffer(state: SaveState, def: PerkDef, income: number): PerkOffer {
   const pace = Math.max(income, PERK_DROPS.minIncome);
   const held = perkLevel(state, def.id);
   const offer: PerkOffer = {
@@ -149,8 +157,8 @@ function dropPerk(
     seen: false,
     seenAffordable: false,
   };
-  perks.offers.push(offer);
-  perks.codex[def.id] ??= 0;
+  state.perks.offers.push(offer);
+  state.perks.codex[def.id] ??= 0;
   return offer;
 }
 
@@ -277,9 +285,9 @@ export function buyPerk(state: SaveState, tab: ShopTab, replace?: PerkId): BuyPe
   return result;
 }
 
-/** Self-Replicator: a free copy of the cheapest revealed auto-tapper. */
+/** Self-Replicator: a free copy of the best auto-tapper owned. */
 export function replicate(state: SaveState): AutoTapperId | null {
-  const id = cheapestTapper(state);
+  const id = bestTapper(state);
   if (id) state.tappers[id] += 1;
   return id;
 }

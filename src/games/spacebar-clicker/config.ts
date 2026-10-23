@@ -10,9 +10,18 @@
  * ran the spec's table about five times too fast: first prestige landed at
  * ten minutes against a 45–60 minute target. This table came out of a grid
  * search against the spec's own pacing targets, with first prestige held as
- * the anchor: ~24 minutes for an optimal buyer, ~48 for a masher with no
- * combo, slower for a human who buys what looks fun. Tune base costs first,
- * scaling second (spec §12).
+ * the anchor at ~24 minutes. Tune base costs first, scaling second (spec §12).
+ *
+ * That simulator lived outside the repo, and by the real rules its table ran
+ * about twice as fast as it said: 14 minutes, not 24. Its replacement, sim.ts,
+ * plays the real rules. On 2026-10-23 the press upgrades' base costs went up
+ * four to five times and the auto-tappers' stayed put, which puts first
+ * prestige back at about 24 minutes for a steady 5-a-second tapper who shops
+ * like a person, and about 38 for a masher. Raising every price alike was
+ * tried first and rejected: auto-tappers fell to a few percent of income for
+ * the first half hour, because a press's combo, surge and Finger Strength
+ * value don't get dearer, and the game stopped feeling idle. pacing.test.ts
+ * holds the results in bands (SPACEBAR-CLICKER.md §4.12).
  *
  * Pure data, no DOM. Imported by the pure logic modules, their tests, the
  * page (to render the shop skeleton server-side) and the content.
@@ -177,7 +186,7 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
     id: 'finger',
     name: 'Finger Strength',
     detail: '+1 energy per press, each level',
-    baseCost: 15,
+    baseCost: 75,
     scale: 1.8,
     max: 20,
   },
@@ -185,7 +194,7 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
     id: 'double',
     name: 'Double Tap',
     detail: '+5% chance a press counts twice, each level',
-    baseCost: 300,
+    baseCost: 1500,
     scale: 2.5,
     max: 10,
   },
@@ -193,7 +202,7 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
     id: 'spring',
     name: 'Spring Keys',
     detail: 'Press value x1.5, each level',
-    baseCost: 5000,
+    baseCost: 25_000,
     scale: 6,
     max: 5,
   },
@@ -201,7 +210,7 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
     id: 'stabiliser',
     name: 'Stabiliser',
     detail: 'A broken combo drops by 10 instead of resetting',
-    baseCost: 5000,
+    baseCost: 20_000,
     scale: 1,
     max: 1,
   },
@@ -209,7 +218,7 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
     id: 'sync',
     name: 'Synchronisation',
     detail: 'Auto-tappers get half your combo multiplier',
-    baseCost: 25000,
+    baseCost: 100_000,
     scale: 1,
     max: 1,
   },
@@ -246,7 +255,7 @@ export const AUTO_TAPPERS: readonly AutoTapperDef[] = [
     name: 'Quantum Keyboard',
     detail: 'Presses in several states at once',
     eps: 80,
-    baseCost: 75000,
+    baseCost: 75_000,
     scale: 1.2,
   },
   {
@@ -254,7 +263,7 @@ export const AUTO_TAPPERS: readonly AutoTapperDef[] = [
     name: 'Particle Collider',
     detail: 'Not technically a keyboard',
     eps: 200,
-    baseCost: 150000,
+    baseCost: 150_000,
     scale: 1.2,
   },
 ];
@@ -344,8 +353,8 @@ export const PERKS: readonly PerkDef[] = [
     name: 'Metronome',
     tab: 'press',
     family: 'rhythm',
-    rarity: 'rare',
-    values: [0.4, 0.5, 0.6],
+    rarity: 'common',
+    values: [0.4, 0.55, 0.7],
     detail: 'Rhythm tolerance widens from 25% to {v}',
     unit: 'percent',
   },
@@ -355,7 +364,7 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'press',
     family: 'rhythm',
     rarity: 'common',
-    values: [2, 3, 5],
+    values: [2.5, 4, 6],
     detail: 'A pause of up to {v} keeps the combo, up from 0.8 s',
     unit: 'seconds',
   },
@@ -365,7 +374,7 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'press',
     family: 'rhythm',
     rarity: 'rare',
-    values: [4, 4.5, 5],
+    values: [3.5, 3.75, 4],
     detail: 'A new tier above Harmonic: 200 combo for {v}',
     unit: 'times',
   },
@@ -375,8 +384,8 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'press',
     family: 'rhythm',
     rarity: 'rare',
-    values: [0.005, 0.0075, 0.01],
-    detail: '+{v} press value per point of combo, no ceiling',
+    values: [0.25, 0.4, 0.6],
+    detail: '+0.25% press value per point of combo, up to +{v}',
     unit: 'percent',
   },
   {
@@ -387,7 +396,7 @@ export const PERKS: readonly PerkDef[] = [
     rarity: 'keystone',
     values: [2, 2.5, 3],
     detail:
-      'Combo multipliers {v}, but one off-beat press breaks the combo and the Stabiliser stops working',
+      'Combo multipliers {v}, but two off-beat presses in a row break the combo and the Stabiliser stops working',
     unit: 'times',
   },
   {
@@ -396,9 +405,9 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'press',
     family: 'press',
     rarity: 'common',
-    values: [2, 3, 4],
-    detail: 'Each Finger Strength level adds {v} energy a press instead of 1',
-    unit: 'plain',
+    values: [0.1, 0.2, 0.3],
+    detail: 'Finger Strength gives {v} more energy a level',
+    unit: 'percent',
   },
   {
     id: 'coiled-spring',
@@ -406,7 +415,7 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'press',
     family: 'press',
     rarity: 'rare',
-    values: [2, 2.25, 2.5],
+    values: [1.7, 1.8, 1.9],
     detail: 'Spring Keys give {v} a level instead of x1.5',
     unit: 'times',
   },
@@ -416,7 +425,7 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'press',
     family: 'press',
     rarity: 'keystone',
-    values: [3, 4, 5],
+    values: [1.8, 2, 2.2],
     detail: 'No combo at all, but press value {v}',
     unit: 'times',
   },
@@ -436,8 +445,8 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'press',
     family: 'luck',
     rarity: 'rare',
-    values: [0.5, 0.75, 1],
-    detail: 'A Double Tap rolls again at {v} of your Double Tap chance, up to x8',
+    values: [1.5, 2, 3],
+    detail: 'A Double Tap rolls again at {v} of your Double Tap chance (at most 60%), up to x8',
     unit: 'percent',
   },
   {
@@ -446,7 +455,7 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'press',
     family: 'surge',
     rarity: 'rare',
-    values: [2, 2.5, 3],
+    values: [1.75, 2, 2.5],
     detail: 'Surges come {v} times as often',
     unit: 'plain',
   },
@@ -466,7 +475,7 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'press',
     family: 'surge',
     rarity: 'keystone',
-    values: [25, 35, 50],
+    values: [20, 25, 32],
     detail: 'Surges hit {v} but strike with no warning',
     unit: 'times',
   },
@@ -478,8 +487,8 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'auto',
     family: 'machines',
     rarity: 'common',
-    values: [4, 7, 10],
-    detail: 'Lab Assistants produce {v}',
+    values: [1.75, 2.5, 3.25],
+    detail: 'Lab Assistants and Pneumatic Keys produce {v}',
     unit: 'times',
   },
   {
@@ -528,7 +537,7 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'auto',
     family: 'rhythm',
     rarity: 'rare',
-    values: [1, 1.25, 1.5],
+    values: [0.75, 0.9, 1.05],
     detail: 'Auto-tappers get {v} of your combo bonus, no Synchronisation needed',
     unit: 'percent',
   },
@@ -548,7 +557,7 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'auto',
     family: 'machines',
     rarity: 'rare',
-    values: [2.5, 3.5, 5],
+    values: [1.4, 1.7, 2],
     detail: 'Auto-tappers {v} after 10 s without a press',
     unit: 'times',
   },
@@ -568,7 +577,7 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'auto',
     family: 'machines',
     rarity: 'rare',
-    values: [0.05, 0.08, 0.12],
+    values: [0.08, 0.12, 0.16],
     detail: 'Each press also pays {v} of your per-second income',
     unit: 'percent',
   },
@@ -578,8 +587,8 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'auto',
     family: 'machines',
     rarity: 'rare',
-    values: [60, 45, 30],
-    detail: 'A free copy of your cheapest auto-tapper every {v}',
+    values: [180, 130, 90],
+    detail: 'A free copy of your best auto-tapper every {v}',
     unit: 'seconds',
   },
   {
@@ -588,7 +597,7 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'auto',
     family: 'machines',
     rarity: 'keystone',
-    values: [4, 5, 6],
+    values: [1.7, 1.95, 2.2],
     detail: 'Presses earn half, but auto-tappers {v}',
     unit: 'times',
   },
@@ -600,6 +609,12 @@ export const PERK_EFFECT = {
   loadedDiceCap: 0.75,
   /** Chain Reaction's highest multiplier: x2, x4, x8. */
   chainMax: 8,
+  /** Chain Reaction's chance to roll again never passes this. */
+  chainAgainMax: 0.6,
+  /** Glass Rhythm breaks the combo on this many off-beat presses in a row. */
+  glassMissesToBreak: 2,
+  /** Momentum's bonus per point of combo, up to the level's cap. */
+  momentumPerPoint: 0.0025,
   /** Afterglow's press multiplier. */
   afterglowMult: 3,
   /** Idle Hands' seconds without a press. */
@@ -643,8 +658,8 @@ export const PERK_DROPS = {
   surgeOdds: { common: 0.45, rare: 0.45, keystone: 0.1 } as Readonly<Record<PerkRarity, number>>,
   /** Income below this counts as this, so prices and windows never collapse to zero. */
   minIncome: 1,
-  priceS: { common: 45, rare: 90, keystone: 150 } as Readonly<Record<PerkRarity, number>>,
-  windowS: { common: 90, rare: 180, keystone: 300 } as Readonly<Record<PerkRarity, number>>,
+  priceS: { common: 15, rare: 30, keystone: 60 } as Readonly<Record<PerkRarity, number>>,
+  windowS: { common: 60, rare: 90, keystone: 150 } as Readonly<Record<PerkRarity, number>>,
 } as const;
 
 /** Spec §10. Cosmetic; the checks live in achievements.ts. */

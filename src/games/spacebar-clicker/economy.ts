@@ -150,7 +150,7 @@ export function energyPerPress(
   const base = 1 + state.upgrades.finger * mods.fingerPerLevel;
   const spring = Math.pow(mods.springPerLevel, state.upgrades.spring);
   const tier = comboTier(combo, mods.tiers).multiplier;
-  const momentum = 1 + mods.pressPerCombo * combo;
+  const momentum = 1 + Math.min(mods.momentumCap, mods.pressPerCombo * combo);
   const surge = ctx.surging ? mods.surge.multiplier : 1;
   const afterglow = ctx.afterglow ? mods.afterglowMult : 1;
   const press =
@@ -176,8 +176,8 @@ export function doubleTapChance(state: SaveState, mods = modsOf(state)): number 
 
 /**
  * A press's luck, rolled once per press: x1, or x2 on a Double Tap. With
- * Chain Reaction a Double Tap rolls again at a share of the chance, doubling
- * each time, up to x8. The cap keeps the expected value finite: at a 75%
+ * Chain Reaction a Double Tap rolls again at a share of the chance (never past
+ * chainAgainMax), doubling each time, up to x8. The cap keeps the expected value finite: at a 75%
  * chance an uncapped chain would pay out without limit.
  */
 export function luckyMultiplier(
@@ -187,7 +187,7 @@ export function luckyMultiplier(
 ): number {
   const chance = doubleTapChance(state, mods);
   if (random() >= chance) return 1;
-  const again = chance * mods.chainShare;
+  const again = Math.min(PERK_EFFECT.chainAgainMax, chance * mods.chainShare);
   let mult = 2;
   while (mult < PERK_EFFECT.chainMax && random() < again) mult *= 2;
   return mult;
@@ -288,17 +288,10 @@ export function buyTapper(state: SaveState, id: AutoTapperId): boolean {
   return true;
 }
 
-/** The revealed auto-tapper with the lowest price right now (Self-Replicator). */
-export function cheapestTapper(state: SaveState, mods = modsOf(state)): AutoTapperId | null {
+/** The owned auto-tapper with the most output each (Self-Replicator). */
+export function bestTapper(state: SaveState): AutoTapperId | null {
   let best: AutoTapperId | null = null;
-  let bestCost = Infinity;
-  for (const id of state.revealed) {
-    const cost = tapperCost(state, id, mods);
-    if (cost < bestCost) {
-      best = id;
-      bestCost = cost;
-    }
-  }
+  for (const t of AUTO_TAPPERS) if (state.tappers[t.id] > 0) best = t.id;
   return best;
 }
 
