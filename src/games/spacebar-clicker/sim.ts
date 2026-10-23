@@ -238,8 +238,9 @@ export function simulateRun(
     earned[surging ? 'surges' : 'presses'] += value;
     minute(at)[surging ? 'surges' : 'presses'] += value;
     state.totalPresses++;
-    // The meter reads the player's own pace, without a surge's multiplier.
-    income.add(at * 1000, surging ? value / mods.surge.multiplier : value);
+    // The meter reads the player's own pace, without a surge's or an afterglow's boost.
+    const boost = (surging ? mods.surge.multiplier : 1) * (play.afterglow ? mods.afterglowMult : 1);
+    income.add(at * 1000, value / boost);
     lastPress = at;
     comboAvg += (r.combo - comboAvg) * 0.01;
   }

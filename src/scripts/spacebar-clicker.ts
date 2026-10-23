@@ -3,9 +3,9 @@
  *
  * A game, not a tool: there are no scored runs, so none of the telemetry rig
  * (createRig, ProgressWidgets) applies. This file owns the DOM, the input, the
- * frame loop, the surge scheduler, saving, and sound. Every rule it enforces
- * comes from the pure modules in src/games/spacebar-clicker, which carry the
- * unit tests.
+ * frame loop, the surge scheduler, the perks in play, saving, and sound. Every
+ * rule it enforces comes from the pure modules in src/games/spacebar-clicker,
+ * which carry the unit tests.
  *
  * Reuse from the engine is deliberate and narrow: the guarded localStorage
  * adapter and the Web Audio beeper. The save lives under its own namespaced
@@ -20,11 +20,16 @@ import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
   MIN_PRESS_GAP_MS,
+  PERK_SLOTS,
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
   REACTOR_STATES,
   SAVE_INTERVAL_MS,
   type AutoTapperId,
+  type PerkDef,
+  type PerkFamily,
+  type PerkId,
+  type PerkRarity,
   type PressUpgradeId,
   type ShopTab,
 } from '../games/spacebar-clicker/config';
@@ -35,14 +40,16 @@ import {
   canBuyTapper,
   canBuyUpgrade,
   comboTier,
-  doubleTapChance,
   earn,
   energyPerPress,
   energyPerSecond,
   isotopeBonus,
+  luckyMultiplier,
   markShopTabSeen,
   nextComboTier,
+  offerOn,
   offlineAward,
+  perk,
   pressUpgrade,
   prestigeGain,
   prestigeUnlocked,
@@ -52,6 +59,7 @@ import {
   tapperCost,
   updateReveals,
   upgradeCost,
+  upgradeSwitchedOff,
   type PlayContext,
 } from '../games/spacebar-clicker/economy';
 import {
@@ -63,10 +71,23 @@ import {
 import { IncomeMeter } from '../games/spacebar-clicker/income';
 import { modsOf } from '../games/spacebar-clicker/mods';
 import {
+  buyPerk,
+  deferPerks,
+  formatPerkValue,
+  keystoneSwap,
+  needsSlot,
+  offerRemaining,
+  perkLevel,
+  perkTick,
+  replicate,
+  surgeDrop,
+} from '../games/spacebar-clicker/perks';
+import {
   defaultSave,
   parseSave,
   prestigeReset,
   serializeSave,
+  type PerkOffer,
   type SaveState,
 } from '../games/spacebar-clicker/save';
 
@@ -131,6 +152,7 @@ const dialLeds = Array.from(document.querySelectorAll<SVGGElement>('.dial-led'))
   index: REACTOR_STATES.findIndex((s) => s.id === node.dataset.led),
 }));
 const hintEl = el('sc-hint');
+const comboMeter = el('sc-combo-meter');
 const comboEl = el('sc-combo');
 const comboTierEl = el('sc-combo-tier');
 const comboNextEl = el('sc-combo-next');
@@ -155,6 +177,9 @@ const surgePresses = el('sc-surge-presses');
 const surgeRate = el('sc-surge-rate');
 const surgeEarned = el('sc-surge-earned');
 const surgeBest = el('sc-surge-best');
+const surgeDropEl = el('sc-surge-drop');
+const surgeDropKind = el('sc-surge-drop-kind');
+const surgeDropName = el('sc-surge-drop-name');
 
 const toastEl = el('sc-toast');
 const toastText = el('sc-toast-text');
@@ -170,7 +195,54 @@ const newTagEls: Record<ShopTab, HTMLElement> = {
   auto: el('sc-new-auto'),
 };
 const shopHiddenHint = el('sc-shop-hidden-hint');
+const SHOP_TABS: readonly ShopTab[] = ['press', 'auto'];
 let activeShopTab: ShopTab = 'press';
+
+/** The perk offer row at the top of a shop tab, and the parts the script fills. */
+interface OfferRow {
+  li: HTMLElement;
+  btn: HTMLButtonElement;
+  tile: HTMLElement;
+  ring: SVGPathElement;
+  glyph: HTMLElement;
+  name: HTMLElement;
+  level: HTMLElement;
+  detail: HTMLElement;
+  note: HTMLElement;
+  window: HTMLElement;
+  cost: HTMLElement;
+  rarity: HTMLElement;
+  /** The offer the row shows, as "id:level"; empty when none. */
+  shown: string;
+  /** The fold-away while the row leaves, bought or run out. */
+  leaving: Animation | null;
+}
+
+function offerRow(tab: ShopTab): OfferRow {
+  const li = el(`sc-offer-${tab}`);
+  const part = <T extends Element = HTMLElement>(selector: string) =>
+    li.querySelector<T>(selector)!;
+  return {
+    li,
+    btn: part<HTMLButtonElement>('.perk-buy'),
+    tile: part('.perk-tile'),
+    ring: part<SVGPathElement>('.perk-ring-fill'),
+    glyph: part('[data-perk-glyph]'),
+    name: part('[data-perk-name]'),
+    level: part('[data-perk-level]'),
+    detail: part('[data-perk-detail]'),
+    note: part('[data-perk-note]'),
+    window: part('[data-perk-window]'),
+    cost: part('[data-perk-cost]'),
+    rarity: part('[data-perk-rarity]'),
+    shown: '',
+    leaving: null,
+  };
+}
+
+const offerRows: Record<ShopTab, OfferRow> = { press: offerRow('press'), auto: offerRow('auto') };
+/** Every perk's glyph (PerkIcon.astro), for cloning. */
+const perkGlyphs = el<HTMLTemplateElement>('sc-perk-glyphs');
 
 const shopButtons = new Map<string, HTMLButtonElement>();
 document.querySelectorAll<HTMLButtonElement>('.shop-buy').forEach((btn) => {
@@ -210,8 +282,17 @@ const prestigeConfirm = el('sc-prestige-confirm');
 
 const awayModal = el('sc-away-modal');
 const awayTime = el('sc-away-time');
+const awayRate = el('sc-away-rate');
 const awayEnergy = el('sc-away-energy');
 const awayCollect = el('sc-away-collect');
+
+const swapModal = el('sc-swap-modal');
+const swapTitle = el('sc-swap-title');
+const swapIncoming = el('sc-swap-incoming');
+const swapMessage = el('sc-swap-message');
+const swapList = el('sc-swap-list');
+const swapCancel = el('sc-swap-cancel');
+const swapConfirm = el<HTMLButtonElement>('sc-swap-confirm');
 
 const resetModal = el('reset-modal');
 const resetBtn = el('reset-btn');
@@ -235,6 +316,13 @@ function chord(freqs: number[], gapMs = 90): void {
   freqs.forEach((f, i) => window.setTimeout(() => beeper.play(f), i * gapMs));
 }
 
+/** A perk drop rings by its rarity, so a high tier is heard as an event. */
+const DROP_CHIMES: Record<PerkRarity, [number[], number]> = {
+  common: [[1046, 1318], 80],
+  rare: [[880, 1175, 1568], 85],
+  keystone: [[659, 880, 1175, 1568, 2093], 105],
+};
+
 const SOUND = {
   purchase: () => beeper.play(880),
   tierUp: () => chord([659, 988]),
@@ -245,6 +333,8 @@ const SOUND = {
   achievement: () => chord([784, 1175]),
   prestige: () => chord([523, 659, 784, 1046], 110),
   collect: () => chord([523, 659, 784], 80),
+  perkDrop: (rarity: PerkRarity) => chord(...DROP_CHIMES[rarity]),
+  perkBuy: () => chord([880, 1318], 60),
 };
 
 function updateSoundIcon(): void {
@@ -260,11 +350,12 @@ function announce(text: string): void {
   announceEl.textContent = text;
 }
 
-const toastQueue: string[] = [];
+const toastQueue: { text: string; family?: PerkFamily }[] = [];
 let toastTimer = 0;
 
-function toast(text: string): void {
-  toastQueue.push(text);
+/** A short notice on the reactor face. A perk's notice wears its family's hue. */
+function toast(text: string, family?: PerkFamily): void {
+  toastQueue.push({ text, family });
   if (!toastTimer) showNextToast();
 }
 
@@ -275,7 +366,9 @@ function showNextToast(): void {
     toastEl.hidden = true;
     return;
   }
-  toastText.textContent = next;
+  toastText.textContent = next.text;
+  if (next.family) toastEl.dataset.family = next.family;
+  else delete toastEl.dataset.family;
   toastEl.hidden = false;
   toastEl.classList.remove('is-in');
   void toastEl.offsetWidth;
@@ -289,6 +382,11 @@ function replay(node: Element, className: string): void {
   node.classList.remove(className);
   void node.getBoundingClientRect(); // force a reflow so the animation restarts
   node.classList.add(className);
+}
+
+/** Set text only when it changes, for nodes rewritten every frame. */
+function setText(node: HTMLElement, text: string): void {
+  if (node.textContent !== text) node.textContent = text;
 }
 
 // --- Run state ------------------------------------------------------------------
@@ -324,6 +422,10 @@ const surge = {
 };
 /** Seconds of active play: page visible and a press within the last minute. */
 let activeS = 0;
+/** performance.now() until which presses keep Afterglow's multiplier. */
+let afterglowUntil = 0;
+/** Active seconds toward Self-Replicator's next copy. Not saved: a reload starts the count over. */
+let replicateClock = 0;
 
 function scheduleSurge(): void {
   const { minGapS, maxGapS } = modsOf(state).surge;
@@ -335,8 +437,18 @@ function playContext(now = performance.now()): PlayContext {
   return {
     combo: combo.combo,
     surging: surge.phase === 'active',
+    afterglow: now < afterglowUntil,
     idleS: (now - lastPressAt) / 1000,
   };
+}
+
+/**
+ * The passing boosts on a press: a surge, and Afterglow after one. The income
+ * meter takes them back out, so a perk dropping during or just after a surge
+ * is priced at the player's own pace, not ten times it.
+ */
+function pressBoost(play: PlayContext, mods = modsOf(state)): number {
+  return (play.surging ? mods.surge.multiplier : 1) * (play.afterglow ? mods.afterglowMult : 1);
 }
 scheduleSurge();
 
@@ -436,7 +548,18 @@ function celebrateStage(prevIdx: number): void {
 }
 
 function renderCombo(now: number): void {
-  const { tiers } = modsOf(state);
+  const { tiers, comboOff } = modsOf(state);
+  // Brute Force: the beat still draws on the scope, but the combo stands down.
+  comboMeter.classList.toggle('is-off', comboOff);
+  if (comboOff) {
+    setText(comboEl, '0');
+    setText(comboTierEl, 'combo');
+    comboTierEl.classList.remove('is-tiered');
+    setText(comboNextEl, `off with ${perk('brute-force').name}`);
+    setText(comboMultEl, 'x1');
+    comboFill.style.transform = 'scaleX(0)';
+    return;
+  }
   const tier = comboTier(combo.combo, tiers);
   const next = nextComboTier(combo.combo, tiers);
   comboEl.textContent = String(combo.combo);
@@ -454,11 +577,13 @@ function renderShop(): void {
     const owned = state.upgrades[def.id];
     const maxed = owned >= def.max;
     const affordable = canBuyUpgrade(state, def.id);
+    // A held perk can leave a one-off upgrade doing nothing; the row says so.
+    const off = upgradeSwitchedOff(state, def.id);
     btn.querySelector('[data-cost]')!.textContent = maxed
       ? 'Max'
       : formatEnergy(upgradeCost(state, def.id));
     btn.querySelector('[data-level]')!.textContent =
-      def.max === 1 ? (owned ? 'Owned' : '') : `${owned}/${def.max}`;
+      def.max === 1 ? (off ? 'Off' : owned ? 'Owned' : '') : `${owned}/${def.max}`;
     btn.classList.toggle('is-affordable', affordable);
     btn.classList.toggle('is-maxed', maxed);
     btn.setAttribute('aria-disabled', String(!affordable));
@@ -483,6 +608,7 @@ function renderShop(): void {
   }
   shopHiddenHint.hidden = !anyHidden;
 
+  for (const tab of SHOP_TABS) renderOffer(tab);
   renderShopNotices();
 }
 
@@ -492,9 +618,202 @@ function renderShop(): void {
  */
 function renderShopNotices(): void {
   if (markShopTabSeen(state, activeShopTab)) dirty = true;
-  for (const tab of ['press', 'auto'] as const) {
+  for (const tab of SHOP_TABS) {
     newTagEls[tab].hidden = tab === activeShopTab || !shopTabHasNews(state, tab);
   }
+}
+
+// --- Perks in the shop ------------------------------------------------------------
+// A drop puts a perk on offer at the top of its tab for a window of the run's
+// energy (SPACEBAR-CLICKER.md §8.1). The rules live in perks.ts; this draws
+// the offer, its draining ring and its notes, and folds it away when it is
+// bought or runs out.
+
+const RARITY_NAME: Record<PerkRarity, string> = {
+  common: 'Common',
+  rare: 'Rare',
+  keystone: 'Keystone',
+};
+const ROMAN = ['', 'I', 'II', 'III'];
+
+/** A fresh copy of a perk's glyph. */
+function perkGlyph(id: PerkId): Node {
+  return perkGlyphs.content.querySelector(`[data-glyph="${id}"]`)!.cloneNode(true);
+}
+
+/** A perk's name with its level, past the first: "Overtone II". */
+function perkTitle(id: PerkId, level: number): string {
+  return level > 1 ? `${perk(id).name} ${ROMAN[level]}` : perk(id).name;
+}
+
+/** What a drop is called: "Perk drop", "Rare drop", "Keystone drop", "Upgrade drop". */
+function dropKind(offer: PerkOffer): string {
+  if (offer.level > 1) return 'Upgrade drop';
+  const { rarity } = perk(offer.id);
+  return rarity === 'common' ? 'Perk drop' : `${RARITY_NAME[rarity]} drop`;
+}
+
+/** The level badge after a name: "II" on screen, "level 2" to a screen reader. */
+function setLevelBadge(badge: HTMLElement, level: number): void {
+  badge.hidden = level < 2;
+  if (level < 2) return;
+  const shown = document.createElement('span');
+  shown.setAttribute('aria-hidden', 'true');
+  shown.textContent = ROMAN[level]!;
+  const spoken = document.createElement('span');
+  spoken.className = 'visually-hidden';
+  spoken.textContent = `level ${level}`;
+  badge.replaceChildren(shown, spoken);
+}
+
+/**
+ * A perk's effect at a level, with its number in the perk's hue. Given the
+ * level held, an upgrade: the number now struck out beside the one it becomes.
+ */
+function perkEffect(def: PerkDef, level: number, held = 0): Node[] {
+  const [before = '', after = ''] = def.detail.split('{v}');
+  const number = (lvl: number, className: string, spoken: string) => {
+    const node = document.createElement(className === 'perk-was' ? 's' : 'span');
+    node.className = className;
+    if (spoken) {
+      const hidden = document.createElement('span');
+      hidden.className = 'visually-hidden';
+      hidden.textContent = spoken;
+      node.append(hidden);
+    }
+    node.append(formatPerkValue(def.unit, def.values[lvl - 1]!));
+    return node;
+  };
+  const value =
+    held > 0
+      ? [number(held, 'perk-was', 'now '), ' ', number(level, 'perk-value', ', then ')]
+      : [number(level, 'perk-value', '')];
+  const nodes: Node[] = [document.createTextNode(before)];
+  for (const part of value)
+    nodes.push(typeof part === 'string' ? document.createTextNode(part) : part);
+  nodes.push(document.createTextNode(after));
+  return nodes;
+}
+
+/** A perk as a card for the swap dialog: its tile, its name and level, its effect. */
+function perkCard(id: PerkId, level: number, asButton: boolean): HTMLElement {
+  const def = perk(id);
+  const card = document.createElement(asButton ? 'button' : 'div');
+  card.className = 'perk-card';
+  card.dataset.family = def.family;
+  card.dataset.rarity = def.rarity;
+  if (card instanceof HTMLButtonElement) card.type = 'button';
+
+  const tile = document.createElement('span');
+  tile.className = 'perk-tile';
+  tile.append(perkGlyph(id));
+  const text = document.createElement('span');
+  text.className = 'perk-card-text';
+  const name = document.createElement('span');
+  name.className = 'perk-card-name';
+  const badge = document.createElement('span');
+  badge.className = 'perk-level';
+  setLevelBadge(badge, level);
+  name.append(def.name, ' ', badge);
+  const detail = document.createElement('span');
+  detail.className = 'perk-card-detail';
+  detail.append(...perkEffect(def, level));
+  text.append(name, detail);
+  card.append(tile, text);
+  return card;
+}
+
+/** Bring a tab's offer row up to date: what is on offer, its price, its ring, its notes. */
+function renderOffer(tab: ShopTab): void {
+  const row = offerRows[tab];
+  const offer = offerOn(state, tab);
+  if (!offer) {
+    if (!row.leaving) row.li.hidden = true;
+    row.shown = '';
+    return;
+  }
+  if (row.leaving) {
+    row.leaving.cancel();
+    row.leaving = null;
+    row.li.classList.remove('is-leaving');
+  }
+
+  const def = perk(offer.id);
+  const key = `${offer.id}:${offer.level}`;
+  if (row.shown !== key) {
+    row.shown = key;
+    row.li.dataset.family = def.family;
+    row.li.dataset.rarity = def.rarity;
+    row.li.classList.toggle('is-upgrade', offer.level > 1);
+    row.glyph.replaceChildren(perkGlyph(def.id));
+    row.name.textContent = def.name;
+    setLevelBadge(row.level, offer.level);
+    row.detail.replaceChildren(...perkEffect(def, offer.level, offer.level - 1));
+    row.rarity.textContent = offer.level > 1 ? 'Upgrade' : RARITY_NAME[def.rarity];
+  }
+
+  const affordable = state.energy >= offer.price;
+  row.btn.classList.toggle('is-affordable', affordable);
+  row.btn.setAttribute('aria-disabled', String(!affordable));
+  setText(row.cost, formatEnergy(offer.price));
+
+  const left = offerRemaining(state, offer);
+  row.ring.style.strokeDashoffset = String(100 * (1 - left));
+  row.li.classList.toggle('is-fading', left < 0.2);
+  setText(row.window, `, ${Math.ceil(left * 10) * 10}% of its window left`);
+
+  // What buying it would cost besides energy.
+  const out = keystoneSwap(state, tab);
+  const note = out
+    ? `Swaps out your keystone, ${perkTitle(out, perkLevel(state, out))}`
+    : needsSlot(state, tab)
+      ? `All ${PERK_SLOTS} slots are full: you'll pick one to drop`
+      : '';
+  row.note.hidden = !note;
+  setText(row.note, note);
+  row.li.hidden = false;
+}
+
+/** A drop lands in its row: the row slides in and the tile pops (CSS, by rarity). */
+function arriveOffer(tab: ShopTab): void {
+  renderOffer(tab);
+  replay(offerRows[tab].li, 'is-arriving');
+}
+
+/**
+ * Fold an offer row away, once it is bought (the tile flares first) or has
+ * run out. On a closed tab, or under reduced motion, it simply goes.
+ */
+function leaveOffer(tab: ShopTab, bought: boolean): void {
+  const row = offerRows[tab];
+  row.shown = '';
+  row.leaving?.cancel();
+  row.leaving = null;
+  if (row.li.hidden || !row.li.offsetParent || reducedMotion()) {
+    row.li.hidden = true;
+    return;
+  }
+  if (bought) replay(row.tile, 'is-claimed');
+  row.li.classList.add('is-leaving');
+  const leaving = row.li.animate(
+    [
+      { opacity: 1, height: `${row.li.offsetHeight}px` },
+      { opacity: 0, height: '0px' },
+    ],
+    {
+      duration: bought ? 380 : 520,
+      delay: bought ? 280 : 0,
+      easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+      fill: 'both',
+    }
+  );
+  row.leaving = leaving;
+  leaving.onfinish = () => {
+    row.li.hidden = true;
+    row.li.classList.remove('is-leaving');
+    leaving.cancel();
+    row.leaving = null;
+  };
 }
 
 function renderStats(): void {
@@ -577,12 +896,15 @@ function renderAll(now = performance.now()): void {
 
 const MAX_FLOATS = 14;
 
-/** A press's gain rising off the core. A lucky Double Tap press rises in gold. */
-function spawnFloat(value: number, lucky: boolean, e?: Event): void {
+/**
+ * A press's gain rising off the core. A lucky Double Tap press rises in gold;
+ * a Chain Reaction past x2 pops each doubling out after it, x2, x4, x8.
+ */
+function spawnFloat(value: number, lucky: number, e?: Event): void {
   if (reducedMotion() || floats.childElementCount >= MAX_FLOATS) return;
   const span = document.createElement('span');
-  span.className = lucky ? 'float is-lucky readout' : 'float readout';
-  span.textContent = `+${formatEnergy(value)}${lucky ? ' x2' : ''}`;
+  span.className = lucky > 1 ? 'float is-lucky readout' : 'float readout';
+  span.textContent = `+${formatEnergy(value)}${lucky === 2 ? ' x2' : ''}`;
 
   // Rise from where the press landed, or from around the core on a key press.
   const rect = reactor.getBoundingClientRect();
@@ -597,6 +919,19 @@ function spawnFloat(value: number, lucky: boolean, e?: Event): void {
   span.style.top = `${y}px`;
   span.addEventListener('animationend', () => span.remove());
   floats.appendChild(span);
+
+  for (let mult = 2, i = 0; lucky >= 4 && mult <= lucky; mult *= 2, i++) {
+    if (floats.childElementCount >= MAX_FLOATS) break;
+    const link = document.createElement('span');
+    link.className = 'float is-lucky is-chain readout';
+    link.textContent = `x${mult}`;
+    link.style.left = `${x + 30 + i * 24}px`;
+    link.style.top = `${y - 4 - i * 12}px`;
+    link.style.fontSize = `${0.875 + i * 0.125}rem`;
+    link.style.animationDelay = `${80 + i * 120}ms`;
+    link.addEventListener('animationend', () => link.remove());
+    floats.appendChild(link);
+  }
 }
 
 /** Seconds of auto-tapper output gathered into each idle float. */
@@ -606,6 +941,14 @@ let idleTimer = 0;
 
 /** Auto-tapper income made visible: a small dim gain drifting off the rim. */
 function spawnIdleFloat(amount: number): void {
+  spawnRimFloat(`+${formatEnergy(amount)}`);
+}
+
+/**
+ * Something drifting up off the core's rim: auto-tapper income, or a perk
+ * at work (Self-Replicator's free copy) in the perk's own hue.
+ */
+function spawnRimFloat(text: string, family?: PerkFamily): void {
   if (reducedMotion() || floats.childElementCount >= MAX_FLOATS) return;
   const box = floats.getBoundingClientRect();
   const core = coreEl.getBoundingClientRect();
@@ -613,8 +956,9 @@ function spawnIdleFloat(amount: number): void {
   const angle = (-160 + Math.random() * 140) * (Math.PI / 180);
   const r = core.width * 0.48;
   const span = document.createElement('span');
-  span.className = 'float is-idle readout';
-  span.textContent = `+${formatEnergy(amount)}`;
+  span.className = family ? 'float is-idle is-perk' : 'float is-idle readout';
+  if (family) span.dataset.family = family;
+  span.textContent = text;
   span.style.left = `${core.left - box.left + core.width / 2 + r * Math.cos(angle)}px`;
   span.style.top = `${core.top - box.top + core.height / 2 + r * Math.sin(angle)}px`;
   span.addEventListener('animationend', () => span.remove());
@@ -775,24 +1119,27 @@ function press(e?: Event): void {
   beeper.unlock();
   replay(keycapEl, 'is-down');
 
+  const mods = modsOf(state);
   const result = combo.press(now);
-  const tier = comboTier(result.combo, modsOf(state).tiers);
+  // Brute Force: the beat is still tracked for the scope, but counts for nothing.
+  const counted = mods.comboOff ? 0 : result.combo;
+  const tier = comboTier(counted, mods.tiers);
   if (tier.multiplier > lastTierMultiplier) {
     SOUND.tierUp();
     replay(comboTierEl, 'is-up');
   }
   lastTierMultiplier = tier.multiplier;
 
-  const surging = surge.phase === 'active';
-  let value = energyPerPress(state, { combo: result.combo, surging });
-  const doubled = Math.random() < doubleTapChance(state);
-  if (doubled) value *= 2;
+  const play = playContext(now);
+  // x1, or x2 on a Double Tap, and on down a Chain Reaction to x8.
+  const lucky = luckyMultiplier(state);
+  const value = energyPerPress(state, play, mods) * lucky;
 
   earn(state, value);
-  income.add(now, value);
+  income.add(now, value / pressBoost(play, mods));
   state.totalPresses++;
-  if (result.combo > state.bestCombo) state.bestCombo = result.combo;
-  if (surging) {
+  if (counted > state.bestCombo) state.bestCombo = counted;
+  if (play.surging) {
     surge.presses++;
     surge.earned += value;
     spawnSparks();
@@ -800,22 +1147,27 @@ function press(e?: Event): void {
 
   blips.push({ t: now, kept: result.kept });
   if (reducedMotion()) drawScope(now);
-  spawnFloat(value, doubled, e);
+  spawnFloat(value, lucky, e);
   replay(coreEl, 'is-pressed');
   afterEarn();
   if (
     state.totalPresses === 1 ||
     state.totalPresses % 100 === 0 ||
-    result.combo === 25 ||
-    result.combo === 50 ||
-    result.combo === 100
+    counted === 25 ||
+    counted === 50 ||
+    counted === 100
   ) {
-    awardAchievements({ combo: result.combo });
+    awardAchievements({ combo: counted });
   }
 }
 
+/** The combo the formulas count: none at all under Brute Force. */
+function countedCombo(): number {
+  return modsOf(state).comboOff ? 0 : combo.combo;
+}
+
 function onComboBroke(): void {
-  lastTierMultiplier = comboTier(combo.combo, modsOf(state).tiers).multiplier;
+  lastTierMultiplier = comboTier(countedCombo(), modsOf(state).tiers).multiplier;
 }
 
 // --- Surge ---------------------------------------------------------------------------
@@ -873,9 +1225,9 @@ function surgeTick(now: number): void {
       if (activeS < surge.dueAt || now - lastPressAt >= rules.idleAfterS * 1000) break;
       surge.warningS = rules.warningS;
       surge.durationS = rules.durationS;
-      // A surge with no countdown strikes at once.
+      // A surge with no countdown (Storm Front) strikes at once.
       if (surge.warningS <= 0) {
-        startOverdrive(now);
+        startOverdrive(now, true);
         break;
       }
       setSurgePhase('warning');
@@ -914,7 +1266,8 @@ function surgeTick(now: number): void {
   }
 }
 
-function startOverdrive(now: number): void {
+/** Into overdrive. `struck`: there was no countdown, so a ring rolls off the core instead. */
+function startOverdrive(now: number, struck = false): void {
   setSurgePhase('active');
   surge.phaseEndsAt = now + surge.durationS * 1000;
   surge.presses = 0;
@@ -923,7 +1276,10 @@ function startOverdrive(now: number): void {
   coreNum.textContent = '0.0';
   coreUnit.textContent = 'per second';
   replay(coreNum, 'is-tick');
-  announce(`Surge. Press as fast as you can for ${surge.durationS} seconds.`);
+  if (struck) replay(shockEl, 'is-firing');
+  announce(
+    `${struck ? 'A surge strikes without warning.' : 'Surge.'} Press as fast as you can for ${surge.durationS} seconds.`
+  );
   SOUND.surgeStart();
 }
 
@@ -950,6 +1306,18 @@ function endSurge(now: number): void {
   }
   sweepArcBack();
 
+  const mods = modsOf(state);
+  if (mods.afterglowS > 0) afterglowUntil = now + mods.afterglowS * 1000;
+  // Surges are the boss fights: now and then one drops a perk, named on the card.
+  const dropped = surgeDrop(state, income.rate(now));
+  surgeDropEl.hidden = !dropped;
+  if (dropped) {
+    surgeDropEl.dataset.family = perk(dropped.id).family;
+    surgeDropKind.textContent = dropKind(dropped);
+    surgeDropName.textContent = perkTitle(dropped.id, dropped.level);
+    onPerkDropped(dropped, true);
+  }
+
   announce(
     `Surge over. ${surge.presses} presses, ${cps.toFixed(1)} per second, ${formatEnergy(surge.earned)} energy.` +
       (isBest ? ' New best.' : '')
@@ -957,6 +1325,78 @@ function endSurge(now: number): void {
   SOUND.surgeEnd();
   awardAchievements({ surgeCps: cps });
   renderStats();
+}
+
+// --- Perks in play -------------------------------------------------------------------------
+
+/**
+ * A perk dropped. Its row lights up and a closed tab tags itself; the chime
+ * rings by rarity; a toast names it, unless a surge dropped it and its
+ * results card already does, in which case the chime waits for the surge's own.
+ */
+function onPerkDropped(offer: PerkOffer, fromSurge = false): void {
+  const def = perk(offer.id);
+  arriveOffer(def.tab);
+  renderShopNotices();
+  if (fromSurge) {
+    window.setTimeout(() => SOUND.perkDrop(def.rarity), 450);
+  } else {
+    SOUND.perkDrop(def.rarity);
+    toast(`${dropKind(offer)}: ${perkTitle(offer.id, offer.level)}`, def.family);
+  }
+  dirty = true;
+}
+
+/** An offer's window ran out: its row fades away, quietly. */
+function onOfferExpired(offer: PerkOffer): void {
+  const { tab } = perk(offer.id);
+  if (!swapModal.hidden && swapTab === tab) closeDialog(swapModal);
+  leaveOffer(tab, false);
+  renderShopNotices();
+  dirty = true;
+}
+
+/** Self-Replicator made a copy: it drifts off the core, and the tapper's glyph plays its motion. */
+function onReplicated(id: AutoTapperId): void {
+  spawnRimFloat(`+1 ${autoTapper(id).name}`, perk('self-replicator').family);
+  if (activeShopTab === 'auto') {
+    const glyph = shopButtons.get(`auto:${id}`)?.querySelector('.shop-glyph');
+    if (glyph) replay(glyph, 'is-bought');
+  }
+  awardAchievements();
+  dirty = true;
+}
+
+/** Every frame: Self-Replicator's clock, then the drops and expiries (perks.ts). */
+function perkFrame(now: number, activeDt: number): void {
+  const every = modsOf(state).replicateEveryS;
+  if (every > 0) {
+    replicateClock += activeDt;
+    if (replicateClock >= every) {
+      replicateClock -= every;
+      const id = replicate(state);
+      if (id) onReplicated(id);
+    }
+  } else {
+    replicateClock = 0;
+  }
+
+  const { dropped, expired } = perkTick(state, income.rate(now), activeDt);
+  for (const offer of expired) onOfferExpired(offer);
+  for (const offer of dropped) onPerkDropped(offer);
+}
+
+/** While Afterglow lasts, the label under the core counts it down in place of the stage name. */
+function renderAfterglow(now: number): void {
+  if (surge.phase === 'warning' || surge.phase === 'active') return;
+  const left = afterglowUntil - now;
+  const glowing = left > 0;
+  reactor.classList.toggle('is-afterglow', glowing);
+  stateLabelEl.hidden = glowing;
+  surgeLabel.hidden = !glowing;
+  if (glowing) {
+    setText(surgeLabel, `Afterglow x${modsOf(state).afterglowMult}, ${Math.ceil(left / 1000)} s`);
+  }
 }
 
 // --- Frame loop ------------------------------------------------------------------------
@@ -969,18 +1409,31 @@ let dirty = false;
 function frame(now: number): void {
   const dt = Math.min((now - lastFrame) / 1000, 1);
   lastFrame = now;
+  const mods = modsOf(state);
 
-  if (!document.hidden) {
-    state.playedS += dt;
-    if (now - lastPressAt < modsOf(state).surge.idleAfterS * 1000) activeS += dt;
-  }
+  // Active play, the clock surges, perk drops and Self-Replicator run on: the
+  // page in view and a press within the last minute.
+  const visible = !document.hidden;
+  const activeDt = visible && now - lastPressAt < mods.surge.idleAfterS * 1000 ? dt : 0;
+  if (visible) state.playedS += dt;
+  activeS += activeDt;
 
   if (combo.tick(now)) onComboBroke();
 
-  const eps = energyPerSecond(state, playContext(now));
+  const play = playContext(now);
+  const eps = energyPerSecond(state, play, mods);
+  // Idle Hands at work: the per-second readout says so.
+  epsEl.classList.toggle(
+    'is-boosted',
+    eps > 0 && mods.idleBoostMult > 1 && play.idleS! >= mods.idleBoostAfterS
+  );
   if (eps > 0) {
     earn(state, eps * dt);
-    income.add(now, eps * dt);
+    // As for presses, a surge reaching the auto-tappers (Surge Lines) stays out of the pace.
+    income.add(
+      now,
+      (eps * dt) / (play.surging && mods.surgeHitsTappers ? mods.surge.multiplier : 1)
+    );
     afterEarn();
     dirty = true;
 
@@ -1003,6 +1456,8 @@ function frame(now: number): void {
   }
 
   surgeTick(now);
+  perkFrame(now, activeDt);
+  renderAfterglow(now);
 
   renderReadouts();
   renderCombo(now);
@@ -1038,14 +1493,21 @@ function settleAbsence(): void {
 
   const award = offlineAward(state, awayS);
   if (award) {
+    const { rate } = modsOf(state).offline;
     awayTime.textContent = formatDuration(award.seconds);
+    // Night Shift pays all of it.
+    awayRate.textContent =
+      rate >= 1 ? 'full speed' : rate === 0.5 ? 'half speed' : `${Math.round(rate * 100)}% speed`;
     awayEnergy.textContent = formatEnergy(award.energy);
     pendingAway = award.energy;
     // The reactor idled while you were gone; it wakes when you collect.
     reactor.classList.add('is-asleep');
     openDialog(awayModal, awayCollect);
   } else if (awayS > 1) {
-    earn(state, energyPerSecond(state) * Math.min(awayS, 60));
+    const amount = energyPerSecond(state) * Math.min(awayS, 60);
+    earn(state, amount);
+    // Time away never runs a perk offer down (SPACEBAR-CLICKER.md §8.1.2).
+    deferPerks(state, amount);
     afterEarn();
   }
   state.lastSeen = Date.now();
@@ -1054,6 +1516,7 @@ function settleAbsence(): void {
 awayCollect.addEventListener('click', () => {
   const amount = pendingAway;
   earn(state, amount);
+  deferPerks(state, amount);
   pendingAway = 0;
   // The core brightens (CSS) while the energy counts into the readout.
   reactor.classList.remove('is-asleep');
@@ -1085,10 +1548,10 @@ function closeDialog(modal: HTMLElement): void {
 }
 
 function anyDialogOpen(): boolean {
-  return !resetModal.hidden || !prestigeModal.hidden || !awayModal.hidden;
+  return !resetModal.hidden || !prestigeModal.hidden || !awayModal.hidden || !swapModal.hidden;
 }
 
-for (const modal of [resetModal, prestigeModal, awayModal]) {
+for (const modal of [resetModal, prestigeModal, awayModal, swapModal]) {
   modal.addEventListener('click', (e) => {
     if (e.target === modal && modal !== awayModal) closeDialog(modal);
   });
@@ -1098,6 +1561,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (!resetModal.hidden) closeDialog(resetModal);
   if (!prestigeModal.hidden) closeDialog(prestigeModal);
+  if (!swapModal.hidden) closeDialog(swapModal);
 });
 
 /** Return the live state to a fresh run's starting point (reset or prestige). */
@@ -1114,6 +1578,18 @@ function restartRun(): void {
   idleAccum = 0;
   idleTimer = 0;
   income.reset();
+  afterglowUntil = 0;
+  replicateClock = 0;
+  reactor.classList.remove('is-afterglow');
+  surgeDropEl.hidden = true;
+  for (const tab of SHOP_TABS) {
+    const row = offerRows[tab];
+    row.leaving?.cancel();
+    row.leaving = null;
+    row.shown = '';
+    row.li.hidden = true;
+    row.li.classList.remove('is-leaving', 'is-arriving', 'is-fading');
+  }
   scheduleSurge();
 }
 
@@ -1262,6 +1738,110 @@ for (const [key, btn] of shopButtons) {
     btn.blur();
   });
 }
+
+// Perk offers. A free slot, or an upgrade, buys at once. With every slot full
+// the swap dialog asks which perk to drop, and a second keystone asks before
+// it swaps out the first.
+
+/** The tab whose offer the swap dialog is about. */
+let swapTab: ShopTab | null = null;
+
+for (const tab of SHOP_TABS) {
+  offerRows[tab].btn.addEventListener('click', () => {
+    // Space is the game's input; a focused button would swallow it.
+    offerRows[tab].btn.blur();
+    const offer = offerOn(state, tab);
+    if (!offer || state.energy < offer.price) return;
+    if (needsSlot(state, tab)) openSwap(tab, 'slot');
+    else if (keystoneSwap(state, tab)) openSwap(tab, 'keystone');
+    else buyOffer(tab);
+  });
+}
+
+/** Buy the offer on a tab, dropping `replace` from its slot if every slot is full. */
+function buyOffer(tab: ShopTab, replace?: PerkId): void {
+  const offer = offerOn(state, tab);
+  if (!offer) return;
+  const out = replace ?? keystoneSwap(state, tab);
+  const gapBefore = modsOf(state).surge.maxGapS;
+  const result = buyPerk(state, tab, replace);
+  if (result !== 'bought' && result !== 'upgraded' && result !== 'swapped') return;
+
+  SOUND.perkBuy();
+  leaveOffer(tab, true);
+  const name = perk(offer.id).name;
+  announce(
+    result === 'upgraded'
+      ? `${name} is now level ${offer.level}.`
+      : out
+        ? `Bought ${name}, in place of ${perk(out).name}.`
+        : `Bought ${name}.`
+  );
+
+  // Lightning Rod changes the pace of surges, including the one on its way.
+  const gapAfter = modsOf(state).surge.maxGapS;
+  if (surge.phase === 'idle' && gapAfter !== gapBefore) {
+    surge.dueAt = activeS + (surge.dueAt - activeS) * (gapAfter / gapBefore);
+  }
+  // A perk may rescale the tiers; the next press shouldn't hear that as a tier-up.
+  lastTierMultiplier = comboTier(countedCombo(), modsOf(state).tiers).multiplier;
+  renderShop();
+  renderReadouts();
+  renderCombo(performance.now());
+  renderStats();
+  dirty = true;
+}
+
+/**
+ * The swap dialog. 'slot': every slot is full, so pick a perk to drop. Each
+ * held perk is a button, and choosing one buys. 'keystone': one keystone at
+ * a time, so confirm the swap.
+ */
+function openSwap(tab: ShopTab, mode: 'slot' | 'keystone'): void {
+  const offer = offerOn(state, tab);
+  if (!offer) return;
+  const incoming = perk(offer.id);
+  swapTab = tab;
+  swapIncoming.replaceChildren(perkCard(offer.id, offer.level, false));
+  swapList.replaceChildren();
+
+  if (mode === 'slot') {
+    swapTitle.textContent = `All ${PERK_SLOTS} slots are full`;
+    swapMessage.textContent = `Pick a perk to drop for ${incoming.name}. The one you drop is gone for the rest of this run.`;
+    for (const held of state.perks.owned) {
+      const card = perkCard(held.id, held.level, true);
+      card.addEventListener('click', () => {
+        closeDialog(swapModal);
+        buyOffer(tab, held.id);
+      });
+      const item = document.createElement('li');
+      item.append(card);
+      swapList.append(item);
+    }
+    swapCancel.textContent = 'Keep my perks';
+    swapConfirm.hidden = true;
+  } else {
+    const held = keystoneSwap(state, tab)!;
+    const level = perkLevel(state, held);
+    swapTitle.textContent = 'Swap your keystone?';
+    swapMessage.textContent = `You can hold one keystone at a time. ${incoming.name} takes the place of ${perkTitle(held, level)}, which is gone for the rest of this run.`;
+    const card = perkCard(held, level, false);
+    card.classList.add('is-outgoing');
+    const item = document.createElement('li');
+    item.append(card);
+    swapList.append(item);
+    swapCancel.textContent = `Keep ${perk(held).name}`;
+    swapConfirm.hidden = false;
+  }
+  openDialog(swapModal, swapCancel);
+}
+
+swapCancel.addEventListener('click', () => closeDialog(swapModal));
+swapConfirm.addEventListener('click', () => {
+  const tab = swapTab;
+  closeDialog(swapModal);
+  if (tab) buyOffer(tab);
+});
 
 function selectShopTab(name: ShopTab): void {
   activeShopTab = name;

@@ -239,6 +239,16 @@ function heldKeystone(state: SaveState): boolean {
 }
 
 /**
+ * The keystone that buying the tab's offer would swap out: the offer is a new
+ * keystone and another one is held. Null otherwise. The shop asks first.
+ */
+export function keystoneSwap(state: SaveState, tab: ShopTab): PerkId | null {
+  const offer = offerOn(state, tab);
+  if (!offer || perkLevel(state, offer.id) > 0 || perk(offer.id).rarity !== 'keystone') return null;
+  return state.perks.owned.find((o) => perk(o.id).rarity === 'keystone')?.id ?? null;
+}
+
+/**
  * Buy the offer on a tab. An owned perk goes up a level; a new keystone swaps
  * out the one held; a new perk takes a free slot, or the slot of `replace`
  * when all five are full. Changes nothing unless it succeeds.

@@ -264,6 +264,17 @@ export function earn(state: SaveState, amount: number): void {
   state.totalLifetime += amount;
 }
 
+/**
+ * A one-off upgrade that a held perk leaves doing nothing, owned or not, so
+ * the shop can say so: Glass Rhythm switches off the Stabiliser, and Brute
+ * Force leaves Synchronisation no combo to share.
+ */
+export function upgradeSwitchedOff(state: SaveState, id: PressUpgradeId): boolean {
+  if (id !== 'stabiliser' && id !== 'sync') return false;
+  const mods = modsOf({ ...state, upgrades: { ...state.upgrades, [id]: 1 } });
+  return id === 'stabiliser' ? !mods.stabiliser : mods.comboOff;
+}
+
 export function canBuyUpgrade(state: SaveState, id: PressUpgradeId): boolean {
   const def = pressUpgrade(id);
   return state.upgrades[id] < def.max && state.energy >= upgradeCost(state, id);

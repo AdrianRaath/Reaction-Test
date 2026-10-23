@@ -15,7 +15,7 @@ only in chat.
 | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SPACEBAR-CLICKER-DESIGN.md`           | The original spec, from before the build. §16 records the reasoning behind each build decision. It is history now: where it and this doc disagree, this doc is current. |
 | `src/games/spacebar-clicker/config.ts` | The source of truth for every number. The tables below mirror it as of the last changelog entry; if they disagree, the config wins.                                     |
-| `DESIGN.md`                            | The site's visual contract. The game has three named exceptions in it: Reactor-Ramp, Surge Gold and Shop-Signal.                                                        |
+| `DESIGN.md`                            | The site's visual contract. The game has four named exceptions in it: Reactor-Ramp, Surge Gold, Shop-Signal and Perk-Family.                                            |
 | `NEW-TOOL.md`                          | "Games are not tools": the architecture pattern this game set.                                                                                                          |
 
 ## 1. At a glance
@@ -62,28 +62,29 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 
 ## 3. Code map
 
-| File                                                  | Responsibility                                                                                                                                                                      |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, offline, achievements. Pure data.                                                       |
-| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, reactor state and progress, prestige gain, offline award, buying, shop reveals, shop-tab notices.             |
-| `src/games/spacebar-clicker/mods.ts`                  | A run's modifiers: every rule a perk can bend, in one object. `BASE_MODS` is the shipped game; `modsOf(state)` folds in the Stabiliser and Synchronisation, and will fold in perks. |
-| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo. Takes timestamps from the caller, so it has no clock of its own, and reads the run's rules on every press.                                        |
-| `src/games/spacebar-clicker/rng.ts`                   | A seeded random generator (mulberry32). Pure; for perk drops, so a reload can't reroll them.                                                                                        |
-| `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together. Perk prices will be set in it.                                              |
-| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`.                                                                                                                        |
-| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                    |
-| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                              |
-| `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap, away deferral, perk text. Pure.                                                                 |
-| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks (66 as of 2026-10-23).                                                                                                                        |
-| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12).                                                          |
-| `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                      |
-| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (59 as of 2026-10-23).                                                                           |
-| `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, and every reactor state (§7).                                                                          |
-| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine.            |
-| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS. The frontmatter computes the dial, bezel and mote geometry.                                                                                                |
-| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                          |
-| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`.                                                                                                              |
-| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                 |
+| File                                                  | Responsibility                                                                                                                                                                                                                         |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, offline, achievements. Pure data.                                                                                                          |
+| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, the luck roll, reactor state and progress, prestige gain, offline award, buying, shop reveals, shop-tab notices, and which one-off upgrades a perk switches off. |
+| `src/games/spacebar-clicker/mods.ts`                  | A run's modifiers: every rule a perk can bend, in one object. `BASE_MODS` is the shipped game; `modsOf(state)` folds in the Stabiliser, Synchronisation and every owned perk at its level.                                             |
+| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo. Takes timestamps from the caller, so it has no clock of its own, and reads the run's rules on every press.                                                                                           |
+| `src/games/spacebar-clicker/rng.ts`                   | A seeded random generator (mulberry32). Pure; for perk drops, so a reload can't reroll them.                                                                                                                                           |
+| `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together, without a surge's or Afterglow's boost. Perk prices and windows are set in it.                                                 |
+| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`.                                                                                                                                                                           |
+| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                                                                       |
+| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                 |
+| `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                              |
+| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks (66 as of 2026-10-23).                                                                                                                                                                           |
+| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12).                                                                                                             |
+| `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                         |
+| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (61 as of 2026-10-23).                                                                                                                              |
+| `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, every reactor state, and perks in play (§7).                                                                                                              |
+| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, perks in play, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine.                                                |
+| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the swap dialog and the glyph template. The frontmatter computes the dial, bezel, mote and offer-ring geometry.                                                                |
+| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                                                                             |
+| `src/components/games/PerkIcon.astro`                 | The 25 perk glyphs, in ShopIcon's idiom. The page renders them all into a `<template>` for the script to clone.                                                                                                                        |
+| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`.                                                                                                                                                                 |
+| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                                                                    |
 
 ## 4. How the game works
 
@@ -114,7 +115,8 @@ Energy per second = sum of auto-tapper output x sync x milestone x isotope
   the combo multiplier: `1 + (combo - 1) x 0.5`.
 - **Double Tap** is rolled per press after the formula: a chance of 5% per
   level, capped at 50%, to count the whole press twice. A lucky press floats in
-  gold.
+  gold. With Chain Reaction a lucky press can roll on to x4 and x8, and each
+  doubling pops out beside it as its own gold float.
 - `earn()` is the one place energy is credited. It moves `energy`,
   `runLifetime` and `totalLifetime` together.
 - **Modifiers.** The formulas above read their rules from the run's modifiers
@@ -157,7 +159,19 @@ minute. Pauses end most combos, which is intended.
   each press throws sparks.
 - **Summary**: a results card over the core for 4 s, tallying presses, rate,
   energy, and the best rate. A new best gets one sheen.
-- Surge state is not saved. `bestSurgeCps` and `surges` are.
+- **Surge drops.** As each surge ends, one in eight drops a perk (§4.13), and
+  the results card names it in its family hue.
+- **Perks that change surges.**
+  - Lightning Rod brings them sooner. Buying it, or dropping it from a slot,
+    rescales the wait for the surge already on its way.
+  - Storm Front skips the countdown: the surge strikes at once, with the
+    stage-change ring rolling off the core.
+  - Surge Lines lengthens the overdrive and lets it reach auto-tappers.
+  - Afterglow keeps presses at x3 for a while after the surge. The label
+    under the core counts it down in gold ("Afterglow x3, 12 s") in place of
+    the stage name, and gains float in gold.
+- Surge state is not saved, and neither is Afterglow. `bestSurgeCps` and
+  `surges` are.
 
 ### 4.5 Shop
 
@@ -189,8 +203,9 @@ prices stayed put (§4.12).
   shop.
 - **The "New" tag** (DESIGN.md, Shop-Signal Exception). A closed tab wears one
   amber "New" tag in its top-right corner when it gains something: an
-  auto-tapper newly revealed, or any item newly affordable at its current
-  price. Opening the tab clears it. The save remembers the level each item was
+  auto-tapper newly revealed, any item newly affordable at its current price,
+  or a perk offer, when it drops and again when it first becomes affordable.
+  Opening the tab clears it. The save remembers the level each item was
   last seen affordable at (`announced`), so dipping below a price and earning
   it back does not re-announce it. The open tab is always treated as seen.
 - **Rows** are a three-column grid: a 36px glyph tile, the name and detail, and
@@ -234,7 +249,11 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
   silently.
 - Longer, with at least one auto-tapper, pays 50% of energy per second, capped
   at 4 hours. It sits behind a "While you were away" dialog with a Collect
-  button.
+  button. With Night Shift it pays all of it, and the dialog says "full speed"
+  instead of "half speed".
+- Energy credited for time away, by Collect or by the silent short gap, moves
+  every perk offer's window past itself (`deferPerks`), so being away never
+  runs an offer down.
 
 ### 4.9 Achievements
 
@@ -275,6 +294,11 @@ Fresh Start (1 prestige) and Veteran (5).
 Sound plays through the engine's beeper, at gain 0.18. Events: purchase, combo
 tier up, surge warning ticks, surge start, surge end, reactor state up,
 achievement, prestige and away collect.
+
+Perks add two. A drop chimes by rarity: two rising notes for a common, three
+for a rare, five for a keystone, so a high tier is heard as an event. A surge's
+drop chimes just after the surge's own end chord. Buying a perk has its own
+two-note chord. An offer running out makes no sound.
 
 ### 4.12 Pacing
 
@@ -362,6 +386,55 @@ to 20, and 85% in minutes 25 to 30.
 - By the real rules, the old prices gave 14.0 min for a steady player and
   24.2 for a masher.
 
+### 4.13 Perks
+
+In the game since step 4 (2026-10-23). The shelf, tooltips and Perks panel
+come in step 5. The design, the full table and the build plan are in §8.1.
+
+- **Drops** come on active play, at random (§8.1.2). The perk lands at the top
+  of its shop tab as an offer row.
+  - A closed tab gets the "New" tag, and a chime rings by rarity (§4.11).
+  - A toast names it in its family hue: "Perk drop", "Rare drop", "Keystone
+    drop" or "Upgrade drop". A surge's drop is named on its results card
+    instead.
+- **The offer row** sits on the shop rows' grid, so its name lines up with
+  theirs.
+  - Its glyph tile is lit in the family hue, affordable or not. The tile's
+    border is a ring that drains as the window runs down, and it breathes in
+    the last fifth. A rare's tile glows; a keystone's sits in a second ring.
+  - The name, with a level badge on an upgrade, then the effect with its
+    number in the family hue. An upgrade strikes out the number held beside
+    the number it becomes.
+  - The price, and the rarity: "Common" in grey, "Rare" and "Keystone" in the
+    family hue, "Upgrade" for an upgrade.
+  - A note when buying costs more than energy: "All 5 slots are full: you'll
+    pick one to drop", or "Swaps out your keystone, Glass Rhythm II".
+- **Buying.** An upgrade, or a new perk with a slot free, buys at once: the
+  tile flares and the row folds away.
+  - With all five slots full, the swap dialog shows the offer and lists the
+    held perks as cards. Picking one drops it and buys.
+  - A keystone while another is held asks first: "Swap your keystone?"
+  - Cancel keeps the offer. Presses are ignored while the dialog is open, and
+    it closes if the offer runs out meanwhile.
+- **Running out.** Once the run's energy passes the window, the row fades and
+  folds away, silently.
+- **Effects the script runs:**
+  - Afterglow, Storm Front and Lightning Rod (§4.4).
+  - Chain Reaction's float chain (§4.2).
+  - Self-Replicator: a free copy of the best auto-tapper every so many seconds
+    of active play. "+1 Robot Arm" drifts off the core in lime. Its count is
+    not saved, so a reload starts it over.
+  - Idle Hands: the per-second rate turns lime while the boost runs.
+  - Brute Force: the combo row stands down ("0 combo, off with Brute Force,
+    x1"). The scope still draws the beat, and no combo counts toward the best
+    combo or the combo achievements.
+- **Switched-off upgrades.** The shop marks a one-off upgrade "Off" when a held
+  perk leaves it doing nothing, owned or not: the Stabiliser under Glass
+  Rhythm, Synchronisation under Brute Force (`upgradeSwitchedOff`).
+- **The income meter** leaves out a surge's and Afterglow's boost, so a drop
+  during or just after a surge is priced at the player's own pace. The
+  simulation does the same.
+
 ## 5. Presentation
 
 ### 5.1 Layout
@@ -393,6 +466,11 @@ to 20, and 85% in minutes 25 to 30.
 - **Surge Gold.** Core `#fcd34d`, halo `#fbbf24`, ink `#fef3c7`. Used during
   overdrive and for lucky Double Tap floats.
 - **Shop-Signal.** Amber, only for the "New" tag on a closed shop tab.
+- **Perk-Family.** Each perk wears its family's hue: violet `#a78bfa` for
+  rhythm, rose `#fb7185` for press power, fuchsia `#e879f9` for luck, Surge
+  Gold for surges, lime `#a3e635` for machines. All are measured against the
+  reserved colors in DESIGN.md, and a perk's name always goes with its color.
+  Surge Gold also now marks Chain Reaction's doublings and Afterglow.
 - Everything else follows the site's rules: the One Signal Rule, Rank-Only
   Color, Glow-Is-A-Signal, and monospace numerals for every readout.
 
@@ -424,9 +502,18 @@ The visuals were built in three passes, all shipped 2026-10-22.
     over 0.7 s. The shelf shows up to 10 beads, then "+N".
   - Away wake-up: the core sits dim behind the dialog, and Collect brightens it
     over 0.9 s while the energy counts in.
+- **Perks, step 4 (2026-10-23).**
+  - A drop slides its row in and pops the tile. A rare or a keystone throws a
+    ring off its tile, and a keystone sends a sheen down the row.
+  - Buying flares the tile and throws its ring, then the row folds away.
+    Running out just fades and folds.
+  - The window's ring glides as it drains, and breathes in its last fifth.
+  - Chain Reaction pops x2, x4, x8 in gold, each a beat later and a little
+    larger. Self-Replicator's copy drifts off the rim in lime.
 - **Reduced motion.** Color changes and lights stay; all travel, spin, flight
   and implosion goes. Totals and collected energy apply at once, and the scope
-  redraws only on presses.
+  redraws only on presses. Perk rows appear and go at once, and the ring steps
+  rather than glides and never breathes.
 
 ### 5.4 Accessibility
 
@@ -440,6 +527,12 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - Tabs follow the ARIA tab pattern, with arrow keys.
 - The isotope shelf is `role="img"` with an aria-label such as "N isotopes, +X%
   to all gains". It ignores the pointer, so a tap on it is a press.
+- A perk offer row reads as one button: its name and level ("level 2", not the
+  numeral), its effect ("now 40%, then 55%" on an upgrade), any note, how much
+  of its window is left in tens of percent, the price and the rarity.
+- The swap dialog focuses its cancel button. Buying a perk announces "Bought
+  X.", "X is now level 2." or "Bought X, in place of Y." Drops and expiries
+  are announced from step 5.
 
 ## 6. Content and SEO
 
@@ -459,15 +552,25 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ## 7. Testing
 
-- `npm test` runs Vitest, including the 66 clicker tests.
+- `npm test` runs Vitest: the 66 clicker tests, the 61 perk tests and the
+  pacing bands.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  16 as of 2026-10-23, in about five minutes.
+  25 as of 2026-10-23, in about five minutes.
   - **Coverage:** the page shell, presses and the combo, buying, the shop tabs
     and "New" tag, save and reload, away progress, prestige, the full reset,
     the phone layout, a whole surge on a fake clock with and without reduced
     motion, every reactor state, and a live stage change.
+  - **Perks** (`spacebar-clicker-perks.e2e.ts`): a live drop, its row, toast
+    and tag; buying and an upgrade; the swap dialog and the keystone swap;
+    switched-off upgrades and Brute Force's combo row; a window running out,
+    and time away not running it down; Chain Reaction's floats; a surge with
+    Storm Front, a surge drop, Afterglow and Self-Replicator on a fake clock;
+    reduced motion; the swap dialog on a phone.
+  - **Staging a save.** The perk checks write a whole save before the page
+    loads (`seedSave`), with seed 7 when they need a known draw: its first
+    draw is under one in eight, so the first surge drops a perk.
   - **Browser:** your installed Chrome (`channel: 'chrome'`), so there is
     nothing to download.
   - **Dev server:** a server already on port 4321 is reused; otherwise one is
@@ -507,15 +610,16 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ### 8.1 Perk system: phase 1 in progress
 
-**Status (2026-10-23).** Design and build plan approved, follow-ups answered.
-Steps 1 to 3 of 6 are done: groundwork, perk logic, and pacing simulation.
-Nothing drops in the live game yet, because the script doesn't call the perk
-logic until step 4.
+**Status (2026-10-23).** Steps 1 to 4 of 6 are done: groundwork, perk logic,
+pacing simulation, and shop offers with perk effects in play. Perks now drop,
+sell and work in the live game (§4.13). What's missing is step 5: the shelf
+that shows held perks, tooltips, the Perks panel and codex, and the drop and
+expiry announcements. Until then a bought perk shows nowhere on screen.
 
-The pace question is settled: 24 minutes, option 1 (§4.12). Waiting on the
-maintainer before step 4: sign-off on the step 3 tuning in §8.1.9,
-especially the reworked Overtime and Self-Replicator, and the softer Glass
-Rhythm.
+The step 3 tuning was signed off with the pace (option 1, §4.12), including
+the reworked Overtime and Self-Replicator and the softer Glass Rhythm. Waiting
+on the maintainer's review of step 4, especially the calls in §8.1.10, before
+step 5.
 
 Check in with the maintainer after each step.
 
@@ -832,7 +936,8 @@ maintainer can review before the next one, as with the delight passes.
    - `sim.ts` and `pacing.test.ts` (§4.12, §7).
    - Results are in §8.1.9, and the open pacing question is in §4.12.
    - Drop timing and tier odds were left as decided.
-4. **Shop offers and perk effects in play.**
+4. **Shop offers and perk effects in play.** _Done 2026-10-23._ What shipped
+   is in §4.13, and the calls made along the way are in §8.1.10. The plan was:
    - The offer row: family-color tile, draining ring, price, level badge, and
      the upgrade's effect now and next.
    - The "New" tag on a drop, the chime, and the fade on expiry.
@@ -924,6 +1029,39 @@ The longer runs roughly doubled what a typical player gets from perks: from
 - **The build lists** were corrected so each opens with its strongest perk.
   The rhythm build now leads with Glass Rhythm and Full Sync.
 
+#### 8.1.10 Step 4: calls for the maintainer to review, 2026-10-23
+
+Made while building step 4. Each is small to change.
+
+1. **The family hues** (DESIGN.md, Perk-Family Exception): violet rhythm, rose
+   press power, fuchsia luck, Surge Gold for surges, lime machines. The plan
+   had orange for surges. Orange sat too close to the amber "New" tag, and
+   gold already means a surge on this page. Every hue clears the reserved
+   colors by at least ΔE 13; the tightest pair is violet and fuchsia.
+2. **Rarity in the row.** A rare's tile glows and a keystone's has a second
+   inner ring. The rarity label is grey for a common and in the family hue for
+   a rare or keystone, so a high tier stands out.
+3. **A toast on every drop**, in the family hue. The plan said only the "New"
+   tag and a chime. A toast names what dropped, the way a rune's name shows on
+   the ground in Diablo II. A surge's drop is named on its results card
+   instead.
+4. **The keystone swap asks first.** The plan had the swap dialog for full
+   slots only. Swapping a keystone throws away the old one's levels, so it
+   gets a confirm too.
+5. **"Off" in the shop** for the Stabiliser under Glass Rhythm and
+   Synchronisation under Brute Force, owned or not, so nobody pays for an
+   upgrade that does nothing.
+6. **Brute Force's combo row** reads "0 combo, off with Brute Force, x1". The
+   scope still draws the beat.
+7. **Afterglow** counts down under the core in gold in place of the stage name,
+   and gains float in gold while it lasts.
+8. **Self-Replicator counts active play**, like drops and surges, and the count
+   isn't saved. A reload restarts it, which only ever costs the player.
+9. **Lightning Rod rescales the surge already on its way** when bought or
+   dropped, instead of waiting for the next one.
+10. **The income meter leaves out Afterglow** as well as surges, in the script
+    and the simulation. The pacing results didn't move.
+
 ### 8.2 Unassigned ideas
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
@@ -986,3 +1124,14 @@ the maintainer asks.
   Surges end with a 1-in-8 bonus drop on rarer odds. Tiers are 65/30/5, and the
   only guaranteed drop is a player's first ever. Simulated: 5 to 10 drops in a
   30-minute run, with a keystone in about 38% of runs.
+- **2026-10-23.** Perks step 4, shop offers and effects in play. Perks now drop
+  into the shop as offer rows, with a family-hue tile, a draining ring, the
+  effect, price and rarity, and an upgrade's old value struck out. Drops get a
+  chime by rarity and a toast; surges name theirs on the results card. Buying,
+  the swap dialog for full slots, a confirm for the keystone swap, and the row
+  folding away when bought or run out. Afterglow, Storm Front, Lightning Rod,
+  Self-Replicator, Idle Hands, Chain Reaction's floats and Brute Force's combo
+  row run in the script; away energy no longer drains offers; the shop marks
+  switched-off upgrades. 25 perk glyphs (`PerkIcon.astro`), the Perk-Family
+  Exception in DESIGN.md, 2 more unit tests and 9 browser checks. Calls to
+  review in §8.1.10.

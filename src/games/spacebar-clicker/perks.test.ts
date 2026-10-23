@@ -21,11 +21,13 @@ import {
   offlineAward,
   shopTabHasNews,
   tapperCost,
+  upgradeSwitchedOff,
 } from './economy';
 import { BASE_MODS, modsOf } from './mods';
 import {
   buyPerk,
   deferPerks,
+  keystoneSwap,
   needsSlot,
   offerRemaining,
   perkDetail,
@@ -204,6 +206,20 @@ describe('perk effects on presses and the combo', () => {
     s.tappers.pneumatic = 2;
     expect(energyPerPress(s, { combo: 100 })).toBeCloseTo(v('brute-force'));
     expect(energyPerSecond(s, { combo: 100 }), 'nothing for Full Sync to share').toBe(6);
+  });
+
+  it('marks the one-off upgrades a held perk leaves doing nothing, owned or not', () => {
+    const plain = defaultSave(NOW);
+    expect(upgradeSwitchedOff(plain, 'stabiliser')).toBe(false);
+    expect(upgradeSwitchedOff(plain, 'sync')).toBe(false);
+    const glass = holding(['glass-rhythm', 1]);
+    expect(upgradeSwitchedOff(glass, 'stabiliser')).toBe(true);
+    glass.upgrades.stabiliser = 1;
+    expect(upgradeSwitchedOff(glass, 'stabiliser')).toBe(true);
+    expect(upgradeSwitchedOff(glass, 'sync')).toBe(false);
+    expect(upgradeSwitchedOff(holding(['brute-force', 1]), 'sync')).toBe(true);
+    expect(upgradeSwitchedOff(holding(['brute-force', 1]), 'finger')).toBe(false);
+    expect(glass.upgrades.sync, 'the save is left as it was').toBe(0);
   });
 
   it('Loaded Dice raises the Double Tap chance and its cap', () => {
@@ -608,11 +624,26 @@ describe('buying perks', () => {
     s.energy = 1000;
     offer(s, 'autopilot');
     expect(needsSlot(s, 'auto')).toBe(false);
+    expect(keystoneSwap(s, 'auto'), 'the shop asks first').toBe('brute-force');
     expect(buyPerk(s, 'auto')).toBe('swapped');
     expect(s.perks.owned).toEqual([
       { id: 'autopilot', level: 1 },
       { id: 'metronome', level: 1 },
     ]);
+  });
+
+  it('names a keystone to swap only for a new keystone while another is held', () => {
+    const s = holding(['metronome', 1]);
+    offer(s, 'brute-force');
+    expect(keystoneSwap(s, 'press'), 'no keystone held').toBeNull();
+    s.perks.offers = [];
+    s.perks.owned = [{ id: 'brute-force', level: 1 }];
+    offer(s, 'brute-force');
+    expect(keystoneSwap(s, 'press'), 'an upgrade swaps nothing').toBeNull();
+    s.perks.offers = [];
+    offer(s, 'metronome');
+    expect(keystoneSwap(s, 'press'), 'not a keystone').toBeNull();
+    expect(keystoneSwap(s, 'auto'), 'nothing on offer').toBeNull();
   });
 
   it('turns an upgrade on offer for a dropped perk back into a fresh perk', () => {

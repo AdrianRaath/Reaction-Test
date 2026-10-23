@@ -2,12 +2,14 @@
 import { getEntry, render } from 'astro:content';
 import { Icon } from 'astro-icon/components';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import PerkIcon from '../components/games/PerkIcon.astro';
 import ShopIcon from '../components/games/ShopIcon.astro';
 import RelatedTools from '../components/tool/RelatedTools.astro';
 import ResetModal from '../components/tool/ResetModal.astro';
 import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
+  PERKS,
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
   REACTOR_STATES,
@@ -74,6 +76,12 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     y: Number((50 + LED_R * Math.sin(angle)).toFixed(2)),
   };
 });
+
+// A perk offer's window, drawn as a ring around its 36px glyph tile. It runs
+// clockwise from twelve o'clock, so as the window drains the ring retreats to
+// the top, like a clock running down. The script sets its dash offset out of
+// a path length of 100.
+const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 0 0 1 8 1Z';
 ---
 
 <BaseLayout
@@ -202,6 +210,11 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
               <p class="surge-best" id="sc-surge-best" hidden>
                 <span aria-hidden="true">🏆</span> New best surge
               </p>
+              <!-- A surge is a boss fight: now and then it drops a perk. -->
+              <p class="surge-drop" id="sc-surge-drop" hidden>
+                <span id="sc-surge-drop-kind">Perk drop</span>:
+                <span class="surge-drop-name" id="sc-surge-drop-name"></span>
+              </p>
             </div>
           </div>
 
@@ -211,7 +224,7 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
           </p>
           <p class="surge-label" id="sc-surge-label" hidden>Surge incoming</p>
 
-          <div class="combo">
+          <div class="combo" id="sc-combo-meter">
             <div class="combo-row">
               <span class="combo-count readout" id="sc-combo">0</span>
               <span class="combo-tier" id="sc-combo-tier">combo</span>
@@ -287,6 +300,35 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
             aria-labelledby="sc-shop-tab-press"
           >
             <ul class="shop-list">
+              <!-- The perk on offer here, if any (SPACEBAR-CLICKER.md §8.1). An
+                   empty shell on the shop rows' own grid: the script fills it
+                   when a perk drops, keeps its price, ring and notes current,
+                   and hides it once bought or gone. The Auto-tappers tab has
+                   the same row. -->
+              <li class="perk-offer" id="sc-offer-press" hidden>
+                <button type="button" class="shop-buy perk-buy" aria-disabled="true">
+                  <span class="perk-tile">
+                    <svg class="perk-ring" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
+                      <path class="perk-ring-track" d={RING}></path>
+                      <path class="perk-ring-fill" d={RING} pathLength="100"></path>
+                    </svg>
+                    <span class="perk-glyph-slot" data-perk-glyph></span>
+                  </span>
+                  <span class="shop-text">
+                    <span class="shop-name"
+                      ><span data-perk-name></span>
+                      <span class="perk-level" data-perk-level hidden></span></span
+                    >
+                    <span class="shop-detail perk-detail" data-perk-detail></span>
+                    <span class="perk-note" data-perk-note hidden></span>
+                    <span class="visually-hidden" data-perk-window></span>
+                  </span>
+                  <span class="shop-nums">
+                    <span class="shop-cost readout" data-perk-cost></span>
+                    <span class="perk-rarity" data-perk-rarity></span>
+                  </span>
+                </button>
+              </li>
               {
                 PRESS_UPGRADES.map((u) => (
                   <li class="shop-item" data-kind="press" data-id={u.id}>
@@ -321,6 +363,30 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
             hidden
           >
             <ul class="shop-list">
+              <li class="perk-offer" id="sc-offer-auto" hidden>
+                <button type="button" class="shop-buy perk-buy" aria-disabled="true">
+                  <span class="perk-tile">
+                    <svg class="perk-ring" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
+                      <path class="perk-ring-track" d={RING}></path>
+                      <path class="perk-ring-fill" d={RING} pathLength="100"></path>
+                    </svg>
+                    <span class="perk-glyph-slot" data-perk-glyph></span>
+                  </span>
+                  <span class="shop-text">
+                    <span class="shop-name"
+                      ><span data-perk-name></span>
+                      <span class="perk-level" data-perk-level hidden></span></span
+                    >
+                    <span class="shop-detail perk-detail" data-perk-detail></span>
+                    <span class="perk-note" data-perk-note hidden></span>
+                    <span class="visually-hidden" data-perk-window></span>
+                  </span>
+                  <span class="shop-nums">
+                    <span class="shop-cost readout" data-perk-cost></span>
+                    <span class="perk-rarity" data-perk-rarity></span>
+                  </span>
+                </button>
+              </li>
               {
                 AUTO_TAPPERS.map((t, i) => (
                   <li class="shop-item" data-kind="auto" data-id={t.id} hidden={i > 0}>
@@ -507,14 +573,44 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
       <div class="modal">
         <h3 class="modal-title" id="sc-away-title">While you were away</h3>
         <p class="modal-message">
-          Your auto-tappers ran for <span class="readout" id="sc-away-time">0s</span> at half speed and
-          made <span class="readout" id="sc-away-energy">0</span> energy.
+          Your auto-tappers ran for <span class="readout" id="sc-away-time">0s</span> at
+          <span id="sc-away-rate">half speed</span> and made
+          <span class="readout" id="sc-away-energy">0</span> energy.
         </p>
         <div class="modal-actions">
           <button class="btn btn-primary" id="sc-away-collect" type="button">Collect</button>
         </div>
       </div>
     </div>
+
+    <!-- Buying a perk that needs room: with all five slots full the player
+         picks one to drop, and a second keystone asks before it swaps out the
+         first. The script fills it for the offer at hand. -->
+    <div
+      class="modal-overlay"
+      id="sc-swap-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sc-swap-title"
+      aria-describedby="sc-swap-message"
+      hidden
+    >
+      <div class="modal swap-modal">
+        <h3 class="modal-title" id="sc-swap-title">Make room</h3>
+        <div class="swap-incoming" id="sc-swap-incoming"></div>
+        <p class="modal-message swap-message" id="sc-swap-message"></p>
+        <ul class="swap-list" id="sc-swap-list"></ul>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="sc-swap-cancel" type="button">Keep my perks</button>
+          <button class="btn btn-primary" id="sc-swap-confirm" type="button" hidden>Swap</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Every perk's glyph, for the script to clone into offers and dialogs. -->
+    <template id="sc-perk-glyphs">
+      {PERKS.map((p) => <PerkIcon id={p.id} />)}
+    </template>
   </section>
 
   <Content />
@@ -582,11 +678,46 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
   /* --- Game card --------------------------------------------------------------- */
 
   .game-section {
+    /* Surge Gold (DESIGN.md): the reactor in overdrive. Lighter than Caution
+       Amber, so it never reads as the shop's "New" tag. */
+    --gold: #fcd34d;
+    --gold-deep: #fbbf24;
+    --gold-ink: #fef3c7;
+
+    /* The Perk-Family Exception (DESIGN.md): a perk wears its family's hue,
+       so the build reads at a glance. Surge perks take Surge Gold, since gold
+       already means a surge here. Each hue clears every reserved color and
+       the others by at least ΔE 13, and the perk's name always goes with it. */
+    --perk-rhythm: #a78bfa;
+    --perk-press: #fb7185;
+    --perk-luck: #e879f9;
+    --perk-surge: var(--gold);
+    --perk-machines: #a3e635;
+    --perk: var(--ink-primary);
+
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--space-lg);
     padding-block: var(--space-md) var(--space-2xl);
+  }
+
+  /* Whatever carries a perk's family, a shop row, a dialog card, a float or
+     a toast, sets --perk for everything inside it. */
+  .game-section :global([data-family='rhythm']) {
+    --perk: var(--perk-rhythm);
+  }
+  .game-section :global([data-family='press']) {
+    --perk: var(--perk-press);
+  }
+  .game-section :global([data-family='luck']) {
+    --perk: var(--perk-luck);
+  }
+  .game-section :global([data-family='surge']) {
+    --perk: var(--perk-surge);
+  }
+  .game-section :global([data-family='machines']) {
+    --perk: var(--perk-machines);
   }
 
   .game-card {
@@ -631,11 +762,6 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     --ramp-cyan: #22d3ee;
     --ramp-blue: #38bdf8;
     --ramp-white: #e0f2fe;
-    /* Surge Gold: the reactor in overdrive. Lighter than Caution Amber, so it
-       never reads as the shop's "New" tag. */
-    --gold: #fcd34d;
-    --gold-deep: #fbbf24;
-    --gold-ink: #fef3c7;
 
     --stage: var(--ramp-green);
     /* The dial follows the stage, except while a surge counts down. */
@@ -800,6 +926,11 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     margin-block-start: var(--space-sm);
     font-size: var(--text-label-size);
     color: var(--ink-secondary);
+  }
+
+  /* Idle Hands at work: the per-second rate wears the machines' hue. */
+  .energy-rates .readout.is-boosted {
+    color: var(--perk-machines);
   }
 
   .energy-rates .readout {
@@ -1326,6 +1457,41 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     }
   }
 
+  /* Chain Reaction: each doubling pops out beside the last, x2, x4, x8, a
+     little larger and a beat later each time (the script staggers them). */
+  .floats :global(.float.is-chain) {
+    animation: chain-pop 900ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+
+  @keyframes chain-pop {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.4);
+    }
+    20% {
+      opacity: 1;
+      transform: translate(-50%, calc(-50% - 6px)) scale(1.3);
+    }
+    35% {
+      transform: translate(-50%, calc(-50% - 10px)) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, calc(-50% - 64px)) scale(1);
+    }
+  }
+
+  /* Afterglow: presses keep a surge's gold for a while after it. */
+  .reactor-face.is-afterglow .floats :global(.float:not(.is-idle)) {
+    color: var(--gold);
+  }
+
+  /* A perk at work, such as Self-Replicator's free copy: an idle-style drift
+     in the perk's own hue. */
+  .floats :global(.float.is-perk) {
+    color: var(--perk);
+  }
+
   /* Idle income: small, dim, slow, drifting off the core's rim. */
   .floats :global(.float.is-idle) {
     font-size: var(--text-label-size);
@@ -1569,6 +1735,12 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     will-change: transform;
   }
 
+  /* Brute Force: there is no combo to build, so the meter stands down. */
+  .combo.is-off .combo-count,
+  .combo.is-off .combo-mult {
+    color: var(--ink-muted);
+  }
+
   .test-hint {
     z-index: 1;
     max-width: 38ch;
@@ -1724,6 +1896,17 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     }
   }
 
+  /* The boss's loot: a perk the surge dropped, named in its hue. */
+  .surge-drop {
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--ink-secondary);
+  }
+
+  .surge-drop-name {
+    color: var(--perk);
+  }
+
   /* --- Toast ---------------------------------------------------------------- */
 
   .toast {
@@ -1739,6 +1922,12 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     font-size: var(--text-label-size);
     font-weight: 500;
     color: var(--ink-primary);
+  }
+
+  /* A perk drop's toast wears the perk's hue. */
+  .toast[data-family] {
+    border-color: color-mix(in srgb, var(--perk) 55%, var(--line));
+    color: var(--perk);
   }
 
   .toast.is-in {
@@ -1933,6 +2122,251 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     font-size: 0.75rem;
     font-style: italic;
     color: var(--ink-muted);
+  }
+
+  /* --- Perk offers --------------------------------------------------------------
+
+     A perk on offer tops its tab on the shop rows' own grid. It is always lit
+     in its family's hue, affordable or not, because it is only here for a
+     while: the ring around its tile is the window draining. Rarity shows in
+     the tile: a rare glows, a keystone is set in a second ring. */
+
+  .perk-buy {
+    position: relative;
+    overflow: hidden; /* clips the keystone's arrival sheen */
+    border-color: color-mix(in srgb, var(--perk) 32%, var(--line));
+    background-image: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--perk) 9%, transparent),
+      transparent 70%
+    );
+    color: var(--ink-primary);
+  }
+
+  .perk-buy.is-affordable {
+    border-color: color-mix(in srgb, var(--perk) 65%, var(--line));
+  }
+
+  .perk-buy.is-affordable:hover {
+    border-color: var(--perk);
+  }
+
+  /* The glyph tile: the shop's recessed tile, lit in the family hue. Shared
+     with the dialog's perk cards, which the script builds. */
+  .game-section :global(.perk-tile) {
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    background-color: color-mix(in srgb, var(--perk) 14%, var(--panel-01));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--perk) 45%, transparent);
+    color: var(--perk);
+  }
+
+  .game-section :global(.perk-glyph-slot) {
+    display: flex;
+  }
+
+  .game-section :global([data-rarity='rare'] .perk-tile) {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--perk) 45%, transparent),
+      0 0 10px color-mix(in srgb, var(--perk) 30%, transparent);
+  }
+
+  .game-section :global([data-rarity='keystone'] .perk-tile) {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--perk) 45%, transparent),
+      0 0 14px color-mix(in srgb, var(--perk) 40%, transparent);
+  }
+
+  /* A keystone is set in a second, inner ring. */
+  .game-section :global([data-rarity='keystone'] .perk-tile::after) {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid color-mix(in srgb, var(--perk) 45%, transparent);
+    border-radius: 5px;
+    pointer-events: none;
+  }
+
+  /* The offer's tile drops its hairline for the ring, which is its border. */
+  .perk-offer .perk-tile {
+    box-shadow: none;
+  }
+
+  .perk-offer[data-rarity='rare'] .perk-tile {
+    box-shadow: 0 0 10px color-mix(in srgb, var(--perk) 30%, transparent);
+  }
+
+  .perk-offer[data-rarity='keystone'] .perk-tile {
+    box-shadow: 0 0 14px color-mix(in srgb, var(--perk) 40%, transparent);
+  }
+
+  .perk-ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke-width: 2;
+  }
+
+  .perk-ring-track {
+    stroke: color-mix(in srgb, var(--perk) 22%, transparent);
+  }
+
+  .perk-ring-fill {
+    stroke: var(--perk);
+    stroke-dasharray: 100;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 160ms linear;
+  }
+
+  /* The last fifth of the window: the ring breathes. Never a flash. */
+  .perk-offer.is-fading .perk-ring-fill {
+    animation: ring-breathe 1.1s ease-in-out infinite alternate;
+  }
+
+  @keyframes ring-breathe {
+    to {
+      opacity: 0.35;
+    }
+  }
+
+  .game-section :global(.perk-level) {
+    display: inline-block;
+    margin-inline-start: 2px;
+    padding: 0 6px;
+    border-radius: var(--radius-full);
+    background-color: color-mix(in srgb, var(--perk) 16%, transparent);
+    color: var(--perk);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.45;
+    vertical-align: 1px;
+  }
+
+  .game-section :global(.perk-level[hidden]) {
+    display: none;
+  }
+
+  /* The perk's numbers carry its hue. An upgrade strikes the old one out. */
+  .game-section :global(.perk-value) {
+    font-weight: 600;
+    color: var(--perk);
+  }
+
+  .game-section :global(.perk-was) {
+    color: var(--ink-muted);
+  }
+
+  .perk-note {
+    font-size: 0.75rem;
+    color: var(--ink-secondary);
+  }
+
+  /* Rare and keystone call out in the family hue; a common stays quiet, so a
+     high tier reads as the event it is. */
+  .perk-rarity {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--perk);
+  }
+
+  .perk-offer[data-rarity='common']:not(.is-upgrade) .perk-rarity {
+    color: var(--ink-secondary);
+  }
+
+  /* A drop: the row slides in and the tile pops. A rare or a keystone also
+     throws a ring off its tile, and a keystone sends a sheen down the row. */
+  .perk-offer.is-arriving {
+    animation: offer-in 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes offer-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+
+  .perk-offer.is-arriving .perk-tile {
+    animation: tile-pop 560ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes tile-pop {
+    0% {
+      transform: scale(0.55);
+    }
+    55% {
+      transform: scale(1.12);
+    }
+  }
+
+  .perk-offer.is-arriving:not([data-rarity='common']) .perk-tile::before,
+  .perk-tile.is-claimed::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--perk);
+    border-radius: var(--radius-md);
+    opacity: 0;
+    pointer-events: none;
+    animation: tile-burst 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .perk-offer.is-arriving[data-rarity='keystone'] .perk-tile::before {
+    animation-duration: 1000ms;
+  }
+
+  @keyframes tile-burst {
+    0% {
+      opacity: 0.9;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(2.2);
+    }
+  }
+
+  .perk-offer.is-arriving[data-rarity='keystone'] .perk-buy::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      color-mix(in srgb, var(--perk) 28%, transparent) 50%,
+      transparent 70%
+    );
+    transform: translateX(-100%);
+    pointer-events: none;
+    animation: sheen 1100ms ease-out 220ms forwards;
+  }
+
+  /* Bought: the tile flares and throws its ring; the script then folds the
+     row away, as it does when an offer runs out. */
+  .perk-tile.is-claimed {
+    animation: tile-claim 320ms cubic-bezier(0.3, 0, 0.3, 1);
+  }
+
+  @keyframes tile-claim {
+    45% {
+      transform: scale(1.14);
+      background-color: color-mix(in srgb, var(--perk) 40%, var(--panel-01));
+    }
+  }
+
+  .perk-offer.is-leaving {
+    overflow: hidden;
+    pointer-events: none;
   }
 
   /* --- Panels -------------------------------------------------------------------- */
@@ -2187,6 +2621,92 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     gap: var(--space-md);
   }
 
+  /* The swap dialog: the perk on offer at the top, then the perks it could
+     replace. Its cards are built by the script. */
+  .swap-modal {
+    max-width: 440px;
+  }
+
+  .swap-incoming {
+    margin-block-end: var(--space-md);
+  }
+
+  .swap-message {
+    margin-block-end: var(--space-md);
+  }
+
+  .swap-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin-block-end: var(--space-lg);
+    padding: 0;
+    list-style: none;
+  }
+
+  .swap-list:empty {
+    display: none;
+  }
+
+  /* A perk as a card: tile, then name, level and effect, on the shop rows'
+     grid. A button when the player is picking one to drop. */
+  .game-section :global(.perk-card) {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 0.75rem;
+    width: 100%;
+    padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-sm);
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+    color: var(--ink-primary);
+    text-align: start;
+  }
+
+  .game-section :global(button.perk-card) {
+    border-color: var(--line);
+    cursor: pointer;
+    transition:
+      border-color var(--duration-fast) var(--ease),
+      background-color var(--duration-fast) var(--ease);
+  }
+
+  .game-section :global(button.perk-card:hover) {
+    border-color: var(--perk);
+    background-color: var(--panel-hover);
+  }
+
+  .swap-incoming :global(.perk-card) {
+    border-color: color-mix(in srgb, var(--perk) 55%, var(--line));
+  }
+
+  .game-section :global(.perk-card.is-outgoing) {
+    opacity: 0.7;
+  }
+
+  .game-section :global(.perk-card.is-outgoing .perk-card-name) {
+    text-decoration: line-through;
+  }
+
+  .game-section :global(.perk-card-text) {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .game-section :global(.perk-card-name) {
+    font-size: var(--text-label-size);
+    font-weight: 600;
+  }
+
+  .game-section :global(.perk-card-detail) {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
   /* --- Responsive ------------------------------------------------------------------- */
 
   @media (max-width: 900px) {
@@ -2249,7 +2769,12 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     .reactor-face.is-imploding .core,
     .reactor-face.is-blooming .core,
     .toast.is-in,
-    .shop-new-tag {
+    .shop-new-tag,
+    .perk-offer.is-arriving,
+    .perk-offer.is-arriving .perk-tile,
+    .perk-tile.is-claimed,
+    .perk-ring-fill,
+    .perk-offer.is-fading .perk-ring-fill {
       animation: none;
       transition: none;
     }
@@ -2265,7 +2790,10 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
     .motes,
     .surge-best.is-shining::after,
     .shockwave,
-    .grid-wash {
+    .grid-wash,
+    .perk-offer.is-arriving .perk-tile::before,
+    .perk-tile.is-claimed::before,
+    .perk-offer.is-arriving .perk-buy::after {
       display: none;
     }
   }
