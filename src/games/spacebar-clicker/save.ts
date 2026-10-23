@@ -10,7 +10,6 @@
 import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
-  PERK_DROPS,
   PERK_MAX_LEVEL,
   PERK_SLOTS,
   PERKS,
@@ -52,14 +51,10 @@ export interface PerkState {
   offers: PerkOffer[];
   /** The drop generator's state (rng.ts), so a reload can't reroll a drop. */
   rng: number;
-  /** Run energy at which the next scheduled roll comes. */
-  nextRollAt: number;
-  /** Rolls in a row that dropped nothing, for the pity odds. */
-  misses: number;
-  /** Perks dropped this run. The first always drops. */
-  drops: number;
-  /** The reactor state the drop logic last saw; a higher one rolls. */
-  stage: number;
+  /** Seconds of active play this run: drops come on this clock. */
+  activeS: number;
+  /** The `activeS` at which the next drop comes; null until it is drawn. */
+  nextDropAtS: number | null;
   /**
    * Every perk ever dropped, with the best level ever held (0 if only seen).
    * Survives prestige; only the full reset clears it.
@@ -117,10 +112,8 @@ function freshRun(perks: Pick<PerkState, 'rng' | 'codex'>): PerkState {
     owned: [],
     offers: [],
     rng: perks.rng,
-    nextRollAt: PERK_DROPS.firstRollAt,
-    misses: 0,
-    drops: 0,
-    stage: 0,
+    activeS: 0,
+    nextDropAtS: null,
     codex: { ...perks.codex },
   };
 }
@@ -270,10 +263,9 @@ function parsePerks(value: unknown, now: number): PerkState {
     owned,
     offers,
     rng: whole(d.rng, 0, 2 ** 32 - 1) ?? seedFrom(now),
-    nextRollAt: num(d.nextRollAt, PERK_DROPS.firstRollAt),
-    misses: whole(d.misses, 0, Number.MAX_SAFE_INTEGER) ?? 0,
-    drops: whole(d.drops, 0, Number.MAX_SAFE_INTEGER) ?? 0,
-    stage: whole(d.stage, 0, Number.MAX_SAFE_INTEGER) ?? 0,
+    activeS: num(d.activeS, 0),
+    // Unknown means undrawn: the next tick draws it.
+    nextDropAtS: num(d.nextDropAtS, -1) >= 0 ? (d.nextDropAtS as number) : null,
     codex,
   };
 }

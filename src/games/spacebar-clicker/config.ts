@@ -617,20 +617,32 @@ export const PERK_MAX_LEVEL = 3;
 export const PERK_UPGRADE_SCALE = 1.5;
 
 /**
- * Drops, prices and windows. Prices and windows are in seconds of the run's
- * income at the moment a perk drops, so they mean the same early and late.
+ * Drops, prices and windows (SPACEBAR-CLICKER.md §8.1.2). Drops are meant to
+ * feel like rune drops in Diablo II: random, so they can't be timed, and rare
+ * enough that a high tier is an event. Each gap between drops is drawn fresh
+ * from an exponential distribution over active play, so a drop can come 20
+ * seconds after the last or eight minutes after it. Surges are the boss
+ * fights: each ends with a chance of a bonus drop, weighted to the rarer
+ * tiers. Simulated: about 7 drops in a 30-minute run, keystones in about a
+ * third of runs.
+ *
+ * Prices and windows are in seconds of the run's income at the moment a perk
+ * drops, so they mean the same early and late.
  */
 export const PERK_DROPS = {
-  /** Run energy at which a run's first roll comes. It always drops. */
-  firstRollAt: 300,
-  /** Seconds of income between scheduled rolls. A reactor state change also rolls. */
-  rollEveryS: 60,
-  /** Odds of a roll dropping a perk, rising by `pityStep` for each miss in a row. */
-  baseChance: 0.35,
-  pityStep: 0.2,
+  /** Average seconds of active play between drops, before the ceiling. */
+  meanGapS: 360,
+  /** The hidden ceiling: never longer than this without a drop. */
+  maxGapS: 600,
+  /** A player's very first run: its first drop comes at a random moment in this range, and is a common. */
+  firstEverS: [60, 180] as readonly [number, number],
+  /** Chance a surge ends with a bonus drop. */
+  surgeChance: 1 / 8,
+  /** Tier odds for a drop, and for a surge's bonus drop. */
+  odds: { common: 0.65, rare: 0.3, keystone: 0.05 } as Readonly<Record<PerkRarity, number>>,
+  surgeOdds: { common: 0.45, rare: 0.45, keystone: 0.1 } as Readonly<Record<PerkRarity, number>>,
   /** Income below this counts as this, so prices and windows never collapse to zero. */
   minIncome: 1,
-  weight: { common: 6, rare: 3, keystone: 1 } as Readonly<Record<PerkRarity, number>>,
   priceS: { common: 45, rare: 90, keystone: 150 } as Readonly<Record<PerkRarity, number>>,
   windowS: { common: 90, rare: 180, keystone: 300 } as Readonly<Record<PerkRarity, number>>,
 } as const;

@@ -75,7 +75,7 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 | `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                              |
 | `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap, away deferral, perk text. Pure.                                                                 |
 | `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks (66 as of 2026-10-23).                                                                                                                        |
-| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (56 as of 2026-10-23).                                                                           |
+| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (59 as of 2026-10-23).                                                                           |
 | `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, and every reactor state (§7).                                                                          |
 | `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine.            |
 | `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS. The frontmatter computes the dial, bezel and mote geometry.                                                                                                |
@@ -256,7 +256,8 @@ Fresh Start (1 prestige) and Veteran (5).
   - `offers`, at most one per tab, with price, window, and whether they've
     been seen.
   - `rng`, the drop generator's state.
-  - `nextRollAt`, `misses`, `drops` and `stage`, which run the drop schedule.
+  - `activeS`, seconds of active play this run, and `nextDropAtS`, the moment
+    of the next drop on that clock. `nextDropAtS` is `null` until it is drawn.
   - `codex`: every perk ever dropped, with the best level held.
   - Prestige clears everything except `rng` and `codex`. A save from before
     perks loads with an empty block.
@@ -476,21 +477,40 @@ are proposals carried into the build plan.
     and the "While you were away" dialog mentions a waiting offer.
   - Commons are cheaper with shorter windows; keystones dearer with longer
     ones. Exact numbers come from simulation.
-- **Drops**, as built in step 2. The numbers are in `PERK_DROPS` and are
-  starting points for step 3's simulation.
-  - Rolls come every 60 s of income, roughly one every 2 to 3 minutes of play.
-    A reactor state change also rolls.
-  - A run's first roll comes at 300 energy and always drops a common, so
-    every run meets the system early.
-  - After that a roll drops at 35%, plus 20% for each miss in a row. No more
-    than four misses can come in a row, and about half of rolls drop.
-  - Drops are weighted by rarity, 6 : 3 : 1 for common, rare and keystone.
-    With 9 commons, 12 rares and 4 keystones, that is about 57%, 38% and 4%
-    of drops.
-  - At most one live offer per tab. A roll with both tabs taken is skipped
-    and doesn't count as a miss.
-  - Prices are 45, 90 and 150 s of income by rarity, with windows of 90, 180
-    and 300 s.
+- **Drops feel like rune drops in Diablo II.** _Decided 2026-10-23._ The
+  maintainer's brief: drops should feel random and never linear, so you never
+  know when one is coming. A high tier should be an event. Not scarce, but
+  never constant.
+  - **Random in time.** Each gap is drawn fresh from an exponential
+    distribution over seconds of active play, with a 6-minute mean. A drop
+    can land seconds after the last one or many minutes later.
+  - **Active play only.** Active play means the page is visible and the
+    player pressed within the last minute, the same rule surges use. Leaving
+    the game running never brings a drop.
+  - **One hidden ceiling.** A gap never exceeds 10 minutes. With the ceiling,
+    the average gap is about 4.9 minutes. There is no visible pity.
+  - **Surges are boss fights.** Each surge ends with a 1-in-8 chance of a
+    bonus drop, on rarer odds. Surge drops don't affect the ordinary timing.
+  - **Steep tiers.** Ordinary drops are 65% common, 30% rare and 5% keystone.
+    Surge drops are 45%, 45% and 10%. A tier with nothing left to drop is
+    skipped and the odds are spread over the rest. A perk is then picked
+    evenly within its tier.
+  - **One guaranteed drop, ever.** It comes on a player's very first run,
+    meaning their codex is empty: a common, at a random moment 1 to 3 minutes
+    into active play. Nothing else is guaranteed. A full reset empties the
+    codex, so a fresh start gets the tutorial drop again.
+  - **Full tabs lose the drop.** At most one live offer per tab. A drop due
+    while both tabs hold offers is lost, not held, because holding it would
+    make the next drop predictable. A fresh moment is drawn.
+  - **Removed from the step 2 model:** the fixed roll schedule, the pity
+    ramp, the roll on each reactor stage change, and the guaranteed first drop
+    on every run. In simulation that model gave about 21 drops in a 30-minute
+    run, never more than about 3 minutes apart.
+  - **Checked through the real code.** Simulated 30-minute runs give 5 to 10
+    drops, usually 7, with a keystone in about 38% of runs. About one drop in
+    two runs is lost to full tabs if the player never buys.
+  - **Prices** are 45, 90 and 150 s of income by rarity, with windows of 90,
+    180 and 300 s.
 - **Slots: 5.** _Decided._ At most 5 active perks, and one keystone at a time.
   - Buying a new perk with all 5 slots full asks which perk to drop. The
     dropped perk is gone for the run, levels and all. Cancelling keeps the
@@ -627,7 +647,7 @@ where the decisions come from.
   `SURGE`. Lightning Rod, Storm Front, Surge Lines and Afterglow need them to
   take modifiers.
 - **Save.** Add a perks block: owned ids with their levels, live offers, the
-  RNG state, the drop meter and pity count, and the codex.
+  RNG state, the active-play clock and next drop, and the codex.
   - Store each offer's expiry as a `runLifetime` value. The offer is gone once
     `runLifetime` passes it.
   - Away energy must not drain offers (question 5), so Collect pushes each
@@ -635,9 +655,15 @@ where the decisions come from.
     gaps of a minute or less does the same.
   - `prestigeReset` clears owned perks and offers, and keeps the codex.
   - Parse defensively and drop unknown perk ids.
-- **Income at drop time** needs a rolling measure of what the player actually
-  earned over the last few seconds, presses included. The script doesn't track
-  this yet.
+- **Income at drop time.** `IncomeMeter` measures what the player is actually
+  earning, presses included (step 1).
+  - In step 4, feed it surge presses at their value without the surge
+    multiplier. Otherwise a drop during or just after a surge is priced and
+    timed at ten times the player's real pace. A surge's bonus drop is the
+    obvious case.
+  - The script calls `perkTick(state, income, activeDt)` every frame, with
+    the same active-play seconds the surge scheduler counts. It calls
+    `surgeDrop` as each surge ends.
 - **Glyphs.** Each perk needs a glyph in `ShopIcon.astro`, or a sibling
   component: same 24-unit grid, 1.5 stroke, `currentColor`.
 - **Content.** Add a perks table to the MDX, rendered from config, with rarity
@@ -646,7 +672,7 @@ where the decisions come from.
   prestige. Rebuild the pacing simulation with drops, ideally in the repo this
   time, and run each build through it. Starting target: a strong build cuts
   first prestige by about a third.
-- **Tests.** Cover drops and pity, pricing and windows, expiry, each perk's
+- **Tests.** Cover drop timing and tiers, pricing and windows, expiry, each perk's
   effect at every level, upgrades, the slot limit and swap, the keystone rule,
   save parsing, and prestige.
 
@@ -703,16 +729,23 @@ maintainer can review before the next one, as with the delight passes.
    - `economy.ts` gained `luckyMultiplier`, the Double Tap and chain roll, and
      `cheapestTapper`. It counts perk offers as shop-tab news, and handles
      Brute Force's combo-off and Feedback Loop.
-   - `perks.ts`: `perkTick` for drops and expiry, `buyPerk` and `needsSlot`,
-     `deferPerks`, `replicate`, `offerRemaining`, and the perk text.
+   - `perks.ts`: `perkTick` for drops and expiry, `surgeDrop`, `buyPerk` and
+     `needsSlot`, `deferPerks`, `replicate`, `offerRemaining`, and the perk
+     text.
    - `combo.ts` gained rests, for Held Breath.
    - The save's `perks` block (§4.10).
-   - 56 new unit tests in `perks.test.ts`. Drops are seeded, so a test
-     replays a run through a save and reload and gets the same drops.
+   - Unit tests in `perks.test.ts`, 59 after the drop rework. Drops are
+     seeded, so a test replays a run through a save and reload and gets the
+     same drops.
+   - **Drop rework, same day.** On the maintainer's feedback, the scheduled
+     rolls with pity were replaced by the random, Diablo-style model in
+     §8.1.2.
 3. **Pacing simulation, in the repo.**
    - A pure simulation module, with a Vitest pacing test that asserts first
      prestige stays within a band, both with no perks and for each build.
-   - Tune drop rates, prices, windows and perk values until the bands hold.
+   - Tune prices, windows and perk values until the bands hold. The drop
+     timing and tier odds are decided (§8.1.2). Change them only to fix
+     pacing, and check with the maintainer first.
    - Report the numbers before any UI work.
 4. **Shop offers and perk effects in play.**
    - The offer row: family-color tile, draining ring, price, level badge, and
@@ -790,7 +823,12 @@ the maintainer asks.
   change. Playwright added as a dev dependency, with 16 browser checks in
   `tests/browser/`.
 - **2026-10-23.** Perks step 2, the logic and the save. Added the 25 perks with
-  three levels each, their effects through the modifiers, drops with pity and
-  rarity weights, offers priced and timed in seconds of income, buying and
-  upgrading, five slots with one keystone, and the save block with the codex.
-  No visible change yet.
+  three levels each, their effects through the modifiers, drops, offers priced
+  and timed in seconds of income, buying and upgrading, five slots with one
+  keystone, and the save block with the codex. No visible change yet.
+- **2026-10-23.** Drops reworked on the maintainer's feedback, to feel like rune
+  drops in Diablo II rather than a steady schedule. They are now random in
+  active-play time, averaging 6 minutes before a hidden 10-minute ceiling.
+  Surges end with a 1-in-8 bonus drop on rarer odds. Tiers are 65/30/5, and the
+  only guaranteed drop is a player's first ever. Simulated: 5 to 10 drops in a
+  30-minute run, with a keystone in about 38% of runs.

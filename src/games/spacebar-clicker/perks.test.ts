@@ -25,17 +25,26 @@ import {
   perkLevel,
   perkTick,
   replicate,
+  surgeDrop,
   upgradeFactor,
 } from './perks';
-import { defaultSave, parseSave, prestigeReset, serializeSave, type SaveState } from './save';
+import {
+  defaultSave,
+  parseSave,
+  prestigeReset,
+  serializeSave,
+  type PerkOffer,
+  type SaveState,
+} from './save';
 
 const NOW = 1_700_000_000_000;
 const def = (id: PerkId) => PERKS.find((p) => p.id === id)!;
 
-/** A fresh save holding the given perks. */
+/** A fresh save holding the given perks, found in the codex as a real save would have them. */
 function holding(...perks: [PerkId, number][]): SaveState {
   const s = defaultSave(NOW);
   s.perks.owned = perks.map(([id, level]) => ({ id, level }));
+  s.perks.codex = Object.fromEntries(perks);
   return s;
 }
 
@@ -322,151 +331,188 @@ describe('perk effects on auto-tappers and time away', () => {
 // Drops
 // ---------------------------------------------------------------------------
 
+/** Make this not the player's first run: something has dropped before. */
+function veteran(s: SaveState): SaveState {
+  s.perks.codex = { afterglow: 0 };
+  return s;
+}
+
+/**
+ * Play `seconds` of active play in one-second ticks at a steady income,
+ * collecting drops. `keepOpen` clears offers after each tick, so every drop
+ * that comes due has a tab to land in.
+ */
+function play(s: SaveState, seconds: number, { income = 10, keepOpen = true } = {}) {
+  const drops: { t: number; offer: PerkOffer }[] = [];
+  for (let i = 0; i < seconds; i++) {
+    s.runLifetime += income;
+    for (const o of perkTick(s, income, 1).dropped) drops.push({ t: s.perks.activeS, offer: o });
+    if (keepOpen) s.perks.offers = [];
+  }
+  return drops;
+}
+
+const gaps = (drops: { t: number }[]) => drops.slice(1).map((d, i) => d.t - drops[i]!.t);
+
 describe('perk drops', () => {
-  it('roll nothing before the first roll is due', () => {
-    const s = defaultSave(NOW);
-    s.runLifetime = PERK_DROPS.firstRollAt - 1;
-    expect(perkTick(s, 10).dropped).toEqual([]);
-    expect(s.perks.offers).toEqual([]);
+  it('need active play: idle time never brings one', () => {
+    const s = veteran(defaultSave(NOW));
+    for (let i = 0; i < 5000; i++) {
+      s.runLifetime += 100;
+      expect(perkTick(s, 100, 0).dropped).toEqual([]);
+    }
+    expect(s.perks.activeS).toBe(0);
   });
 
-  it('always drop a common on a run’s first roll, priced in seconds of income', () => {
-    for (let seed = 0; seed < 50; seed++) {
+  it('give a player’s very first run one common, at a random moment early on', () => {
+    const times: number[] = [];
+    for (let seed = 0; seed < 300; seed++) {
       const s = defaultSave(NOW);
       s.perks.rng = seed;
-      s.runLifetime = 300;
-      const [o] = perkTick(s, 10).dropped;
-      expect(o, `seed ${seed}`).toBeDefined();
-      expect(def(o!.id).rarity).toBe('common');
-      expect(o).toMatchObject({ level: 1, price: 450, droppedAt: 300, expiresAt: 300 + 900 });
-      expect(s.perks.drops).toBe(1);
-      expect(s.perks.nextRollAt).toBe(300 + 60 * 10);
-      expect(s.perks.codex[o!.id]).toBe(0);
+      const [first] = play(s, 200);
+      expect(first, `seed ${seed}`).toBeDefined();
+      expect(def(first!.offer.id).rarity).toBe('common');
+      times.push(first!.t);
     }
+    expect(Math.min(...times)).toBeGreaterThanOrEqual(60);
+    expect(Math.max(...times)).toBeLessThanOrEqual(181);
+    expect(Math.min(...times), 'spread across the range').toBeLessThan(70);
+    expect(Math.max(...times)).toBeGreaterThan(170);
   });
 
-  it('roll again when the reactor reaches a new state', () => {
-    const s = defaultSave(NOW);
-    s.perks.drops = 1;
-    s.perks.nextRollAt = 1e9;
-    s.perks.misses = 99; // certain to drop
-    s.runLifetime = 500; // Warming
-    expect(perkTick(s, 10).dropped).toHaveLength(1);
-    expect(s.perks.stage).toBe(1);
-    expect(perkTick(s, 10).dropped, 'the same state rolls once').toHaveLength(0);
+  it('come at random intervals: clustered sometimes, long apart others, never past the ceiling', () => {
+    const s = veteran(defaultSave(NOW));
+    const g = gaps(play(s, 300_000));
+    const mean = g.reduce((a, b) => a + b, 0) / g.length;
+    const spread = Math.sqrt(g.reduce((a, b) => a + (b - mean) ** 2, 0) / g.length) / mean;
+    // An exponential with a 6-minute mean, cut at 10 minutes, averages 292 s.
+    expect(mean).toBeGreaterThan(280);
+    expect(mean).toBeLessThan(305);
+    expect(spread, 'far from clockwork').toBeGreaterThan(0.6);
+    expect(Math.max(...g)).toBeLessThanOrEqual(601);
+    expect(g.filter((x) => x <= 30).length / g.length).toBeGreaterThan(0.05);
+    expect(g.filter((x) => x >= 480).length / g.length).toBeGreaterThan(0.15);
   });
 
-  it('keep one live offer per tab, and roll nothing when both are taken', () => {
-    const s = defaultSave(NOW);
-    s.perks.drops = 1;
-    s.perks.misses = 99;
+  it('drop commons, rares and keystones at 65%, 30% and 5%', () => {
+    const s = veteran(defaultSave(NOW));
+    const seen = { common: 0, rare: 0, keystone: 0 };
+    const drops = play(s, 2_000_000);
+    for (const d of drops) seen[def(d.offer.id).rarity]++;
+    expect(seen.common / drops.length).toBeCloseTo(0.65, 1);
+    expect(seen.rare / drops.length).toBeCloseTo(0.3, 1);
+    expect(seen.keystone / drops.length).toBeCloseTo(0.05, 1);
+    expect(seen.keystone).toBeGreaterThan(0);
+  });
+
+  it('fall back to the tiers that have anything left', () => {
+    const s = holding(
+      ...PERKS.filter((p) => p.rarity !== 'keystone').map((p): [PerkId, number] => [p.id, 3])
+    );
+    const drops = play(s, 20_000);
+    expect(drops.length).toBeGreaterThan(20);
+    for (const d of drops) expect(def(d.offer.id).rarity).toBe('keystone');
+  });
+
+  it('lose a drop that comes while both tabs hold offers, and draw a fresh moment', () => {
+    const s = veteran(defaultSave(NOW));
+    s.perks.nextDropAtS = 1;
     offer(s, 'metronome');
     offer(s, 'overtime');
-    s.runLifetime = 400;
-    const rng = s.perks.rng;
-    expect(perkTick(s, 10).dropped).toEqual([]);
-    expect(s.perks.misses, 'a full shop is not a miss').toBe(99);
-    expect(s.perks.rng).toBe(rng);
+    expect(perkTick(s, 10, 1).dropped).toEqual([]);
+    expect(s.perks.offers).toHaveLength(2);
+    expect(s.perks.nextDropAtS).toBeGreaterThan(s.perks.activeS);
   });
 
-  it('never leave more than four misses in a row, and drop about half the rolls', () => {
-    const s = defaultSave(NOW);
-    s.perks.drops = 1;
-    let misses = 0;
-    let worst = 0;
-    let dropped = 0;
-    for (let i = 0; i < 4000; i++) {
-      s.runLifetime = s.perks.nextRollAt;
-      const got = perkTick(s, 10).dropped.length;
-      s.perks.offers = []; // keep both tabs open
-      dropped += got;
-      misses = got ? 0 : misses + 1;
-      worst = Math.max(worst, misses);
-    }
-    expect(worst).toBeLessThanOrEqual(4);
-    expect(dropped / 4000).toBeGreaterThan(0.45);
-    expect(dropped / 4000).toBeLessThan(0.65);
-  });
-
-  it('weight drops by rarity', () => {
-    const s = defaultSave(NOW);
-    s.perks.drops = 1;
-    const seen = { common: 0, rare: 0, keystone: 0 };
-    for (let i = 0; i < 6000; i++) {
-      s.perks.misses = 99;
-      s.runLifetime = s.perks.nextRollAt;
-      for (const o of perkTick(s, 10).dropped) seen[def(o.id).rarity]++;
-      s.perks.offers = [];
-    }
-    // 9 commons x6, 12 rares x3, 4 keystones x1: 54 : 36 : 4.
-    expect(seen.common / 6000).toBeCloseTo(54 / 94, 1);
-    expect(seen.rare / 6000).toBeCloseTo(36 / 94, 1);
-    expect(seen.keystone / 6000).toBeCloseTo(4 / 94, 1);
+  it('price and time an offer in seconds of income', () => {
+    const s = veteran(defaultSave(NOW));
+    s.perks.nextDropAtS = 0;
+    s.runLifetime = 5000;
+    const [o] = perkTick(s, 10, 1).dropped;
+    const rarity = def(o!.id).rarity;
+    expect(o!.price).toBe(PERK_DROPS.priceS[rarity] * 10);
+    expect(o!.droppedAt).toBe(5000);
+    expect(o!.expiresAt - o!.droppedAt).toBe(PERK_DROPS.windowS[rarity] * 10);
   });
 
   it('offer an owned perk again as an upgrade, dearer per level held', () => {
-    // Everything maxed but Metronome at II, and the Auto-tappers tab taken:
-    // the only perk left to drop is Metronome's upgrade.
+    // Everything maxed but Metronome at II: the only perk left to drop is
+    // Metronome's upgrade.
     const s = holding(...PERKS.map((p): [PerkId, number] => [p.id, p.id === 'metronome' ? 2 : 3]));
-    s.perks.drops = 1;
-    s.perks.misses = 99;
-    s.runLifetime = 400;
-    const [o] = perkTick(s, 10).dropped;
+    s.perks.nextDropAtS = 0;
+    const [o] = perkTick(s, 10, 1).dropped;
     expect(o).toMatchObject({ id: 'metronome', level: 3, price: Math.round(90 * 10 * 2.25) });
     expect(upgradeFactor(2)).toBe(2.25);
   });
 
   it('never offer a perk at the top level', () => {
-    const s = holding(['metronome', 3], ['overtime', 3]);
-    s.perks.drops = 1;
-    for (let i = 0; i < 2000; i++) {
-      s.perks.misses = 99;
-      s.runLifetime = s.perks.nextRollAt;
-      for (const o of perkTick(s, 10).dropped)
-        expect(['metronome', 'overtime']).not.toContain(o.id);
-      s.perks.offers = [];
-    }
+    const s = veteran(holding(['metronome', 3], ['overtime', 3]));
+    s.perks.codex = { metronome: 3, overtime: 3 };
+    const drops = play(s, 100_000);
+    expect(drops.length).toBeGreaterThan(100);
+    for (const d of drops) expect(['metronome', 'overtime']).not.toContain(d.offer.id);
   });
 
   it('retire an offer once the run earns past its window', () => {
-    const s = defaultSave(NOW);
-    s.runLifetime = 300;
-    const [o] = perkTick(s, 10).dropped;
-    s.runLifetime = 750;
+    const s = veteran(defaultSave(NOW));
+    s.perks.nextDropAtS = 0;
+    s.runLifetime = 1000;
+    const [o] = perkTick(s, 10, 1).dropped;
+    const span = o!.expiresAt - o!.droppedAt;
+    s.runLifetime += span / 2;
     expect(offerRemaining(s, o!)).toBeCloseTo(0.5);
-    s.runLifetime = 1200;
-    expect(perkTick(s, 10).expired).toEqual([o]);
+    s.runLifetime = o!.expiresAt;
+    expect(perkTick(s, 10, 0).expired).toEqual([o]);
     expect(s.perks.offers).toEqual([]);
   });
 
-  it('move offers and the schedule past energy collected for time away', () => {
-    const s = defaultSave(NOW);
-    s.runLifetime = 300;
-    perkTick(s, 10);
+  it('move offers past energy collected for time away', () => {
+    const s = veteran(defaultSave(NOW));
+    offer(s, 'metronome');
+    const next = s.perks.nextDropAtS;
     s.runLifetime += 5000; // collected
     deferPerks(s, 5000);
-    expect(s.perks.offers[0]).toMatchObject({ droppedAt: 5300, expiresAt: 6200 });
-    expect(s.perks.nextRollAt).toBe(5900);
-    expect(perkTick(s, 10).expired).toEqual([]);
+    expect(s.perks.offers[0]).toMatchObject({ droppedAt: 5000, expiresAt: 6000 });
+    expect(s.perks.nextDropAtS).toBe(next);
+    expect(perkTick(s, 10, 0).expired).toEqual([]);
   });
 
   it('replay the same drops from the same seed, through a save and reload', () => {
-    const play = (s: SaveState, from: number, to: number) => {
-      const ids: string[] = [];
-      for (let e = from; e < to; e += 50) {
-        s.runLifetime = e;
-        for (const o of perkTick(s, 10).dropped) ids.push(o.id);
-        s.perks.offers = [];
-      }
-      return ids;
-    };
+    const ids = (drops: { offer: PerkOffer }[]) => drops.map((d) => d.offer.id);
     const a = defaultSave(NOW);
     const b = defaultSave(NOW);
-    const whole = play(a, 0, 40_000);
-    const first = play(b, 0, 20_000);
+    const whole = ids(play(a, 20_000));
+    const first = ids(play(b, 10_000));
     const reloaded = parseSave(serializeSave(b), NOW);
-    expect([...first, ...play(reloaded, 20_000, 40_000)]).toEqual(whole);
-    expect(whole.length).toBeGreaterThan(10);
+    expect([...first, ...ids(play(reloaded, 10_000))]).toEqual(whole);
+    expect(whole.length).toBeGreaterThan(30);
+  });
+});
+
+describe('surge drops', () => {
+  it('come at the end of about one surge in eight, leaning to the rarer tiers', () => {
+    const s = veteran(defaultSave(NOW));
+    const seen = { common: 0, rare: 0, keystone: 0 };
+    let dropped = 0;
+    for (let i = 0; i < 80_000; i++) {
+      const o = surgeDrop(s, 10);
+      if (o) {
+        dropped++;
+        seen[def(o.id).rarity]++;
+      }
+      s.perks.offers = [];
+    }
+    expect(dropped / 80_000).toBeCloseTo(1 / 8, 2);
+    expect(seen.common / dropped).toBeCloseTo(0.45, 1);
+    expect(seen.rare / dropped).toBeCloseTo(0.45, 1);
+    expect(seen.keystone / dropped).toBeCloseTo(0.1, 1);
+  });
+
+  it('leave the ordinary drops’ timing alone', () => {
+    const s = veteran(defaultSave(NOW));
+    s.perks.nextDropAtS = 123;
+    for (let i = 0; i < 100; i++) surgeDrop(s, 10);
+    expect(s.perks.nextDropAtS).toBe(123);
   });
 });
 
@@ -568,16 +614,9 @@ describe('perk offers and the "New" tag', () => {
 // ---------------------------------------------------------------------------
 
 describe('perks in the save', () => {
-  it('start empty, with the first roll due early', () => {
+  it('start empty, with the first drop not yet drawn', () => {
     const p = defaultSave(NOW).perks;
-    expect(p).toMatchObject({
-      owned: [],
-      offers: [],
-      nextRollAt: 300,
-      misses: 0,
-      drops: 0,
-      codex: {},
-    });
+    expect(p).toMatchObject({ owned: [], offers: [], activeS: 0, nextDropAtS: null, codex: {} });
   });
 
   it('survive a round trip', () => {
@@ -618,8 +657,8 @@ describe('perks in the save', () => {
           { id: 'ghost-presses', level: 1, price: 10, droppedAt: 0, expiresAt: 10, seen: 'yes' },
         ],
         rng: -4,
-        nextRollAt: 'soon',
-        misses: 2.5,
+        activeS: 'lots',
+        nextDropAtS: -5,
         codex: { metronome: 7, afterglow: 2, nope: 1 },
       },
     });
@@ -634,8 +673,8 @@ describe('perks in the save', () => {
     expect(p.offers.map((o) => o.id)).toEqual(['momentum', 'ghost-presses']);
     expect(p.offers[1]!.seen).toBe(false);
     expect(p.rng).toBe(NOW >>> 0);
-    expect(p.nextRollAt).toBe(300);
-    expect(p.misses).toBe(0);
+    expect(p.activeS).toBe(0);
+    expect(p.nextDropAtS).toBeNull();
     expect(p.codex).toEqual({
       afterglow: 2,
       overtone: 2,
@@ -650,20 +689,16 @@ describe('perks in the save', () => {
     const s = holding(['metronome', 2]);
     offer(s, 'overtime');
     s.perks.rng = 1234;
-    s.perks.drops = 6;
-    s.perks.misses = 2;
-    s.perks.stage = 4;
-    s.perks.nextRollAt = 9e6;
+    s.perks.activeS = 900;
+    s.perks.nextDropAtS = 1100;
     s.perks.codex = { metronome: 2, overtime: 0 };
     const after = prestigeReset(s, 1, NOW).perks;
     expect(after).toEqual({
       owned: [],
       offers: [],
       rng: 1234,
-      nextRollAt: 300,
-      misses: 0,
-      drops: 0,
-      stage: 0,
+      activeS: 0,
+      nextDropAtS: null,
       codex: { metronome: 2, overtime: 0 },
     });
   });

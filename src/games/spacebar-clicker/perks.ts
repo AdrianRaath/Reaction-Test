@@ -3,19 +3,24 @@
  *
  * Pure functions over a SaveState, like the economy. The rules:
  *
- * - Rolls come on a schedule in the run's energy, every PERK_DROPS.rollEveryS
- *   seconds of income, and whenever the reactor reaches a new state. A run's
- *   first roll always drops, and a common, so every run meets the system
- *   early. After that a roll drops at baseChance, plus pityStep for each miss
- *   in a row.
- * - A drop goes to a tab with no live offer, weighted by rarity. A perk
- *   already owned can drop again as an upgrade; one at the top level can't.
+ * - Drops are random in time, like rune drops in Diablo II. Each gap is drawn
+ *   fresh from an exponential distribution over seconds of active play
+ *   (PERK_DROPS.meanGapS), so a drop can come seconds after the last or many
+ *   minutes after it, and can't be timed. A hidden ceiling (maxGapS) is the
+ *   only protection against a long dry spell.
+ * - Surges are the boss fights: each ends with a chance of a bonus drop,
+ *   weighted toward the rarer tiers (`surgeDrop`).
+ * - A drop picks a tier by its odds, then a perk in that tier, for a tab with
+ *   no live offer. A perk already owned can drop again as an upgrade; one at
+ *   the top level can't. A drop due while both tabs hold offers is lost, not
+ *   held: holding it would make the next drop predictable.
+ * - A player's very first run gets one guaranteed drop, a common, at a random
+ *   moment early on. Nothing else is guaranteed.
  * - Price and window are in seconds of income at the moment of the drop,
  *   because energy grows too fast for fixed amounts to mean anything for
  *   long. An upgrade costs PERK_UPGRADE_SCALE times more per level held.
  * - An offer leaves once the run has earned past its window. Energy collected
- *   for time away doesn't count: `deferPerks` moves the offers and the roll
- *   schedule past it.
+ *   for time away doesn't count: `deferPerks` moves the offers past it.
  * - Five slots, one keystone at a time. A new keystone swaps the old one; a new
  *   perk with every slot full needs one named to drop.
  *
@@ -32,14 +37,16 @@ import {
   type AutoTapperId,
   type PerkDef,
   type PerkId,
+  type PerkRarity,
   type PerkUnit,
   type ShopTab,
 } from './config';
-import { cheapestTapper, offerOn, perk, reactorIndex } from './economy';
+import { cheapestTapper, offerOn, perk } from './economy';
 import { nextRandom } from './rng';
 import type { PerkOffer, PerkState, SaveState } from './save';
 
 const TABS: readonly ShopTab[] = ['press', 'auto'];
+const TIERS: readonly PerkRarity[] = ['common', 'rare', 'keystone'];
 
 /** The level a perk is held at this run; 0 if not held. */
 export function perkLevel(state: SaveState, id: PerkId): number {
@@ -94,52 +101,55 @@ function draw(perks: PerkState): number {
   return d.value;
 }
 
-/** One roll. Returns the offer it dropped, if any. */
-function roll(state: SaveState, income: number): PerkOffer | null {
+/** Seconds of active play to the next drop: exponential, under the ceiling. */
+function nextGap(perks: PerkState): number {
+  return Math.min(-Math.log(1 - draw(perks)) * PERK_DROPS.meanGapS, PERK_DROPS.maxGapS);
+}
+
+/** A player's very first run: nothing has ever dropped. */
+function firstEver(state: SaveState): boolean {
+  return Object.keys(state.perks.codex).length === 0;
+}
+
+/**
+ * Put a perk on offer in a tab with no live one: a tier by its odds (among
+ * tiers with anything left to drop), then a perk in that tier. `commonOnly`
+ * (a player's first drop ever) keeps to commons while any are left. Null when
+ * both tabs are taken or nothing is left.
+ */
+function dropPerk(
+  state: SaveState,
+  income: number,
+  odds: Readonly<Record<PerkRarity, number>>,
+  commonOnly = false
+): PerkOffer | null {
   const perks = state.perks;
   const open = TABS.filter((tab) => !offerOn(state, tab));
-  const first = perks.drops === 0;
-  const pool = PERKS.filter(
-    (def) =>
-      open.includes(def.tab) &&
-      perkLevel(state, def.id) < PERK_MAX_LEVEL &&
-      (!first || def.rarity === 'common')
+  const available = PERKS.filter(
+    (def) => open.includes(def.tab) && perkLevel(state, def.id) < PERK_MAX_LEVEL
   );
-  // Nowhere to put a drop isn't a miss: the pity odds don't climb for it.
+  const commons = available.filter((def) => def.rarity === 'common');
+  const pool = commonOnly && commons.length > 0 ? commons : available;
   if (pool.length === 0) return null;
 
-  const chance = first
-    ? 1
-    : Math.min(1, PERK_DROPS.baseChance + PERK_DROPS.pityStep * perks.misses);
-  if (draw(perks) >= chance) {
-    perks.misses++;
-    return null;
-  }
+  const tiers = TIERS.filter((t) => pool.some((def) => def.rarity === t));
+  let pick = draw(perks) * tiers.reduce((sum, t) => sum + odds[t], 0);
+  const tier = tiers.find((t) => (pick -= odds[t]) < 0) ?? tiers[tiers.length - 1]!;
+  const inTier = pool.filter((def) => def.rarity === tier);
+  const def = inTier[Math.floor(draw(perks) * inTier.length)]!;
 
-  const total = pool.reduce((sum, def) => sum + PERK_DROPS.weight[def.rarity], 0);
-  let pick = draw(perks) * total;
-  let def = pool[pool.length - 1]!;
-  for (const candidate of pool) {
-    pick -= PERK_DROPS.weight[candidate.rarity];
-    if (pick < 0) {
-      def = candidate;
-      break;
-    }
-  }
-
+  const pace = Math.max(income, PERK_DROPS.minIncome);
   const held = perkLevel(state, def.id);
   const offer: PerkOffer = {
     id: def.id,
     level: held + 1,
-    price: Math.max(1, Math.round(PERK_DROPS.priceS[def.rarity] * income * upgradeFactor(held))),
+    price: Math.max(1, Math.round(PERK_DROPS.priceS[def.rarity] * pace * upgradeFactor(held))),
     droppedAt: state.runLifetime,
-    expiresAt: state.runLifetime + PERK_DROPS.windowS[def.rarity] * income,
+    expiresAt: state.runLifetime + PERK_DROPS.windowS[def.rarity] * pace,
     seen: false,
     seenAffordable: false,
   };
   perks.offers.push(offer);
-  perks.drops++;
-  perks.misses = 0;
   perks.codex[def.id] ??= 0;
   return offer;
 }
@@ -150,12 +160,13 @@ export interface PerkEvents {
 }
 
 /**
- * Advance the drops: retire offers whose window has passed, then roll if the
- * schedule has come round or the reactor has reached a new state. Call it as
- * the run earns. `income` is energy per second actually being earned
- * (income.ts); it prices any drop.
+ * Advance the drops: retire offers whose window has passed, add `activeDt`
+ * seconds of active play (page visible, a press within the last minute, as
+ * for surges), and drop a perk if its moment has come. Call it every frame.
+ * `income` is energy per second actually being earned (income.ts); it prices
+ * any drop.
  */
-export function perkTick(state: SaveState, income: number): PerkEvents {
+export function perkTick(state: SaveState, income: number, activeDt: number): PerkEvents {
   const perks = state.perks;
   const events: PerkEvents = { dropped: [], expired: [] };
 
@@ -165,23 +176,34 @@ export function perkTick(state: SaveState, income: number): PerkEvents {
     return false;
   });
 
-  const stage = reactorIndex(state.runLifetime);
-  const stageUp = stage > perks.stage;
-  if (stageUp) perks.stage = stage;
-  const due = state.runLifetime >= perks.nextRollAt;
-  if (!stageUp && !due) return events;
+  perks.activeS += Math.max(0, activeDt);
+  if (perks.nextDropAtS === null) {
+    const [lo, hi] = PERK_DROPS.firstEverS;
+    perks.nextDropAtS =
+      perks.activeS + (firstEver(state) ? lo + draw(perks) * (hi - lo) : nextGap(perks));
+  }
+  if (perks.activeS < perks.nextDropAtS) return events;
 
-  const pace = Math.max(income, PERK_DROPS.minIncome);
-  if (due) perks.nextRollAt = state.runLifetime + PERK_DROPS.rollEveryS * pace;
-  const offer = roll(state, pace);
+  const offer = dropPerk(state, income, PERK_DROPS.odds, firstEver(state));
+  perks.nextDropAtS = perks.activeS + nextGap(perks);
   if (offer) events.dropped.push(offer);
   return events;
 }
 
 /**
- * Energy credited for time away (or a silent short gap) moves every window and
- * the roll schedule past itself, so being away never runs an offer down.
- * Call after crediting it.
+ * Surges are the boss fights: call this as a surge ends. It drops a bonus perk
+ * at PERK_DROPS.surgeChance, on the surge's own tier odds, and leaves the
+ * ordinary drops' timing alone.
+ */
+export function surgeDrop(state: SaveState, income: number): PerkOffer | null {
+  if (draw(state.perks) >= PERK_DROPS.surgeChance) return null;
+  return dropPerk(state, income, PERK_DROPS.surgeOdds);
+}
+
+/**
+ * Energy credited for time away (or a silent short gap) moves every offer's
+ * window past itself, so being away never runs an offer down. Call after
+ * crediting it. Drops need active play, so being away never brings one.
  */
 export function deferPerks(state: SaveState, amount: number): void {
   if (!(amount > 0)) return;
@@ -189,7 +211,6 @@ export function deferPerks(state: SaveState, amount: number): void {
     offer.droppedAt += amount;
     offer.expiresAt += amount;
   }
-  state.perks.nextRollAt += amount;
 }
 
 // --- Buying ---------------------------------------------------------------------
