@@ -80,7 +80,7 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 | `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (61 as of 2026-10-23).                                                                                                                              |
 | `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, every reactor state, and perks in play (§7).                                                                                                              |
 | `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, perks in play, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine.                                                |
-| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the swap dialog and the glyph template. The frontmatter computes the dial, bezel, mote and offer-ring geometry.                                                                |
+| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the perk shelf and its tooltip, the swap dialog, the Perks panel and the glyph template. The frontmatter computes the dial, bezel, mote and offer-ring geometry.               |
 | `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                                                                             |
 | `src/components/games/PerkIcon.astro`                 | The 25 perk glyphs, in ShopIcon's idiom. The page renders them all into a `<template>` for the script to clone.                                                                                                                        |
 | `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`.                                                                                                                                                                 |
@@ -234,10 +234,11 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
 - Unlocks at 1,000,000 `runLifetime`.
 - Pays `floor(sqrt(runLifetime / 1,000,000))` isotopes: 1M gives 1, 4M gives 2,
   25M gives 5. Each isotope is +10% to all gains, permanently.
-- **Wipes**: energy, `runLifetime`, upgrades, tappers and `announced`. The
-  reactor returns to Dormant.
+- **Wipes**: energy, `runLifetime`, upgrades, tappers, `announced`, and the
+  run's perks and offers. The reactor returns to Dormant, and the perk shelf
+  fades with the imploding core.
 - **Keeps**: isotopes, the prestige count, reveals, achievements, lifetime
-  totals and bests.
+  totals and bests, the perk codex, and the drop generator's seed.
 - It has its own tab and its own confirm dialog. Separately, the toolbar
   Reset, the site's shared modal, wipes everything including isotopes. Sound
   settings survive both.
@@ -388,8 +389,8 @@ to 20, and 85% in minutes 25 to 30.
 
 ### 4.13 Perks
 
-In the game since step 4 (2026-10-23). The shelf, tooltips and Perks panel
-come in step 5. The design, the full table and the build plan are in §8.1.
+In the game since steps 4 and 5 (2026-10-23). The design, the full table and
+the build plan are in §8.1.
 
 - **Drops** come on active play, at random (§8.1.2). The perk lands at the top
   of its shop tab as an offer row.
@@ -397,6 +398,8 @@ come in step 5. The design, the full table and the build plan are in §8.1.
   - A toast names it in its family hue: "Perk drop", "Rare drop", "Keystone
     drop" or "Upgrade drop". A surge's drop is named on its results card
     instead.
+  - It is announced: "Rare drop: Overtone, in the Upgrades tab for 18,000
+    energy." A surge's drop joins the "Surge over" announcement.
 - **The offer row** sits on the shop rows' grid, so its name lines up with
   theirs.
   - Its glyph tile is lit in the family hue, affordable or not. The tile's
@@ -417,7 +420,32 @@ come in step 5. The design, the full table and the build plan are in §8.1.
   - Cancel keeps the offer. Presses are ignored while the dialog is open, and
     it closes if the offer runs out meanwhile.
 - **Running out.** Once the run's energy passes the window, the row fades and
-  folds away, silently.
+  folds away, silently, and "Overtone is no longer on offer." is announced.
+- **The shelf** sits over the face's top-right corner, mirroring the isotope
+  beads: five sockets, a chip in the family hue for each perk held, and three
+  pips under it for its level. Empty sockets show as dashed outlines.
+  - A bought perk flies from its offer tile to its socket and lands with a
+    pop; an upgrade flies to the chip it raises and fills a pip.
+  - **Tooltips**: the perk's name and level, rarity and family in words
+    ("Rare · Rhythm"), and its effect now. They show on mouse hover (and stay
+    while the pointer crosses onto them), on keyboard focus, and on a tap,
+    which pins them until a second tap, a tap elsewhere or a press. Escape
+    dismisses one.
+  - A click or tap on the shelf is never a press, and a clicked chip lets go
+    of focus so Space keeps pressing the reactor.
+  - The shelf sits beside the face in the markup, not inside it, so its
+    buttons aren't nested in the face's `role="button"`. Tab goes from the
+    reactor to the chips.
+- **The Perks panel**, a tab between Achievements and Reset the experiment:
+  - This run: "N of 5 slots", and a card per perk held with its rarity and
+    family, level and effect.
+  - The codex, "N of 25 found": a board with a socket per perk, one row per
+    shop tab. Found perks are lit, dimmer if never held. Undiscovered ones are
+    empty sockets with their rarity's shape (a keystone's has its inner ring)
+    and no name. Then a card for each perk found, with every level's number,
+    the best held lit, and "Held up to level 2" or "Found, never held".
+- **The away dialog** names any offer still waiting in the shop: "Overtone is
+  still on offer in the shop: time away doesn't count against its window."
 - **Effects the script runs:**
   - Afterglow, Storm Front and Lightning Rod (§4.4).
   - Chain Reaction's float chain (§4.2).
@@ -440,20 +468,27 @@ come in step 5. The design, the full table and the build plan are in §8.1.
 ### 5.1 Layout
 
 - The reactor face sits on the left and the shop on the right, pinned to the
-  face's height. A tabbed panel below holds Stats, Achievements and Reset the
-  experiment.
+  face's height. A tabbed panel below holds Stats, Achievements, Perks and
+  Reset the experiment.
 - **The reactor face**, top to bottom:
   - Energy readout, with per-second and per-press rates.
-  - Isotope shelf in the top-left.
+  - Isotope shelf in the top-left, perk shelf in the top-right.
   - The core: a progress dial with six state lights, a turning dashed bezel,
     motes, the core heart, and the readout inside.
   - State name and surge label.
   - Combo row: count, tier label, next-tier target, grace bar, and the rhythm
     scope canvas.
-  - The SPACE keycap and the hint line.
+  - The SPACE keycap and the hint line. Toasts sit over the hint line, which
+    is standing instructions, since the top corners belong to the shelves.
+    They sat top-right until step 5.
 - **Narrow faces.** A container query on the face, `reactor / inline-size`,
-  steps the energy readout down clear of the shelf. It holds on phones and on a
-  laptop with the shop beside the reactor.
+  steps the energy readout down clear of the isotope shelf. It holds on phones
+  and on a laptop with the shop beside the reactor.
+- **The perk shelf** answers to `reactor-wrap`, a container around the face.
+  At 566px of face (1440 and 1280 wide) it clears the readout as it is. Below
+  530px the readout steps down to clear it, measured from the face's padding
+  token, `--face-pad`, so it holds on phones too. Below 340px with six or more
+  isotope beads, the shelf drops below the beads and the readout with it.
 
 ### 5.2 Color
 
@@ -510,10 +545,14 @@ The visuals were built in three passes, all shipped 2026-10-22.
   - The window's ring glides as it drains, and breathes in its last fifth.
   - Chain Reaction pops x2, x4, x8 in gold, each a beat later and a little
     larger. Self-Replicator's copy drifts off the rim in lime.
+- **Perks, step 5 (2026-10-23).** A bought perk flies in an arc from its offer
+  tile to its socket, and the chip lands with a pop. The shelf fades as the
+  core implodes on a reset.
 - **Reduced motion.** Color changes and lights stay; all travel, spin, flight
   and implosion goes. Totals and collected energy apply at once, and the scope
   redraws only on presses. Perk rows appear and go at once, and the ring steps
-  rather than glides and never breathes.
+  rather than glides and never breathes. A bought perk is simply on the shelf,
+  and the shelf clears without fading.
 
 ### 5.4 Accessibility
 
@@ -532,7 +571,14 @@ The visuals were built in three passes, all shipped 2026-10-22.
   of its window is left in tens of percent, the price and the rarity.
 - The swap dialog focuses its cancel button. Buying a perk announces "Bought
   X.", "X is now level 2." or "Bought X, in place of Y." Drops and expiries
-  are announced from step 5.
+  are announced too (§4.13).
+- The perk shelf is a list labelled "Perks this run, N of 5 slots"; empty
+  sockets are hidden from screen readers. Each chip is a button whose name
+  carries the tooltip's words: "Overtone, level 2, rare rhythm perk. A new tier
+  above Harmonic: 200 combo for x3.75". The tooltip itself is visual only,
+  stays while hovered, and Escape dismisses it.
+- The codex board's sockets are images with names such as "Overtone, held up
+  to level 2" or "Undiscovered rare perk".
 
 ## 6. Content and SEO
 
@@ -557,7 +603,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  25 as of 2026-10-23, in about five minutes.
+  30 as of 2026-10-23, in about six minutes.
   - **Coverage:** the page shell, presses and the combo, buying, the shop tabs
     and "New" tag, save and reload, away progress, prestige, the full reset,
     the phone layout, a whole surge on a fake clock with and without reduced
@@ -567,7 +613,11 @@ The visuals were built in three passes, all shipped 2026-10-22.
     switched-off upgrades and Brute Force's combo row; a window running out,
     and time away not running it down; Chain Reaction's floats; a surge with
     Storm Front, a surge drop, Afterglow and Self-Replicator on a fake clock;
-    reduced motion; the swap dialog on a phone.
+    reduced motion; the swap dialog on a phone. From step 5: the shelf, its
+    pips and the flight to it; tooltips on hover, focus, Escape and a tap,
+    with no press; the Perks panel and codex, through a prestige; the drop,
+    expiry and away-dialog wording; the shelf clearing the readout and the
+    isotope beads on a phone.
   - **Staging a save.** The perk checks write a whole save before the page
     loads (`seedSave`), with seed 7 when they need a known draw: its first
     draw is under one in eight, so the first surge drops a perk.
@@ -610,16 +660,14 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ### 8.1 Perk system: phase 1 in progress
 
-**Status (2026-10-23).** Steps 1 to 4 of 6 are done: groundwork, perk logic,
-pacing simulation, and shop offers with perk effects in play. Perks now drop,
-sell and work in the live game (§4.13). What's missing is step 5: the shelf
-that shows held perks, tooltips, the Perks panel and codex, and the drop and
-expiry announcements. Until then a bought perk shows nowhere on screen.
+**Status (2026-10-23).** Steps 1 to 5 of 6 are done: groundwork, perk logic,
+pacing simulation, shop offers with perk effects in play, and the shelf,
+tooltips and Perks panel. Perks are now whole in the live game (§4.13).
 
-The step 3 tuning was signed off with the pace (option 1, §4.12), including
-the reworked Overtime and Self-Replicator and the softer Glass Rhythm. Waiting
-on the maintainer's review of step 4, especially the calls in §8.1.10, before
-step 5.
+Signed off so far: the step 3 tuning with the pace (option 1, §4.12), and
+step 4 with its calls in §8.1.10. Waiting on the maintainer's review of
+step 5, especially the calls in §8.1.11, before step 6: content, docs and the
+final verification.
 
 Check in with the maintainer after each step.
 
@@ -948,7 +996,8 @@ maintainer can review before the next one, as with the delight passes.
    - Live effects that need the script, such as Afterglow, Self-Replicator,
      Idle Hands, Feedback Loop and Storm Front, and the Chain Reaction gold
      float chain.
-5. **Shelf, tooltips and the Perks panel.**
+5. **Shelf, tooltips and the Perks panel.** _Done 2026-10-23._ What shipped is
+   in §4.13, and the calls made along the way are in §8.1.11. The plan was:
    - Up to 5 perk tiles top-right, with level pips. Tooltips on hover, focus
      and tap, and a tap never counts as a press.
    - A Perks tab beside Stats and Achievements: active perks in full, and the
@@ -1029,9 +1078,9 @@ The longer runs roughly doubled what a typical player gets from perks: from
 - **The build lists** were corrected so each opens with its strongest perk.
   The rhythm build now leads with Glass Rhythm and Full Sync.
 
-#### 8.1.10 Step 4: calls for the maintainer to review, 2026-10-23
+#### 8.1.10 Step 4: calls the maintainer signed off, 2026-10-23
 
-Made while building step 4. Each is small to change.
+Made while building step 4, and approved with it.
 
 1. **The family hues** (DESIGN.md, Perk-Family Exception): violet rhythm, rose
    press power, fuchsia luck, Surge Gold for surges, lime machines. The plan
@@ -1061,6 +1110,32 @@ Made while building step 4. Each is small to change.
    dropped, instead of waiting for the next one.
 10. **The income meter leaves out Afterglow** as well as surges, in the script
     and the simulation. The pacing results didn't move.
+
+#### 8.1.11 Step 5: calls for the maintainer to review, 2026-10-23
+
+Made while building step 5. Each is small to change.
+
+1. **Toasts moved to the hint line**, centred above the keycap, for every
+   notice. The shelf took the top-right corner, and anywhere below it covered
+   the energy number. The hint is standing instructions, so a notice may
+   cover it for a moment.
+2. **Empty sockets show** as dashed outlines once a perk is held, so the five
+   slots are visible before the swap dialog ever appears. With no perks the
+   shelf is hidden, like the isotope shelf with no isotopes.
+3. **A bought perk flies to the shelf**, in an arc from its offer tile, like
+   isotopes fly on a reset.
+4. **The codex is a board of sockets** with cards for found perks only. Cards
+   for all 25 were tried first and read as a wall of "Undiscovered".
+   Undiscovered perks show their rarity's shape but not their name, so
+   finding one is still a surprise.
+5. **The shelf sits beside the face in the markup**, positioned over it.
+   Buttons can't nest inside the face's `role="button"`, and this also means
+   a tap on the shelf can never reach the face as a press.
+6. **A tap pins a tooltip** until a second tap, a tap elsewhere or a press;
+   a mouse click shows nothing extra, since hover already does.
+7. **Self-Replicator's copies aren't announced.** They come every one and a
+   half to three minutes, which would be chatty; the plan's list was drops,
+   purchases, upgrades and expiries.
 
 ### 8.2 Unassigned ideas
 
@@ -1135,3 +1210,11 @@ the maintainer asks.
   switched-off upgrades. 25 perk glyphs (`PerkIcon.astro`), the Perk-Family
   Exception in DESIGN.md, 2 more unit tests and 9 browser checks. Calls to
   review in §8.1.10.
+- **2026-10-23.** Perks step 5, the shelf, tooltips and the Perks panel. Held
+  perks show top-right in five sockets with level pips, a bought perk flies
+  there from the shop, and each chip has a tooltip on hover, focus and tap
+  that never counts as a press. A Perks tab lists this run's perks and the
+  codex, as a board of sockets and a card per perk found. Drops and expiries
+  are announced, the away dialog names a waiting offer, and toasts moved to
+  the hint line. 5 more browser checks, and more assertions in the perk
+  checks. Calls to review in §8.1.11.

@@ -9,6 +9,7 @@ import ResetModal from '../components/tool/ResetModal.astro';
 import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
+  PERK_SLOTS,
   PERKS,
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
@@ -120,135 +121,173 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
   <section id="game-section" class="game-section">
     <div class="game-card">
       <div class="game-grid">
-        <!-- The reactor face: the instrument the whole game is played on. -->
-        <div
-          id="sc-reactor"
-          class="test-area reactor-face"
-          data-state="dormant"
-          tabindex="0"
-          role="button"
-          aria-label="Reactor. Press the spacebar, or tap here, to generate energy."
-        >
-          <!-- Stage change: the graticule lights in a band travelling out from the core. -->
-          <div class="grid-wash" id="sc-wash" aria-hidden="true"></div>
+        <!-- The reactor face, with the perk shelf over its top-right corner. -->
+        <div class="reactor-wrap">
+          <!-- The reactor face: the instrument the whole game is played on. -->
+          <div
+            id="sc-reactor"
+            class="test-area reactor-face"
+            data-state="dormant"
+            tabindex="0"
+            role="button"
+            aria-label="Reactor. Press the spacebar, or tap here, to generate energy."
+          >
+            <!-- Stage change: the graticule lights in a band travelling out from the core. -->
+            <div class="grid-wash" id="sc-wash" aria-hidden="true"></div>
 
-          <!-- The trophy shelf: one pellet per isotope (up to ten shown), kept
+            <!-- The trophy shelf: one pellet per isotope (up to ten shown), kept
                across every reset of the experiment. -->
-          <div class="isotope-shelf" id="sc-shelf" role="img" aria-label="No isotopes yet" hidden>
-            <span class="pellets" id="sc-pellets"></span>
-            <span class="shelf-more readout" id="sc-shelf-more" hidden></span>
-          </div>
+            <div class="isotope-shelf" id="sc-shelf" role="img" aria-label="No isotopes yet" hidden>
+              <span class="pellets" id="sc-pellets"></span>
+              <span class="shelf-more readout" id="sc-shelf-more" hidden></span>
+            </div>
 
-          <div class="energy-block">
-            <p class="energy-row">
-              <span class="energy-value readout" id="sc-energy">0</span>
-              <span class="energy-unit">energy</span>
-            </p>
-            <p class="energy-rates">
-              <span><span class="readout" id="sc-eps">0.0</span> per second</span>
-              <span><span class="readout" id="sc-epp">1</span> per press</span>
-            </p>
-          </div>
+            <div class="energy-block">
+              <p class="energy-row">
+                <span class="energy-value readout" id="sc-energy">0</span>
+                <span class="energy-unit">energy</span>
+              </p>
+              <p class="energy-rates">
+                <span><span class="readout" id="sc-eps">0.0</span> per second</span>
+                <span><span class="readout" id="sc-epp">1</span> per press</span>
+              </p>
+            </div>
 
-          <div class="core-wrap">
-            <!-- The dial: progress to the next state as an arc, and one light per
+            <div class="core-wrap">
+              <!-- The dial: progress to the next state as an arc, and one light per
                  state reached, so the run's history reads at a glance. -->
-            <svg class="core-arc" viewBox="0 0 100 100" aria-hidden="true">
-              <circle class="arc-track" cx="50" cy="50" r={ARC_R}></circle>
-              <circle
-                class="arc-fill"
-                id="sc-arc"
-                cx="50"
-                cy="50"
-                r={ARC_R}
-                stroke-dasharray={ARC_LEN}
-                stroke-dashoffset={ARC_LEN}></circle>
-              {
-                dialLeds.map((led) => (
-                  <g class={`dial-led led-${led.id}`} data-led={led.id}>
-                    <circle class="led-halo" cx={led.x} cy={led.y} r="3.4" />
-                    <circle class="led-dot" cx={led.x} cy={led.y} r="1.5" />
-                  </g>
-                ))
-              }
-            </svg>
-            <span class="shockwave" id="sc-shockwave" aria-hidden="true"></span>
-            <div class="core" id="sc-core" data-state="dormant" aria-hidden="true">
-              <svg class="core-bezel" id="sc-bezel" viewBox="0 0 100 100" aria-hidden="true">
-                <circle cx="50" cy="50" r={BEZEL_R} stroke-dasharray={BEZEL_DASH}></circle>
-              </svg>
-              <span class="core-ring core-ring-inner"></span>
-              <span class="motes" aria-hidden="true">
+              <svg class="core-arc" viewBox="0 0 100 100" aria-hidden="true">
+                <circle class="arc-track" cx="50" cy="50" r={ARC_R}></circle>
+                <circle
+                  class="arc-fill"
+                  id="sc-arc"
+                  cx="50"
+                  cy="50"
+                  r={ARC_R}
+                  stroke-dasharray={ARC_LEN}
+                  stroke-dashoffset={ARC_LEN}></circle>
                 {
-                  MOTES.map((m) => (
-                    <span
-                      class="mote"
-                      style={`--rf:${m.rf};--dur:${m.dur};--start:${m.start};--size:${m.size};--dir:${m.dir}`}
-                    />
+                  dialLeds.map((led) => (
+                    <g class={`dial-led led-${led.id}`} data-led={led.id}>
+                      <circle class="led-halo" cx={led.x} cy={led.y} r="3.4" />
+                      <circle class="led-dot" cx={led.x} cy={led.y} r="1.5" />
+                    </g>
                   ))
                 }
-              </span>
-              <span class="core-heart"></span>
-              <!-- Surge (spec §5): the countdown, then the live rate, read from the core. -->
-              <span class="core-readout">
-                <span class="core-num readout" id="sc-core-num"></span>
-                <span class="core-unit" id="sc-core-unit"></span>
-              </span>
-            </div>
-            <div class="sparks" id="sc-sparks" aria-hidden="true"></div>
-            <div class="floats" id="sc-floats" aria-hidden="true"></div>
+              </svg>
+              <span class="shockwave" id="sc-shockwave" aria-hidden="true"></span>
+              <div class="core" id="sc-core" data-state="dormant" aria-hidden="true">
+                <svg class="core-bezel" id="sc-bezel" viewBox="0 0 100 100" aria-hidden="true">
+                  <circle cx="50" cy="50" r={BEZEL_R} stroke-dasharray={BEZEL_DASH}></circle>
+                </svg>
+                <span class="core-ring core-ring-inner"></span>
+                <span class="motes" aria-hidden="true">
+                  {
+                    MOTES.map((m) => (
+                      <span
+                        class="mote"
+                        style={`--rf:${m.rf};--dur:${m.dur};--start:${m.start};--size:${m.size};--dir:${m.dir}`}
+                      />
+                    ))
+                  }
+                </span>
+                <span class="core-heart"></span>
+                <!-- Surge (spec §5): the countdown, then the live rate, read from the core. -->
+                <span class="core-readout">
+                  <span class="core-num readout" id="sc-core-num"></span>
+                  <span class="core-unit" id="sc-core-unit"></span>
+                </span>
+              </div>
+              <div class="sparks" id="sc-sparks" aria-hidden="true"></div>
+              <div class="floats" id="sc-floats" aria-hidden="true"></div>
 
-            <!-- Surge results, laid over the core for a few seconds. The numbers
+              <!-- Surge results, laid over the core for a few seconds. The numbers
                  tally up; screen readers get the totals from the announcer. -->
-            <div class="surge-card" id="sc-surge-summary" aria-hidden="true" hidden>
-              <p class="surge-card-title">Surge over</p>
-              <dl class="surge-stats">
-                <div><dt>Presses</dt><dd class="readout" id="sc-surge-presses">0</dd></div>
-                <div><dt>Per second</dt><dd class="readout" id="sc-surge-rate">0.0</dd></div>
-                <div><dt>Energy</dt><dd class="readout" id="sc-surge-earned">0</dd></div>
-              </dl>
-              <p class="surge-best" id="sc-surge-best" hidden>
-                <span aria-hidden="true">🏆</span> New best surge
-              </p>
-              <!-- A surge is a boss fight: now and then it drops a perk. -->
-              <p class="surge-drop" id="sc-surge-drop" hidden>
-                <span id="sc-surge-drop-kind">Perk drop</span>:
-                <span class="surge-drop-name" id="sc-surge-drop-name"></span>
-              </p>
+              <div class="surge-card" id="sc-surge-summary" aria-hidden="true" hidden>
+                <p class="surge-card-title">Surge over</p>
+                <dl class="surge-stats">
+                  <div><dt>Presses</dt><dd class="readout" id="sc-surge-presses">0</dd></div>
+                  <div><dt>Per second</dt><dd class="readout" id="sc-surge-rate">0.0</dd></div>
+                  <div><dt>Energy</dt><dd class="readout" id="sc-surge-earned">0</dd></div>
+                </dl>
+                <p class="surge-best" id="sc-surge-best" hidden>
+                  <span aria-hidden="true">🏆</span> New best surge
+                </p>
+                <!-- A surge is a boss fight: now and then it drops a perk. -->
+                <p class="surge-drop" id="sc-surge-drop" hidden>
+                  <span id="sc-surge-drop-kind">Perk drop</span>:
+                  <span class="surge-drop-name" id="sc-surge-drop-name"></span>
+                </p>
+              </div>
             </div>
-          </div>
 
-          <p class="state-label" id="sc-state-label">
-            <span class="state-name" id="sc-state">Dormant</span>
-            <span class="state-noun">reactor</span>
-          </p>
-          <p class="surge-label" id="sc-surge-label" hidden>Surge incoming</p>
+            <p class="state-label" id="sc-state-label">
+              <span class="state-name" id="sc-state">Dormant</span>
+              <span class="state-noun">reactor</span>
+            </p>
+            <p class="surge-label" id="sc-surge-label" hidden>Surge incoming</p>
 
-          <div class="combo" id="sc-combo-meter">
-            <div class="combo-row">
-              <span class="combo-count readout" id="sc-combo">0</span>
-              <span class="combo-tier" id="sc-combo-tier">combo</span>
-              <span class="combo-next" id="sc-combo-next">10 to Steady</span>
-              <span class="combo-mult readout" id="sc-combo-mult">x1</span>
-            </div>
-            <div class="combo-track" role="presentation">
-              <div class="combo-fill" id="sc-combo-fill"></div>
-            </div>
-            <!-- The rhythm scope: one spike per press, scrolling left. Even
+            <div class="combo" id="sc-combo-meter">
+              <div class="combo-row">
+                <span class="combo-count readout" id="sc-combo">0</span>
+                <span class="combo-tier" id="sc-combo-tier">combo</span>
+                <span class="combo-next" id="sc-combo-next">10 to Steady</span>
+                <span class="combo-mult readout" id="sc-combo-mult">x1</span>
+              </div>
+              <div class="combo-track" role="presentation">
+                <div class="combo-fill" id="sc-combo-fill"></div>
+              </div>
+              <!-- The rhythm scope: one spike per press, scrolling left. Even
                  spacing is a steady beat; off-beat presses draw half height. -->
-            <canvas class="rhythm-scope" id="sc-scope" aria-hidden="true"></canvas>
+              <canvas class="rhythm-scope" id="sc-scope" aria-hidden="true"></canvas>
+            </div>
+
+            <p class="test-hint" id="sc-hint">
+              Press the spacebar to generate energy. Keep a steady beat to build a combo.
+            </p>
+            <p class="keycap" id="sc-keycap" aria-hidden="true">space</p>
+
+            <div class="toast" id="sc-toast" hidden>
+              <span id="sc-toast-text"></span>
+            </div>
+
+            <p class="visually-hidden" id="sc-announce" aria-live="polite"></p>
           </div>
 
-          <p class="test-hint" id="sc-hint">
-            Press the spacebar to generate energy. Keep a steady beat to build a combo.
-          </p>
-          <p class="keycap" id="sc-keycap" aria-hidden="true">space</p>
-
-          <div class="toast" id="sc-toast" hidden>
-            <span id="sc-toast-text"></span>
+          <!-- The perk shelf: this run's perks, mirroring the isotopes top-left,
+             with level pips and a tooltip on hover, focus or tap. It sits
+             beside the face rather than inside it, so its buttons aren't
+             nested in the face's role="button" and a tap on it is never a
+             press. Empty sockets show how many of the five slots are free. -->
+          <div class="perk-shelf" id="sc-perk-shelf" hidden>
+            <ul class="perk-slots" id="sc-perk-slots" aria-label="Perks this run">
+              {
+                Array.from({ length: PERK_SLOTS }, () => (
+                  <li class="perk-slot" data-empty aria-hidden="true">
+                    <button type="button" class="perk-chip" hidden>
+                      <span class="perk-chip-glyph" />
+                    </button>
+                    <span class="perk-pips" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  </li>
+                ))
+              }
+            </ul>
+            <!-- Visual only: each chip's accessible name carries the same text. -->
+            <div class="perk-tip" id="sc-perk-tip" aria-hidden="true" hidden>
+              <div class="perk-tip-box">
+                <p class="perk-tip-name">
+                  <span id="sc-perk-tip-name"></span>
+                  <span class="perk-level" id="sc-perk-tip-level" hidden></span>
+                </p>
+                <p class="perk-tip-kind" id="sc-perk-tip-kind"></p>
+                <p class="perk-tip-detail" id="sc-perk-tip-detail"></p>
+              </div>
+            </div>
           </div>
-
-          <p class="visually-hidden" id="sc-announce" aria-live="polite"></p>
         </div>
 
         <!-- Shop (spec §6), rendered from the rulebook so the first paint is right. -->
@@ -446,6 +485,16 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
             type="button"
             class="tab"
             role="tab"
+            id="sc-tab-perks"
+            data-tab="perks"
+            aria-selected="false"
+            aria-controls="sc-panel-perks"
+            tabindex="-1">Perks</button
+          >
+          <button
+            type="button"
+            class="tab"
+            role="tab"
             id="sc-tab-prestige"
             data-tab="prestige"
             aria-selected="false"
@@ -496,6 +545,50 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
               ))
             }
           </ul>
+        </div>
+
+        <!-- Perks in full: this run's, then the codex of every perk ever found.
+             The script fills both. -->
+        <div
+          class="panel"
+          id="sc-panel-perks"
+          role="tabpanel"
+          aria-labelledby="sc-tab-perks"
+          hidden
+        >
+          <section class="perks-section" aria-labelledby="sc-perks-run-title">
+            <h3 class="perks-title" id="sc-perks-run-title">
+              This run <span class="perks-count"
+                ><span class="readout" id="sc-perks-slots">0 of {PERK_SLOTS}</span> slots</span
+              >
+            </h3>
+            <p class="panel-intro" id="sc-perks-empty">
+              No perks yet. They drop into the shop as you play, and once bought they last the rest
+              of the run.
+            </p>
+            <ul class="perk-cards" id="sc-perks-run"></ul>
+          </section>
+          <section class="perks-section" aria-labelledby="sc-codex-title">
+            <h3 class="perks-title" id="sc-codex-title">
+              Codex <span class="perks-count"
+                ><span class="readout" id="sc-codex-count">0 of {PERKS.length}</span> found</span
+              >
+            </h3>
+            <p class="panel-intro">
+              Every perk you have found, across every run. Resetting the experiment keeps it; only
+              the top-bar reset clears it.
+            </p>
+            <!-- The collection at a glance: a socket per perk, lit once found.
+                 An empty socket keeps its rarity's shape, so there is
+                 something to hunt. Then a card for each perk found. -->
+            <div class="codex-board">
+              <p class="codex-label" id="sc-codex-press-label">Upgrades</p>
+              <ul class="codex-row" id="sc-codex-press" aria-labelledby="sc-codex-press-label"></ul>
+              <p class="codex-label" id="sc-codex-auto-label">Auto-tappers</p>
+              <ul class="codex-row" id="sc-codex-auto" aria-labelledby="sc-codex-auto-label"></ul>
+            </div>
+            <ul class="perk-cards" id="sc-codex"></ul>
+          </section>
         </div>
 
         <div
@@ -575,7 +668,8 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
         <p class="modal-message">
           Your auto-tappers ran for <span class="readout" id="sc-away-time">0s</span> at
           <span id="sc-away-rate">half speed</span> and made
-          <span class="readout" id="sc-away-energy">0</span> energy.
+          <span class="readout" id="sc-away-energy">0</span> energy.<span id="sc-away-offers" hidden
+          ></span>
         </p>
         <div class="modal-actions">
           <button class="btn btn-primary" id="sc-away-collect" type="button">Collect</button>
@@ -741,6 +835,20 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     align-items: stretch;
   }
 
+  /* The face and the perk shelf over its top-right corner. A container of
+     its own, so the shelf can answer to the face's width. */
+  .reactor-wrap {
+    container: reactor-wrap / inline-size;
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+
+  .reactor-wrap > .reactor-face {
+    flex: 1;
+  }
+
   /* --- Reactor face ------------------------------------------------------------- */
 
   /* State is carried by custom properties set per data-state, so the core,
@@ -781,8 +889,13 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
+    /* The face's padding, and where the energy readout must start to clear
+       the perk shelf: its 47px plus a gap, from inside the 2px border. */
+    --face-pad: var(--space-lg);
+    --shelf-clear: 54px;
+
     min-height: 520px;
-    padding: var(--space-lg);
+    padding: var(--face-pad);
     border: 2px solid var(--line);
     border-radius: var(--radius-xl);
     background-color: var(--panel-03);
@@ -1334,6 +1447,218 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     inset-inline-start: 0;
     z-index: 3;
     pointer-events: none;
+  }
+
+  /* --- Perk shelf ------------------------------------------------------------
+
+     This run's perks over the face's top-right corner, mirroring the isotope
+     beads top-left: five sockets, each lit with a perk in its family's hue
+     (DESIGN.md, Perk-Family Exception) or left as a dashed outline, and three
+     pips under each for its level. At 566px of face it clears the energy
+     readout; narrower, the readout steps down under it, and on a narrow face
+     with a long row of isotopes the shelf drops below the beads. */
+
+  .perk-shelf {
+    position: absolute;
+    inset-block-start: 14px;
+    inset-inline-end: 16px;
+    z-index: 4;
+    transition: opacity 400ms ease;
+  }
+
+  /* Resetting the experiment: the shelf fades with the imploding core. */
+  .perk-shelf.is-clearing {
+    opacity: 0;
+  }
+
+  .perk-slots {
+    display: flex;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .perk-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .perk-slot[data-empty]::before {
+    content: '';
+    width: 26px;
+    height: 26px;
+    border: 1px dashed var(--line);
+    border-radius: 7px;
+  }
+
+  .perk-slot[data-empty] .perk-pips {
+    visibility: hidden;
+  }
+
+  .perk-chip {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background-color: color-mix(in srgb, var(--perk) 16%, var(--panel-01));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--perk) 55%, transparent);
+    color: var(--perk);
+  }
+
+  .perk-chip :global(svg) {
+    width: 16px;
+    height: 16px;
+  }
+
+  .perk-slot[data-rarity='rare'] .perk-chip {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--perk) 55%, transparent),
+      0 0 8px color-mix(in srgb, var(--perk) 30%, transparent);
+  }
+
+  .perk-slot[data-rarity='keystone'] .perk-chip {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--perk) 55%, transparent),
+      0 0 10px color-mix(in srgb, var(--perk) 40%, transparent);
+  }
+
+  .perk-slot[data-rarity='keystone'] .perk-chip::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid color-mix(in srgb, var(--perk) 40%, transparent);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+
+  /* A perk flying in from the shop: the socket waits, then the chip lands. */
+  .perk-slot.is-pending .perk-chip {
+    opacity: 0;
+  }
+
+  .perk-chip.is-landed {
+    animation: chip-land 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes chip-land {
+    0% {
+      transform: scale(1.6);
+    }
+  }
+
+  .perk-pips {
+    display: flex;
+    gap: 2px;
+  }
+
+  .perk-pips > span {
+    width: 4px;
+    height: 4px;
+    border-radius: var(--radius-full);
+    background-color: color-mix(in srgb, var(--perk) 22%, transparent);
+  }
+
+  .perk-pips[data-level='1'] > span:nth-child(-n + 1),
+  .perk-pips[data-level='2'] > span:nth-child(-n + 2),
+  .perk-pips[data-level='3'] > span {
+    background-color: var(--perk);
+  }
+
+  /* The tooltip hangs under the shelf, right-aligned, its caret on the chip.
+     Its top padding bridges the gap, so the pointer can cross onto it. */
+  .perk-tip {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-end: 0;
+    z-index: 5;
+    width: max-content;
+    max-width: min(260px, calc(100cqi - 32px));
+    padding-block-start: 8px;
+  }
+
+  .perk-tip-box {
+    position: relative;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid color-mix(in srgb, var(--perk) 55%, var(--line));
+    border-radius: var(--radius-md);
+    background-color: var(--panel-01);
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 40%),
+      0 4px 6px -4px rgb(0 0 0 / 30%);
+    text-align: start;
+  }
+
+  .perk-tip-box::before {
+    content: '';
+    position: absolute;
+    inset-block-start: -5px;
+    inset-inline-end: calc(var(--caret-right, 13px) - 5px);
+    width: 8px;
+    height: 8px;
+    border-block-start: 1px solid color-mix(in srgb, var(--perk) 55%, var(--line));
+    border-inline-start: 1px solid color-mix(in srgb, var(--perk) 55%, var(--line));
+    background-color: var(--panel-01);
+    transform: rotate(45deg);
+  }
+
+  .perk-tip-name {
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  .perk-tip-kind {
+    margin-block: 2px 4px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--perk);
+  }
+
+  .perk-tip-detail {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
+  /* A bought perk on its way from the shop to its socket (the script flies it). */
+  .game-section :global(.perk-tile.perk-flyer) {
+    position: fixed;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    z-index: 60;
+    pointer-events: none;
+    transform-origin: 0 0;
+  }
+
+  /* Below 530px of face the energy readout would run under the shelf, so it
+     steps down to clear it, whatever the face's padding. */
+  @container reactor-wrap (max-width: 530px) {
+    .reactor-wrap:has(> .perk-shelf:not([hidden])) .energy-block {
+      padding-block-start: calc(var(--shelf-clear) - var(--face-pad));
+    }
+  }
+
+  /* A narrow face with six or more isotope beads has no room for both rows
+     side by side: the perk shelf drops below the beads, and the readout with
+     it. */
+  @container reactor-wrap (max-width: 340px) {
+    .reactor-wrap:has(.pellets > :nth-child(6)) > .perk-shelf {
+      inset-block-start: 34px;
+    }
+
+    .reactor-wrap:has(.pellets > :nth-child(6)) > .reactor-face {
+      --shelf-clear: 74px;
+    }
   }
 
   .shelf-more {
@@ -1909,12 +2234,17 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
 
   /* --- Toast ---------------------------------------------------------------- */
 
+  /* Notices sit over the hint line above the keycap: the hint is standing
+     instructions, so it is the one thing on the face a notice may cover. The
+     top corners belong to the isotope and perk shelves. */
   .toast {
     position: absolute;
-    inset-block-start: var(--space-md);
-    inset-inline-end: var(--space-md);
+    inset-block-end: calc(var(--face-pad) + 3.5rem);
+    inset-inline-start: 50%;
     z-index: 3;
-    max-width: 60%;
+    max-width: calc(100% - 2 * var(--face-pad));
+    translate: -50% 0;
+    text-align: center;
     padding: var(--space-sm) var(--space-md);
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
@@ -2494,6 +2824,110 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     color: var(--ink-muted);
   }
 
+  /* The Perks panel: this run's perks, then the codex. Cards as in the swap
+     dialog, on the achievements' grid. */
+  .perks-section + .perks-section {
+    margin-block-start: var(--space-xl);
+  }
+
+  .perks-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-sm);
+    margin-block-end: var(--space-sm);
+    font-size: var(--text-title-size);
+    font-weight: 600;
+  }
+
+  .perks-count {
+    font-size: var(--text-label-size);
+    font-weight: 500;
+    color: var(--ink-secondary);
+  }
+
+  .perks-count .readout {
+    color: var(--ink-primary);
+  }
+
+  .perk-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--space-sm);
+    padding: 0;
+    list-style: none;
+  }
+
+  .panel .perk-cards :global(.perk-card) {
+    align-items: start;
+    height: 100%;
+  }
+
+  .game-section :global(.perk-card-kind) {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--perk);
+  }
+
+  .game-section :global(.perk-card-status) {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  /* In the codex, every level's number shows; the best one held is lit. */
+  .game-section :global(.perk-level-value) {
+    color: var(--ink-muted);
+  }
+
+  /* The codex board: a row of sockets per shop tab, labels beside them. */
+  .codex-board {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-sm) var(--space-md);
+    margin-block-end: var(--space-md);
+  }
+
+  .codex-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-secondary);
+  }
+
+  .codex-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Found but never held: lit, but dimmer than one that was held. */
+  .codex-row :global(.codex-entry.is-unheld) {
+    opacity: 0.55;
+  }
+
+  /* Not found yet: an empty socket in its rarity's shape, nothing more. */
+  .codex-row :global(.codex-entry.is-undiscovered) {
+    --perk: var(--ink-muted);
+  }
+
+  .codex-row :global(.codex-entry.is-undiscovered .perk-tile) {
+    background-color: transparent;
+    box-shadow: none;
+    outline: 1px dashed var(--line);
+    outline-offset: -1px;
+  }
+
+  @media (max-width: 768px) {
+    .codex-board {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   .prestige {
     display: flex;
     flex-direction: column;
@@ -2733,7 +3167,7 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     }
 
     .reactor-face {
-      padding: var(--space-md);
+      --face-pad: var(--space-md);
     }
 
     .core-wrap {
@@ -2746,10 +3180,6 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
 
     .surge-summary {
       gap: var(--space-md);
-    }
-
-    .toast {
-      max-width: 80%;
     }
   }
 
@@ -2774,7 +3204,9 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     .perk-offer.is-arriving .perk-tile,
     .perk-tile.is-claimed,
     .perk-ring-fill,
-    .perk-offer.is-fading .perk-ring-fill {
+    .perk-offer.is-fading .perk-ring-fill,
+    .perk-chip.is-landed,
+    .perk-shelf {
       animation: none;
       transition: none;
     }

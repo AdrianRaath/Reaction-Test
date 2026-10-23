@@ -1,9 +1,11 @@
 /**
- * Spacebar Clicker: perks in play (SPACEBAR-CLICKER.md §8.1, step 4). Drops
- * and their offer rows, buying and upgrading, the swap dialog, the keystone
- * swap, windows running out, time away, and the effects the script runs:
- * Brute Force's dead combo, Chain Reaction's floats, and a surge with Storm
- * Front, Afterglow, a surge drop and Self-Replicator on a fake clock.
+ * Spacebar Clicker: perks in play (SPACEBAR-CLICKER.md §8.1, steps 4 and 5).
+ * Drops and their offer rows, buying and upgrading, the swap dialog, the
+ * keystone swap, windows running out, time away, and the effects the script
+ * runs: Brute Force's dead combo, Chain Reaction's floats, and a surge with
+ * Storm Front, Afterglow, a surge drop and Self-Replicator on a fake clock.
+ * Then the shelf and its tooltips, the Perks panel and codex, and what
+ * prestige leaves behind.
  */
 
 import type { Page } from '@playwright/test';
@@ -72,6 +74,9 @@ test('a perk drops into its tab, lit in its family hue, with a toast and a tag',
   await expect(row).toHaveCount(1, { timeout: 6000 });
   const name = (await row.locator('[data-perk-name]').textContent())!.trim();
   await expect(page.locator('#sc-toast')).toContainText(`drop: ${name}`);
+  await expect(page.locator('#sc-announce')).toHaveText(
+    new RegExp(`drop: ${name}, in the (Upgrades|Auto-tappers) tab for [\\d,]+ energy\\.$`)
+  );
   expect(await row.getAttribute('data-family')).toMatch(/^(rhythm|press|luck|surge|machines)$/);
   expect(
     await row.evaluate((li) => getComputedStyle(li.querySelector('.perk-tile')!).color),
@@ -115,6 +120,8 @@ test('buying takes a slot, and an upgrade strikes out the value it replaces', as
   await press.locator('.perk-buy').click();
   await expect(press).toBeHidden();
   expect(await energy(page)).toBe(4550);
+  const pips = page.locator('.perk-slot').first().locator('.perk-pips');
+  await expect(pips, 'the upgrade fills a pip on the shelf').toHaveAttribute('data-level', '2');
 
   await page.click('[data-shop-tab="auto"]');
   const auto = page.locator('#sc-offer-auto');
@@ -122,6 +129,12 @@ test('buying takes a slot, and an upgrade strikes out the value it replaces', as
   await auto.locator('.perk-buy').click();
   await expect(auto).toBeHidden();
   expect(await energy(page)).toBe(4250);
+  // Overtime flies from its offer to the second socket and lands.
+  const second = page.locator('.perk-slot').nth(1);
+  await expect(second.locator('.perk-chip')).toBeVisible();
+  await expect(second.locator('.perk-chip')).toHaveClass(/is-landed/);
+  await expect(second).not.toHaveClass(/is-pending/);
+  await expect(page.locator('.perk-flyer')).toHaveCount(0);
   expect((await savedPerks(page)).owned).toEqual([
     { id: 'metronome', level: 2 },
     { id: 'overtime', level: 1 },
@@ -245,6 +258,9 @@ test('time away never runs an offer down, but play does', async ({ page }) => {
   await expect(page.locator('#sc-away-rate'), 'Night Shift pays all of it').toHaveText(
     'full speed'
   );
+  await expect(page.locator('#sc-away-offers')).toHaveText(
+    " Metronome is still on offer in the shop: time away doesn't count against its window."
+  );
   await page.click('#sc-away-collect');
   const row = page.locator('#sc-offer-press');
   await page.waitForTimeout(500);
@@ -261,6 +277,7 @@ test('time away never runs an offer down, but play does', async ({ page }) => {
   });
   expect(await ring()).toBeGreaterThan(early);
   await expect(row, 'then the window runs out').toBeHidden({ timeout: 10_000 });
+  await expect(page.locator('#sc-announce')).toHaveText('Metronome is no longer on offer.');
 });
 
 test('Chain Reaction pops its doublings out as gold floats', async ({ page }) => {
@@ -362,6 +379,143 @@ test('a surge with perks: Storm Front, a surge drop, Afterglow, and Self-Replica
   expect(await owned()).toBe('3');
 });
 
+test('the shelf shows the perks held this run, with a tooltip on hover and focus', async ({
+  page,
+}) => {
+  await seedSave(page, {
+    energy: 100,
+    runLifetime: 5000,
+    perks: {
+      ...noDrops,
+      owned: [
+        { id: 'overtone', level: 2 },
+        { id: 'glass-rhythm', level: 1 },
+      ],
+    },
+  });
+  await openGame(page);
+
+  const shelf = page.locator('#sc-perk-shelf');
+  await expect(shelf).toBeVisible();
+  await expect(shelf.locator('.perk-chip:not([hidden])')).toHaveCount(2);
+  await expect(shelf.locator('.perk-slot[data-empty]'), 'three empty sockets').toHaveCount(3);
+  await expect(shelf.locator('.perk-pips').first()).toHaveAttribute('data-level', '2');
+  await expect(page.locator('#sc-perk-slots')).toHaveAttribute(
+    'aria-label',
+    'Perks this run, 2 of 5 slots'
+  );
+  const chip = shelf.locator('.perk-chip').first();
+  await expect(chip).toHaveAttribute(
+    'aria-label',
+    'Overtone, level 2, rare rhythm perk. A new tier above Harmonic: 200 combo for x3.75'
+  );
+
+  // Hover shows it, and the pointer can cross onto it.
+  const tip = page.locator('#sc-perk-tip');
+  await chip.hover();
+  await expect(tip).toBeVisible();
+  await expect(page.locator('#sc-perk-tip-name')).toHaveText('Overtone');
+  await expect(page.locator('#sc-perk-tip-kind')).toHaveText('Rare · Rhythm');
+  await expect(page.locator('#sc-perk-tip-detail')).toHaveText(
+    'A new tier above Harmonic: 200 combo for x3.75'
+  );
+  await tip.hover();
+  await expect(tip).toBeVisible();
+  await page.mouse.move(5, 5);
+  await expect(tip).toBeHidden();
+
+  // A click on a chip is never a press, and doesn't keep focus from Space.
+  const before = await energy(page);
+  await chip.click();
+  await page.waitForTimeout(200);
+  expect(await energy(page)).toBe(before);
+  expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe('BUTTON');
+  await page.mouse.move(5, 5);
+
+  // From the reactor, Tab reaches the chips; focus shows the tooltip, Escape dismisses it.
+  await page.focus('#sc-reactor');
+  await page.keyboard.press('Tab');
+  await expect(chip).toBeFocused();
+  await expect(tip).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#sc-perk-tip-name')).toHaveText('Glass Rhythm');
+  await page.keyboard.press('Escape');
+  await expect(tip).toBeHidden();
+});
+
+test('the Perks panel lists this run and the codex, and prestige keeps only the codex', async ({
+  page,
+}) => {
+  await seedSave(page, {
+    energy: 100,
+    runLifetime: 4_000_000,
+    perks: {
+      ...noDrops,
+      owned: [
+        { id: 'glass-rhythm', level: 2 },
+        { id: 'overtone', level: 1 },
+      ],
+      codex: { 'glass-rhythm': 2, overtone: 1, metronome: 0 },
+    },
+  });
+  await openGame(page);
+  await page.click('[data-tab="perks"]');
+
+  await expect(page.locator('#sc-perks-slots')).toHaveText('2 of 5');
+  await expect(page.locator('#sc-perks-empty')).toBeHidden();
+  await expect(page.locator('#sc-perks-run .perk-card')).toHaveCount(2);
+  await expect(page.locator('#sc-perks-run')).toContainText('Keystone · Rhythm');
+
+  await expect(page.locator('#sc-codex-count')).toHaveText('3 of 25');
+  await expect(page.locator('.codex-entry')).toHaveCount(25);
+  await expect(page.locator('.codex-entry.is-undiscovered')).toHaveCount(22);
+  await expect(page.locator('.codex-entry.is-unheld'), 'Metronome: found, never held').toHaveCount(
+    1
+  );
+  await expect(page.locator('#sc-codex .perk-card'), 'a card per perk found').toHaveCount(3);
+  await expect(page.locator('#sc-codex')).toContainText('Found, never held');
+  await expect(page.locator('#sc-codex')).toContainText('Held up to level 2');
+
+  // Reset the experiment: the run's perks go, the codex stays.
+  await page.click('[data-tab="prestige"]');
+  await page.click('#sc-prestige-btn');
+  await page.click('#sc-prestige-confirm');
+  await expect(page.locator('#sc-perk-shelf')).toBeHidden();
+  await page.click('[data-tab="perks"]');
+  await expect(page.locator('#sc-perks-slots')).toHaveText('0 of 5');
+  await expect(page.locator('#sc-perks-empty')).toBeVisible();
+  await expect(page.locator('#sc-codex-count')).toHaveText('3 of 25');
+});
+
+test.describe('on a touchscreen', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test('a tap on a chip pins its tooltip and is never a press', async ({ page }) => {
+    await seedSave(page, {
+      energy: 100,
+      runLifetime: 5000,
+      perks: { ...noDrops, owned: [{ id: 'metronome', level: 1 }] },
+    });
+    await openGame(page);
+    const chip = page.locator('.perk-slot').first().locator('.perk-chip');
+    const tip = page.locator('#sc-perk-tip');
+    const before = await energy(page);
+
+    await chip.tap();
+    await expect(tip).toBeVisible();
+    await expect(page.locator('#sc-perk-tip-name')).toHaveText('Metronome');
+    expect(await energy(page)).toBe(before);
+    await chip.tap();
+    await expect(tip, 'a second tap closes it').toBeHidden();
+
+    await chip.tap();
+    await expect(tip).toBeVisible();
+    await page.locator('#sc-reactor').tap({ position: { x: 160, y: 300 } });
+    await expect(tip, 'a tap on the reactor closes it').toBeHidden();
+    await expect.poll(() => energy(page), 'and counts as a press').toBeGreaterThan(before);
+  });
+});
+
 test.describe('under reduced motion', () => {
   test.use({ reducedMotion: 'reduce' });
 
@@ -374,6 +528,8 @@ test.describe('under reduced motion', () => {
     await openGame(page);
     await page.locator('#sc-offer-press .perk-buy').click();
     expect(await page.locator('#sc-offer-press').isHidden()).toBe(true);
+    expect(await page.locator('.perk-slot').first().locator('.perk-chip').isVisible()).toBe(true);
+    expect(await page.locator('.perk-flyer').count(), 'no flight').toBe(0);
   });
 });
 
@@ -409,4 +565,37 @@ test.describe('on a phone', () => {
     });
     expect(fits).toBe(true);
   });
+
+  for (const isotopes of [2, 8]) {
+    test(`the shelf clears the readout and ${isotopes} isotope beads`, async ({ page }) => {
+      await seedSave(page, {
+        energy: 99_999,
+        runLifetime: 99_999,
+        isotopes,
+        perks: {
+          ...noDrops,
+          owned: [
+            { id: 'glass-rhythm', level: 1 },
+            { id: 'held-breath', level: 2 },
+            { id: 'overtime', level: 3 },
+            { id: 'loaded-dice', level: 1 },
+            { id: 'self-replicator', level: 1 },
+          ],
+        },
+      });
+      await openGame(page);
+      const clear = await page.evaluate(() => {
+        const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+        const perks = r('#sc-perk-shelf');
+        const beads = r('#sc-shelf');
+        const readout = r('.energy-row');
+        return {
+          readout: readout.top >= perks.bottom,
+          beads: beads.right <= perks.left || beads.bottom <= perks.top,
+          noScroll: document.documentElement.scrollWidth <= window.innerWidth,
+        };
+      });
+      expect(clear).toEqual({ readout: true, beads: true, noScroll: true });
+    });
+  }
 });

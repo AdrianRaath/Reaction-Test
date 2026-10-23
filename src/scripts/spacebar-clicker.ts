@@ -21,6 +21,7 @@ import {
   AUTO_TAPPERS,
   MIN_PRESS_GAP_MS,
   PERK_SLOTS,
+  PERKS,
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
   REACTOR_STATES,
@@ -77,6 +78,7 @@ import {
   keystoneSwap,
   needsSlot,
   offerRemaining,
+  perkDetail,
   perkLevel,
   perkTick,
   replicate,
@@ -172,6 +174,37 @@ const bezelEl = document.getElementById('sc-bezel') as SVGSVGElement | null;
 const shelfEl = el('sc-shelf');
 const pelletsEl = el('sc-pellets');
 const shelfMoreEl = el('sc-shelf-more');
+const gameSection = el('game-section');
+
+// The perk shelf over the face's top-right corner: five sockets, a chip and
+// level pips in each, and one shared tooltip.
+const perkShelf = el('sc-perk-shelf');
+const perkSlotList = el('sc-perk-slots');
+const perkSlots = Array.from(perkSlotList.querySelectorAll<HTMLElement>('.perk-slot')).map(
+  (li) => ({
+    li,
+    chip: li.querySelector<HTMLButtonElement>('.perk-chip')!,
+    glyph: li.querySelector<HTMLElement>('.perk-chip-glyph')!,
+    pips: li.querySelector<HTMLElement>('.perk-pips')!,
+    /** The perk whose glyph the chip holds. */
+    shown: '',
+  })
+);
+const perkTip = el('sc-perk-tip');
+const perkTipName = el('sc-perk-tip-name');
+const perkTipLevel = el('sc-perk-tip-level');
+const perkTipKind = el('sc-perk-tip-kind');
+const perkTipDetail = el('sc-perk-tip-detail');
+
+const perksSlotsEl = el('sc-perks-slots');
+const perksEmptyEl = el('sc-perks-empty');
+const perksRunEl = el('sc-perks-run');
+const codexCountEl = el('sc-codex-count');
+const codexEl = el('sc-codex');
+const codexRows: Record<ShopTab, HTMLElement> = {
+  press: el('sc-codex-press'),
+  auto: el('sc-codex-auto'),
+};
 const surgeSummary = el('sc-surge-summary');
 const surgePresses = el('sc-surge-presses');
 const surgeRate = el('sc-surge-rate');
@@ -284,6 +317,7 @@ const awayModal = el('sc-away-modal');
 const awayTime = el('sc-away-time');
 const awayRate = el('sc-away-rate');
 const awayEnergy = el('sc-away-energy');
+const awayOffers = el('sc-away-offers');
 const awayCollect = el('sc-away-collect');
 
 const swapModal = el('sc-swap-modal');
@@ -695,8 +729,60 @@ function perkEffect(def: PerkDef, level: number, held = 0): Node[] {
   return nodes;
 }
 
-/** A perk as a card for the swap dialog: its tile, its name and level, its effect. */
-function perkCard(id: PerkId, level: number, asButton: boolean): HTMLElement {
+const FAMILY_NAME: Record<PerkFamily, string> = {
+  rhythm: 'Rhythm',
+  press: 'Press power',
+  luck: 'Luck',
+  surge: 'Surge',
+  machines: 'Machines',
+};
+const TAB_NAME: Record<ShopTab, string> = { press: 'Upgrades', auto: 'Auto-tappers' };
+
+/** "Rare · Rhythm": rarity and family in words, so the hue never stands alone. */
+function perkKind(def: PerkDef): string {
+  return `${RARITY_NAME[def.rarity]} · ${FAMILY_NAME[def.family]}`;
+}
+
+/** A held perk in full, for its shelf chip's accessible name. */
+function perkLabel(id: PerkId, level: number): string {
+  const def = perk(id);
+  const kind = `${def.rarity} ${FAMILY_NAME[def.family].toLowerCase()} perk`;
+  return `${def.name}, level ${level}, ${kind}. ${perkDetail(def, level)}`;
+}
+
+/**
+ * Every level's number, the best one held lit in the perk's hue and the
+ * rest muted: "for x3.5 / x3.75 / x4". For the codex.
+ */
+function perkEffectAllLevels(def: PerkDef, best: number): Node[] {
+  const [before = '', after = ''] = def.detail.split('{v}');
+  const nodes: Node[] = [document.createTextNode(before)];
+  def.values.forEach((v, i) => {
+    if (i > 0) nodes.push(document.createTextNode(' / '));
+    const value = document.createElement('span');
+    value.className = i + 1 === best ? 'perk-value' : 'perk-level-value';
+    value.textContent = formatPerkValue(def.unit, v);
+    nodes.push(value);
+  });
+  nodes.push(document.createTextNode(after));
+  return nodes;
+}
+
+/** One line of a perk card's text. */
+function cardLine(className: string, content: string | Node[]): HTMLElement {
+  const line = document.createElement('span');
+  line.className = className;
+  if (typeof content === 'string') line.textContent = content;
+  else line.append(...content);
+  return line;
+}
+
+/**
+ * A perk as a card: its tile, its name with a level badge, then the lines
+ * given. The swap dialog, this run's perks and the codex all use it; the
+ * dialog's are buttons when the player is picking one to drop.
+ */
+function perkCard(id: PerkId, level: number, lines: HTMLElement[], asButton = false): HTMLElement {
   const def = perk(id);
   const card = document.createElement(asButton ? 'button' : 'div');
   card.className = 'perk-card';
@@ -715,12 +801,14 @@ function perkCard(id: PerkId, level: number, asButton: boolean): HTMLElement {
   badge.className = 'perk-level';
   setLevelBadge(badge, level);
   name.append(def.name, ' ', badge);
-  const detail = document.createElement('span');
-  detail.className = 'perk-card-detail';
-  detail.append(...perkEffect(def, level));
-  text.append(name, detail);
+  text.append(name, ...lines);
   card.append(tile, text);
   return card;
+}
+
+/** A perk card for the swap dialog: name, level and effect. */
+function swapCard(id: PerkId, level: number, asButton = false): HTMLElement {
+  return perkCard(id, level, [cardLine('perk-card-detail', perkEffect(perk(id), level))], asButton);
 }
 
 /** Bring a tab's offer row up to date: what is on offer, its price, its ring, its notes. */
@@ -816,6 +904,255 @@ function leaveOffer(tab: ShopTab, bought: boolean): void {
   };
 }
 
+// --- The perk shelf and the Perks panel ---------------------------------------------
+// This run's perks over the face's top-right corner, each with its level in
+// pips and a tooltip on hover, keyboard focus or a tap. The tooltip is visual;
+// each chip's accessible name carries the same words. The Perks panel lists
+// them in full, then the codex of every perk ever found.
+
+/** The perks the shelf shows, as "id:level,...". */
+let shelfShown: string | null = null;
+
+function renderPerkShelf(): void {
+  perkShelf.classList.remove('is-clearing');
+  const owned = state.perks.owned;
+  const key = owned.map((o) => `${o.id}:${o.level}`).join(',');
+  if (key === shelfShown) return;
+  shelfShown = key;
+
+  perkShelf.hidden = owned.length === 0;
+  perkSlotList.setAttribute('aria-label', `Perks this run, ${owned.length} of ${PERK_SLOTS} slots`);
+  perkSlots.forEach((slot, i) => {
+    const held = owned[i];
+    slot.chip.hidden = !held;
+    slot.li.toggleAttribute('data-empty', !held);
+    if (!held) {
+      // An empty socket is decoration; the list's label counts the slots.
+      slot.li.setAttribute('aria-hidden', 'true');
+      delete slot.li.dataset.family;
+      delete slot.li.dataset.rarity;
+      slot.shown = '';
+      return;
+    }
+    const def = perk(held.id);
+    slot.li.removeAttribute('aria-hidden');
+    slot.li.dataset.family = def.family;
+    slot.li.dataset.rarity = def.rarity;
+    slot.pips.dataset.level = String(held.level);
+    slot.chip.setAttribute('aria-label', perkLabel(held.id, held.level));
+    if (slot.shown !== held.id) {
+      slot.glyph.replaceChildren(perkGlyph(held.id));
+      slot.shown = held.id;
+    }
+  });
+  renderTip();
+}
+
+// The tooltip shows for the chip under a mouse, else the one with keyboard
+// focus, else the one last tapped. Escape dismisses it until the next hover,
+// focus or tap.
+let tipHover: number | null = null;
+let tipFocus: number | null = null;
+let tipPinned: number | null = null;
+let tipDismissed = false;
+let tipShown = '';
+let lastPointer = 'mouse';
+
+function renderTip(): void {
+  const slot = tipDismissed ? null : (tipHover ?? tipFocus ?? tipPinned);
+  const held = slot === null ? undefined : state.perks.owned[slot];
+  perkTip.hidden = !held;
+  if (!held || slot === null) {
+    tipShown = '';
+    return;
+  }
+  const key = `${slot}:${held.id}:${held.level}`;
+  if (key === tipShown) return;
+  tipShown = key;
+
+  const def = perk(held.id);
+  perkTip.dataset.family = def.family;
+  perkTipName.textContent = def.name;
+  setLevelBadge(perkTipLevel, held.level);
+  perkTipKind.textContent = perkKind(def);
+  perkTipDetail.replaceChildren(...perkEffect(def, held.level));
+  // The caret points at the chip.
+  const chip = perkSlots[slot]!.li.getBoundingClientRect();
+  const shelf = perkShelf.getBoundingClientRect();
+  perkTip.style.setProperty('--caret-right', `${shelf.right - (chip.left + chip.width / 2)}px`);
+}
+
+/** Close a tooltip a tap opened: tapping anywhere else, or pressing. */
+function unpinTip(): void {
+  if (tipPinned === null) return;
+  tipPinned = null;
+  renderTip();
+}
+
+perkSlots.forEach((slot, i) => {
+  slot.chip.addEventListener('pointerdown', (e) => {
+    lastPointer = e.pointerType;
+  });
+  slot.chip.addEventListener('pointerenter', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    tipHover = i;
+    tipDismissed = false;
+    renderTip();
+  });
+  slot.chip.addEventListener('focus', () => {
+    if (!slot.chip.matches(':focus-visible')) return;
+    tipFocus = i;
+    tipDismissed = false;
+    renderTip();
+  });
+  slot.chip.addEventListener('blur', () => {
+    if (tipFocus !== i) return;
+    tipFocus = null;
+    renderTip();
+  });
+  slot.chip.addEventListener('click', (e) => {
+    // From the keyboard (no pointer), focus is already showing it.
+    if (e.detail === 0) return;
+    // Touch has no hover, so a tap pins the tooltip open; a second tap closes it.
+    if (lastPointer !== 'mouse') {
+      tipPinned = tipPinned === i ? null : i;
+      tipDismissed = false;
+      renderTip();
+    }
+    // Space is the game's input; a focused chip would swallow it.
+    slot.chip.blur();
+  });
+});
+
+perkShelf.addEventListener('pointerleave', (e) => {
+  if (e.pointerType !== 'mouse' || tipHover === null) return;
+  tipHover = null;
+  renderTip();
+});
+
+document.addEventListener('pointerdown', (e) => {
+  if (!perkShelf.contains(e.target as Node)) unpinTip();
+});
+
+/** How long a bought perk takes to fly from its offer to its socket. */
+const PERK_FLY_MS = 650;
+
+/**
+ * A bought perk flies from its offer tile to its socket on the shelf, arcing
+ * up, and the chip lands with a pop. An upgrade flies to the chip it raises.
+ * Reduced motion: the chip is simply there.
+ */
+function flyToShelf(from: DOMRect, id: PerkId): void {
+  const slot = perkSlots[state.perks.owned.findIndex((o) => o.id === id)];
+  if (!slot) return;
+  if (reducedMotion() || from.width === 0) return;
+
+  const to = slot.chip.getBoundingClientRect();
+  const flyer = document.createElement('span');
+  flyer.className = 'perk-tile perk-flyer';
+  flyer.dataset.family = perk(id).family;
+  flyer.append(perkGlyph(id));
+  gameSection.append(flyer);
+  slot.li.classList.add('is-pending');
+
+  const peakY = Math.min(from.top, to.top) - 36;
+  const midX = (from.left + to.left) / 2;
+  const flight = flyer.animate(
+    [
+      { transform: `translate(${from.left}px, ${from.top}px) scale(1)` },
+      { transform: `translate(${midX}px, ${peakY}px) scale(1.1)`, offset: 0.45 },
+      { transform: `translate(${to.left}px, ${to.top}px) scale(${to.width / from.width})` },
+    ],
+    { duration: PERK_FLY_MS, easing: 'cubic-bezier(0.5, 0, 0.2, 1)' }
+  );
+  const land = () => {
+    flyer.remove();
+    slot.li.classList.remove('is-pending');
+    replay(slot.chip, 'is-landed');
+  };
+  flight.onfinish = land;
+  flight.oncancel = land;
+}
+
+/** What the Perks panel shows, as JSON of the perks held and the codex. */
+let perksPanelShown = '';
+
+/** The Perks panel: this run's perks in full, then the codex. */
+function renderPerksPanel(): void {
+  const { owned, codex } = state.perks;
+  const key = JSON.stringify([owned, codex]);
+  if (key === perksPanelShown) return;
+  perksPanelShown = key;
+
+  perksSlotsEl.textContent = `${owned.length} of ${PERK_SLOTS}`;
+  perksEmptyEl.hidden = owned.length > 0;
+  perksRunEl.replaceChildren(
+    ...owned.map((o) => {
+      const def = perk(o.id);
+      const item = document.createElement('li');
+      item.append(
+        perkCard(o.id, o.level, [
+          cardLine('perk-card-kind', perkKind(def)),
+          cardLine('perk-card-detail', perkEffect(def, o.level)),
+        ])
+      );
+      return item;
+    })
+  );
+
+  const found = PERKS.filter((p) => codex[p.id] !== undefined);
+  codexCountEl.textContent = `${found.length} of ${PERKS.length}`;
+  for (const tab of SHOP_TABS) {
+    codexRows[tab].replaceChildren(
+      ...PERKS.filter((p) => p.tab === tab).map((def) => codexSocket(def, codex[def.id]))
+    );
+  }
+  codexEl.replaceChildren(
+    ...found.map((def) => {
+      const item = document.createElement('li');
+      item.append(codexCard(def, codex[def.id]!));
+      return item;
+    })
+  );
+}
+
+/**
+ * A perk's socket on the codex board: lit once found, dimmer if never held.
+ * Not found, it stays an empty socket in its rarity's shape (a keystone's has
+ * its inner ring), so there is something to hunt without spoiling it.
+ */
+function codexSocket(def: PerkDef, best: number | undefined): HTMLLIElement {
+  const item = document.createElement('li');
+  item.className = 'codex-entry';
+  item.dataset.rarity = def.rarity;
+  const tile = document.createElement('span');
+  tile.className = 'perk-tile';
+  tile.setAttribute('role', 'img');
+  let label: string;
+  if (best === undefined) {
+    item.classList.add('is-undiscovered');
+    label = `Undiscovered ${def.rarity} perk`;
+  } else {
+    item.dataset.family = def.family;
+    item.classList.toggle('is-unheld', best === 0);
+    tile.append(perkGlyph(def.id));
+    label = `${def.name}, ${best > 0 ? `held up to level ${best}` : 'found, never held'}`;
+  }
+  tile.setAttribute('aria-label', label);
+  tile.title = label;
+  item.append(tile);
+  return item;
+}
+
+/** A found perk's codex card: every level's number with the best held lit, and how far it was held. */
+function codexCard(def: PerkDef, best: number): HTMLElement {
+  return perkCard(def.id, 0, [
+    cardLine('perk-card-kind', perkKind(def)),
+    cardLine('perk-card-detail', perkEffectAllLevels(def, best)),
+    cardLine('perk-card-status', best > 0 ? `Held up to level ${best}` : 'Found, never held'),
+  ]);
+}
+
 function renderStats(): void {
   const play = { combo: combo.combo };
   statEls.presses.textContent = state.totalPresses.toLocaleString('en-US');
@@ -857,6 +1194,7 @@ function renderPrestige(): void {
 function renderPanels(): void {
   renderStats();
   renderAchievements();
+  renderPerksPanel();
   renderPrestige();
 }
 
@@ -890,6 +1228,7 @@ function renderAll(now = performance.now()): void {
   renderShop();
   renderPanels();
   renderShelf();
+  renderPerkShelf();
 }
 
 // --- Press feedback ---------------------------------------------------------------
@@ -1118,6 +1457,7 @@ function press(e?: Event): void {
   lastPressAt = now;
   beeper.unlock();
   replay(keycapEl, 'is-down');
+  unpinTip();
 
   const mods = modsOf(state);
   const result = combo.press(now);
@@ -1320,7 +1660,8 @@ function endSurge(now: number): void {
 
   announce(
     `Surge over. ${surge.presses} presses, ${cps.toFixed(1)} per second, ${formatEnergy(surge.earned)} energy.` +
-      (isBest ? ' New best.' : '')
+      (isBest ? ' New best.' : '') +
+      (dropped ? ` ${dropAnnouncement(dropped)}` : '')
   );
   SOUND.surgeEnd();
   awardAchievements({ surgeCps: cps });
@@ -1338,21 +1679,31 @@ function onPerkDropped(offer: PerkOffer, fromSurge = false): void {
   const def = perk(offer.id);
   arriveOffer(def.tab);
   renderShopNotices();
+  renderPerksPanel(); // the codex has found it
   if (fromSurge) {
+    // The surge's own end chord and announcement come first; it adds the drop to them.
     window.setTimeout(() => SOUND.perkDrop(def.rarity), 450);
   } else {
     SOUND.perkDrop(def.rarity);
     toast(`${dropKind(offer)}: ${perkTitle(offer.id, offer.level)}`, def.family);
+    announce(dropAnnouncement(offer));
   }
   dirty = true;
 }
 
-/** An offer's window ran out: its row fades away, quietly. */
+/** "Rare drop: Overtone, in the Upgrades tab for 18,000 energy." */
+function dropAnnouncement(offer: PerkOffer): string {
+  const where = TAB_NAME[perk(offer.id).tab];
+  return `${dropKind(offer)}: ${perkTitle(offer.id, offer.level)}, in the ${where} tab for ${formatEnergy(offer.price)} energy.`;
+}
+
+/** An offer's window ran out: its row fades away, and a screen reader hears it go. */
 function onOfferExpired(offer: PerkOffer): void {
   const { tab } = perk(offer.id);
   if (!swapModal.hidden && swapTab === tab) closeDialog(swapModal);
   leaveOffer(tab, false);
   renderShopNotices();
+  announce(`${perkTitle(offer.id, offer.level)} is no longer on offer.`);
   dirty = true;
 }
 
@@ -1499,6 +1850,13 @@ function settleAbsence(): void {
     awayRate.textContent =
       rate >= 1 ? 'full speed' : rate === 0.5 ? 'half speed' : `${Math.round(rate * 100)}% speed`;
     awayEnergy.textContent = formatEnergy(award.energy);
+    // An offer still in the shop is worth a mention: time away didn't use it up.
+    const waiting = state.perks.offers.map((o) => perkTitle(o.id, o.level));
+    awayOffers.hidden = waiting.length === 0;
+    awayOffers.textContent =
+      waiting.length === 1
+        ? ` ${waiting[0]} is still on offer in the shop: time away doesn't count against its window.`
+        : ` ${waiting.join(' and ')} are still on offer in the shop: time away doesn't count against their windows.`;
     pendingAway = award.energy;
     // The reactor idled while you were gone; it wakes when you collect.
     reactor.classList.add('is-asleep');
@@ -1562,6 +1920,11 @@ document.addEventListener('keydown', (e) => {
   if (!resetModal.hidden) closeDialog(resetModal);
   if (!prestigeModal.hidden) closeDialog(prestigeModal);
   if (!swapModal.hidden) closeDialog(swapModal);
+  // A perk tooltip can always be dismissed without moving the pointer or focus.
+  if (!perkTip.hidden) {
+    tipDismissed = true;
+    renderTip();
+  }
 });
 
 /** Return the live state to a fresh run's starting point (reset or prestige). */
@@ -1615,6 +1978,8 @@ function playReset(isotopesBefore: number): void {
   imploding = true;
   reactor.classList.remove('is-blooming');
   reactor.classList.add('is-imploding');
+  // The run's perks go with it: the shelf fades as the core collapses.
+  perkShelf.classList.add('is-clearing');
   // Everything off the reactor face updates now; the face waits.
   renderReadouts();
   renderShop();
@@ -1768,7 +2133,12 @@ function buyOffer(tab: ShopTab, replace?: PerkId): void {
   if (result !== 'bought' && result !== 'upgraded' && result !== 'swapped') return;
 
   SOUND.perkBuy();
+  // Where the flight to the shelf starts, before the tile flares.
+  const from = offerRows[tab].tile.getBoundingClientRect();
   leaveOffer(tab, true);
+  renderPerkShelf();
+  renderPerksPanel();
+  flyToShelf(from, offer.id);
   const name = perk(offer.id).name;
   announce(
     result === 'upgraded'
@@ -1802,14 +2172,14 @@ function openSwap(tab: ShopTab, mode: 'slot' | 'keystone'): void {
   if (!offer) return;
   const incoming = perk(offer.id);
   swapTab = tab;
-  swapIncoming.replaceChildren(perkCard(offer.id, offer.level, false));
+  swapIncoming.replaceChildren(swapCard(offer.id, offer.level));
   swapList.replaceChildren();
 
   if (mode === 'slot') {
     swapTitle.textContent = `All ${PERK_SLOTS} slots are full`;
     swapMessage.textContent = `Pick a perk to drop for ${incoming.name}. The one you drop is gone for the rest of this run.`;
     for (const held of state.perks.owned) {
-      const card = perkCard(held.id, held.level, true);
+      const card = swapCard(held.id, held.level, true);
       card.addEventListener('click', () => {
         closeDialog(swapModal);
         buyOffer(tab, held.id);
@@ -1825,7 +2195,7 @@ function openSwap(tab: ShopTab, mode: 'slot' | 'keystone'): void {
     const level = perkLevel(state, held);
     swapTitle.textContent = 'Swap your keystone?';
     swapMessage.textContent = `You can hold one keystone at a time. ${incoming.name} takes the place of ${perkTitle(held, level)}, which is gone for the rest of this run.`;
-    const card = perkCard(held, level, false);
+    const card = swapCard(held, level);
     card.classList.add('is-outgoing');
     const item = document.createElement('li');
     item.append(card);
