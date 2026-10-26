@@ -23,6 +23,9 @@
  *   for time away doesn't count: `deferPerks` moves the offers past it.
  * - Five slots, one keystone at a time. A new keystone swaps the old one; a new
  *   perk with every slot full needs one named to drop.
+ * - The isotope track (track.ts) bends some of this through the run's
+ *   modifiers: odds, a fresh perk's level, prices, windows, slots, keystones,
+ *   and a reroll.
  *
  * Randomness comes from the seed in the save (rng.ts), so reloading the page
  * replays the same drops instead of rerolling them.
@@ -31,7 +34,6 @@
 import {
   PERK_DROPS,
   PERK_MAX_LEVEL,
-  PERK_SLOTS,
   PERK_UPGRADE_SCALE,
   PERKS,
   type AutoTapperId,
@@ -42,6 +44,7 @@ import {
   type ShopTab,
 } from './config';
 import { bestTapper, offerOn, perk } from './economy';
+import { modsOf } from './mods';
 import { nextRandom } from './rng';
 import type { PerkOffer, PerkState, SaveState } from './save';
 
@@ -114,19 +117,22 @@ function firstEver(state: SaveState): boolean {
 /**
  * Put a perk on offer in a tab with no live one: a tier by its odds (among
  * tiers with anything left to drop), then a perk in that tier. `commonOnly`
- * (a player's first drop ever) keeps to commons while any are left. Null when
- * both tabs are taken or nothing is left.
+ * (a player's first drop ever) keeps to commons while any are left. `only`
+ * keeps to one tab and leaves one perk out, for a reroll. Null when both tabs
+ * are taken or nothing is left.
  */
 function dropPerk(
   state: SaveState,
   income: number,
   odds: Readonly<Record<PerkRarity, number>>,
-  commonOnly = false
+  commonOnly = false,
+  only?: { tab: ShopTab; not: PerkId }
 ): PerkOffer | null {
   const perks = state.perks;
-  const open = TABS.filter((tab) => !offerOn(state, tab));
+  const open = only ? [only.tab] : TABS.filter((tab) => !offerOn(state, tab));
   const available = PERKS.filter(
-    (def) => open.includes(def.tab) && perkLevel(state, def.id) < PERK_MAX_LEVEL
+    (def) =>
+      open.includes(def.tab) && def.id !== only?.not && perkLevel(state, def.id) < PERK_MAX_LEVEL
   );
   const commons = available.filter((def) => def.rarity === 'common');
   const pool = commonOnly && commons.length > 0 ? commons : available;
@@ -146,14 +152,19 @@ function dropPerk(
  * to stage a build's perfect run.
  */
 export function placeOffer(state: SaveState, def: PerkDef, income: number): PerkOffer {
+  const mods = modsOf(state);
   const pace = Math.max(income, PERK_DROPS.minIncome);
   const held = perkLevel(state, def.id);
+  // Familiar: a perk held before, in any run, costs less.
+  const familiar = (state.perks.codex[def.id] ?? 0) > 0 ? 1 - mods.familiarDiscount : 1;
+  const base = PERK_DROPS.priceS[def.rarity] * pace * familiar;
   const offer: PerkOffer = {
     id: def.id,
-    level: held + 1,
-    price: Math.max(1, Math.round(PERK_DROPS.priceS[def.rarity] * pace * upgradeFactor(held))),
+    // Prodigy: a perk not held drops at level II, still at the level I price.
+    level: held > 0 ? held + 1 : mods.freshLevel,
+    price: Math.max(1, Math.round(base * upgradeFactor(held))),
     droppedAt: state.runLifetime,
-    expiresAt: state.runLifetime + PERK_DROPS.windowS[def.rarity] * pace,
+    expiresAt: state.runLifetime + PERK_DROPS.windowS[def.rarity] * pace * mods.offerWindowMult,
     seen: false,
     seenAffordable: false,
   };
@@ -192,7 +203,7 @@ export function perkTick(state: SaveState, income: number, activeDt: number): Pe
   }
   if (perks.activeS < perks.nextDropAtS) return events;
 
-  const offer = dropPerk(state, income, PERK_DROPS.odds, firstEver(state));
+  const offer = dropPerk(state, income, modsOf(state).dropOdds, firstEver(state));
   perks.nextDropAtS = perks.activeS + nextGap(perks);
   if (offer) events.dropped.push(offer);
   return events;
@@ -226,32 +237,63 @@ export function deferPerks(state: SaveState, amount: number): void {
 export type BuyPerkResult =
   'bought' | 'upgraded' | 'swapped' | 'needs-slot' | 'unaffordable' | 'no-offer';
 
-/** True when buying the tab's offer would need a perk named to drop. */
-export function needsSlot(state: SaveState, tab: ShopTab): boolean {
-  const offer = offerOn(state, tab);
-  if (!offer || perkLevel(state, offer.id) > 0) return false;
-  if (perk(offer.id).rarity === 'keystone' && heldKeystone(state)) return false;
-  return state.perks.owned.length >= PERK_SLOTS;
+/** The keystones held this run, in slot order. */
+function keystonesHeld(state: SaveState): PerkId[] {
+  return state.perks.owned.filter((o) => perk(o.id).rarity === 'keystone').map((o) => o.id);
 }
 
-function heldKeystone(state: SaveState): boolean {
-  return state.perks.owned.some((o) => perk(o.id).rarity === 'keystone');
+/** The tab's offer, when it is a perk not held: a buy that needs a slot. */
+function newPerkOn(state: SaveState, tab: ShopTab): PerkOffer | null {
+  const offer = offerOn(state, tab);
+  return offer && perkLevel(state, offer.id) === 0 ? offer : null;
+}
+
+/** True when a new keystone on the tab would pass the run's keystone limit. */
+function overKeystones(state: SaveState, offer: PerkOffer): boolean {
+  return (
+    perk(offer.id).rarity === 'keystone' &&
+    keystonesHeld(state).length >= modsOf(state).keystoneSlots
+  );
+}
+
+/**
+ * The perks a buy of the tab's offer needs the player to name one of, to drop:
+ * every perk held when the slots are full, or the keystones held when a new
+ * keystone would pass a limit of two (Twin Keystones). Empty when nothing
+ * needs naming, including a lone keystone's swap, which keystoneSwap covers.
+ */
+export function swapChoices(state: SaveState, tab: ShopTab): PerkId[] {
+  const offer = newPerkOn(state, tab);
+  if (!offer) return [];
+  if (overKeystones(state, offer)) {
+    return modsOf(state).keystoneSlots > 1 ? keystonesHeld(state) : [];
+  }
+  return state.perks.owned.length >= modsOf(state).perkSlots
+    ? state.perks.owned.map((o) => o.id)
+    : [];
+}
+
+/** True when buying the tab's offer needs a perk named to drop. */
+export function needsSlot(state: SaveState, tab: ShopTab): boolean {
+  return swapChoices(state, tab).length > 0;
 }
 
 /**
  * The keystone that buying the tab's offer would swap out: the offer is a new
- * keystone and another one is held. Null otherwise. The shop asks first.
+ * keystone and the run holds as many as it may, which is one. Null otherwise.
+ * The shop asks first.
  */
 export function keystoneSwap(state: SaveState, tab: ShopTab): PerkId | null {
-  const offer = offerOn(state, tab);
-  if (!offer || perkLevel(state, offer.id) > 0 || perk(offer.id).rarity !== 'keystone') return null;
-  return state.perks.owned.find((o) => perk(o.id).rarity === 'keystone')?.id ?? null;
+  const offer = newPerkOn(state, tab);
+  if (!offer || !overKeystones(state, offer) || modsOf(state).keystoneSlots > 1) return null;
+  return keystonesHeld(state)[0] ?? null;
 }
 
 /**
- * Buy the offer on a tab. An owned perk goes up a level; a new keystone swaps
- * out the one held; a new perk takes a free slot, or the slot of `replace`
- * when all five are full. Changes nothing unless it succeeds.
+ * Buy the offer on a tab. An owned perk goes up a level; a new keystone past
+ * the limit swaps out the one held, or the one named in `replace` when there
+ * are two; any other new perk takes a free slot, or the slot of `replace`
+ * when all are full. Changes nothing unless it succeeds.
  */
 export function buyPerk(state: SaveState, tab: ShopTab, replace?: PerkId): BuyPerkResult {
   const perks = state.perks;
@@ -259,6 +301,7 @@ export function buyPerk(state: SaveState, tab: ShopTab, replace?: PerkId): BuyPe
   if (!offer) return 'no-offer';
   if (state.energy < offer.price) return 'unaffordable';
 
+  const mods = modsOf(state);
   const owned = perks.owned.find((o) => o.id === offer.id);
   let result: BuyPerkResult;
   let dropped: PerkId | null = null;
@@ -266,17 +309,17 @@ export function buyPerk(state: SaveState, tab: ShopTab, replace?: PerkId): BuyPe
     owned.level = offer.level;
     result = 'upgraded';
   } else {
-    const slot = { id: offer.id, level: 1 };
-    const keystoneAt =
-      perk(offer.id).rarity === 'keystone'
-        ? perks.owned.findIndex((o) => perk(o.id).rarity === 'keystone')
-        : -1;
+    const slot = { id: offer.id, level: offer.level };
+    const keystones = keystonesHeld(state);
+    const swapOut = overKeystones(state, offer)
+      ? mods.keystoneSlots > 1
+        ? keystones.find((id) => id === replace)
+        : keystones[0]
+      : perks.owned.length < mods.perkSlots
+        ? null
+        : replace;
     const at =
-      keystoneAt >= 0
-        ? keystoneAt
-        : perks.owned.length < PERK_SLOTS
-          ? perks.owned.length
-          : perks.owned.findIndex((o) => o.id === replace);
+      swapOut === null ? perks.owned.length : perks.owned.findIndex((o) => o.id === swapOut);
     if (at < 0) return 'needs-slot';
     dropped = perks.owned[at]?.id ?? null;
     perks.owned[at] = slot;
@@ -286,13 +329,42 @@ export function buyPerk(state: SaveState, tab: ShopTab, replace?: PerkId): BuyPe
   state.energy -= offer.price;
   perks.offers = perks.offers.filter((o) => o !== offer);
   perks.codex[offer.id] = Math.max(perks.codex[offer.id] ?? 0, offer.level);
-  // An upgrade on offer for the perk just dropped becomes a fresh perk again.
+  // An upgrade on offer for the perk just dropped becomes a fresh perk again,
+  // at a fresh perk's level and price.
   const orphan = dropped && perks.offers.find((o) => o.id === dropped);
   if (orphan) {
     orphan.price = Math.max(1, Math.round(orphan.price / upgradeFactor(orphan.level - 1)));
-    orphan.level = 1;
+    orphan.level = mods.freshLevel;
   }
   return result;
+}
+
+// --- Reroll (the isotope track) ---------------------------------------------------
+
+/** Rerolls this run still has: none without the Reroll rung. */
+export function rerollsLeft(state: SaveState): number {
+  return Math.max(0, modsOf(state).rerolls - state.perks.rerollsUsed);
+}
+
+/**
+ * Reroll: swap the tab's offer for a fresh drop on the run's odds, priced and
+ * timed at `income` now, never the perk it replaces. Uses a reroll only when a
+ * new perk comes; with none left, or nothing else to draw, it changes nothing
+ * and returns null.
+ */
+export function rerollOffer(state: SaveState, tab: ShopTab, income: number): PerkOffer | null {
+  const old = offerOn(state, tab);
+  if (!old || rerollsLeft(state) <= 0) return null;
+  const perks = state.perks;
+  const others = perks.offers.filter((o) => o !== old);
+  perks.offers = others;
+  const offer = dropPerk(state, income, modsOf(state).dropOdds, false, { tab, not: old.id });
+  if (!offer) {
+    perks.offers = [...others, old];
+    return null;
+  }
+  perks.rerollsUsed += 1;
+  return offer;
 }
 
 /** Self-Replicator: a free copy of the best auto-tapper owned. */

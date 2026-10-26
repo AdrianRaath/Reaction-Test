@@ -180,8 +180,12 @@ test('reset the experiment: isotopes paid, the run wiped', async ({ page }) => {
   await expect(page.locator('#sc-prestige-held')).toHaveText(
     'You hold 2 isotopes, +20% to all gains.'
   );
-  expect(await energy(page)).toBe(0);
-  await expect(page.locator('#sc-state')).toHaveText('Dormant');
+  // Two isotopes hold Warm Start: the new run begins Warming, with 500 energy
+  // and a Lab Assistant, which has earned a little since.
+  expect(await energy(page)).toBeGreaterThanOrEqual(500);
+  expect(await energy(page)).toBeLessThan(510);
+  await expect(page.locator('#sc-state')).toHaveText('Warming');
+  await expect(page.locator('.shop-item[data-id="assistant"] [data-owned]')).toHaveText('1');
   await expect(page.locator('.shop-item[data-id="pneumatic"] [data-owned]')).toHaveText('0');
   await page.click('[data-tab="achievements"]');
   await expect(page.locator('.achievement[data-id="fresh-start"]')).toHaveClass(/is-unlocked/);

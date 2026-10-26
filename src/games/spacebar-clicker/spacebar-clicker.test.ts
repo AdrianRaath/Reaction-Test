@@ -260,13 +260,15 @@ describe('prestige', () => {
     s.achievements = ['first-press'];
 
     const after = prestigeReset(s, prestigeGain(s.runLifetime), NOW + 1);
-    expect(after.energy).toBe(0);
-    expect(after.runLifetime).toBe(0);
+    // Two isotopes hold Warm Start (track.ts): the new run begins at 500, Warming.
+    expect(after.energy).toBe(500);
+    expect(after.runLifetime).toBe(500);
     expect(after.upgrades.finger).toBe(0);
     expect(after.tappers.collider).toBe(0);
+    expect(after.tappers.assistant).toBe(1);
     expect(after.isotopes).toBe(2);
     expect(after.prestiges).toBe(1);
-    expect(after.totalLifetime).toBe(4e6);
+    expect(after.totalLifetime).toBe(4e6 + 500);
     expect(after.totalPresses).toBe(9000);
     expect(after.bestCombo).toBe(120);
     expect(after.bestSurgeCps).toBe(9.4);

@@ -10,7 +10,9 @@
  * The two one-off upgrades that change rules, the Stabiliser and
  * Synchronisation, are folded in here too, so a perk that overrides them
  * (Glass Rhythm, Full Sync) has one field to change rather than a special case
- * in the economy. Then each owned perk applies its effect at its level.
+ * in the economy. Then each owned perk applies its effect at its level, and
+ * last the isotope track's rungs in force (track.ts), so a rung that adds to a
+ * rule adds to whatever a perk made of it.
  *
  * Economy functions take `mods = modsOf(state)` as an optional last argument:
  * the game never passes it, tests pass it to exercise one field directly.
@@ -20,19 +22,26 @@ import {
   AUTO_TAPPERS,
   COMBO,
   COMBO_TIERS,
+  ISOTOPE_BONUS,
   OFFLINE,
+  PERK_DROPS,
   PERK_EFFECT,
+  PERK_SLOTS,
   PERKS,
   SURGE,
   SYNC_SHARE,
+  TRACK_EFFECT,
   type AutoTapperId,
   type ComboRules,
   type ComboTierDef,
   type OfflineRules,
   type PerkId,
+  type PerkRarity,
+  type RungId,
   type SurgeRules,
 } from './config';
 import type { SaveState } from './save';
+import { activeRungs } from './track';
 
 export interface Mods {
   // --- Presses -----------------------------------------------------------
@@ -95,6 +104,26 @@ export interface Mods {
 
   // --- Away --------------------------------------------------------------
   offline: Readonly<OfflineRules>;
+
+  // --- Perk rules the isotope track bends ----------------------------------
+  /** Perks a run can hold. */
+  perkSlots: number;
+  /** Keystones a run can hold. */
+  keystoneSlots: number;
+  /** The level a perk not held drops at. */
+  freshLevel: number;
+  /** Tier odds for an ordinary drop. A surge's bonus drop keeps its own. */
+  dropOdds: Readonly<Record<PerkRarity, number>>;
+  /** Multiplier on how long an offer stays. */
+  offerWindowMult: number;
+  /** Price cut on a perk held before, in any run. */
+  familiarDiscount: number;
+  /** Offers a run can swap for a fresh drop. */
+  rerolls: number;
+
+  // --- Isotopes ------------------------------------------------------------
+  /** What each isotope adds to every gain. */
+  isotopeRate: number;
 }
 
 const ONES = Object.fromEntries(AUTO_TAPPERS.map((t) => [t.id, 1])) as Record<AutoTapperId, number>;
@@ -129,6 +158,14 @@ export const BASE_MODS: Readonly<Mods> = Object.freeze({
   tapperCostMult: 1,
   replicateEveryS: 0,
   offline: OFFLINE,
+  perkSlots: PERK_SLOTS,
+  keystoneSlots: 1,
+  freshLevel: 1,
+  dropOdds: PERK_DROPS.odds,
+  offerWindowMult: 1,
+  familiarDiscount: 0,
+  rerolls: 0,
+  isotopeRate: ISOTOPE_BONUS,
 });
 
 /** Mods while perks are applied: the nested rule sets are this run's own copies. */
@@ -235,7 +272,54 @@ const EFFECTS: Record<PerkId, (m: Draft, v: number) => void> = {
   },
 };
 
-function build(state: SaveState): Readonly<Mods> {
+/**
+ * What each rung of the isotope track does (config.ts, ISOTOPE_TRACK). Applied
+ * after the perks, in track order, so Rich Find's odds replace Lucky Find's.
+ * Head starts and kept perks happen at the reset instead (save.ts).
+ */
+const RUNGS: Partial<Record<RungId, (m: Draft) => void>> = {
+  capacitor: (m) => {
+    m.surge.durationS += TRACK_EFFECT.capacitorS;
+  },
+  'sixth-slot': (m) => {
+    m.perkSlots = TRACK_EFFECT.sixthSlotSlots;
+  },
+  prodigy: (m) => {
+    m.freshLevel = TRACK_EFFECT.prodigyLevel;
+  },
+  'night-lab': (m) => {
+    // Night Shift pays more, and wins where it does.
+    m.offline.rate = Math.max(m.offline.rate, TRACK_EFFECT.nightLabRate);
+    m.offline.capS = Math.max(m.offline.capS, TRACK_EFFECT.nightLabCapS);
+  },
+  'lucky-find': (m) => {
+    m.dropOdds = TRACK_EFFECT.luckyFindOdds;
+  },
+  reroll: (m) => {
+    m.rerolls = TRACK_EFFECT.rerollsPerRun;
+  },
+  patience: (m) => {
+    m.offerWindowMult = TRACK_EFFECT.patienceWindowMult;
+  },
+  familiar: (m) => {
+    m.familiarDiscount = TRACK_EFFECT.familiarDiscount;
+  },
+  'rich-find': (m) => {
+    m.dropOdds = TRACK_EFFECT.richFindOdds;
+  },
+  'perfect-pitch': (m) => {
+    // Metronome widens it further, and wins where it does.
+    m.combo.tolerance = Math.max(m.combo.tolerance, TRACK_EFFECT.perfectPitchTolerance);
+  },
+  'twin-keystones': (m) => {
+    m.keystoneSlots = TRACK_EFFECT.twinKeystoneSlots;
+  },
+  enrichment: (m) => {
+    m.isotopeRate = TRACK_EFFECT.enrichmentRate;
+  },
+};
+
+function build(state: SaveState, rungs: readonly RungId[]): Readonly<Mods> {
   const m: Draft = {
     ...BASE_MODS,
     combo: { ...BASE_MODS.combo },
@@ -249,6 +333,7 @@ function build(state: SaveState): Readonly<Mods> {
     const level = state.perks.owned.find((o) => o.id === def.id)?.level ?? 0;
     if (level > 0) EFFECTS[def.id](m, def.values[level - 1]!);
   }
+  for (const id of rungs) RUNGS[id]?.(m);
   return Object.freeze(m);
 }
 
@@ -260,10 +345,11 @@ const cache = new Map<string, Readonly<Mods>>();
  */
 export function modsOf(state: SaveState): Readonly<Mods> {
   const perks = state.perks.owned.map((o) => `${o.id}:${o.level}`).join(',');
-  const key = `${state.upgrades.stabiliser > 0 ? 1 : 0}${state.upgrades.sync > 0 ? 1 : 0}|${perks}`;
+  const rungs = activeRungs(state.isotopes, state.forks);
+  const key = `${state.upgrades.stabiliser > 0 ? 1 : 0}${state.upgrades.sync > 0 ? 1 : 0}|${perks}|${rungs.join(',')}`;
   let mods = cache.get(key);
   if (!mods) {
-    mods = build(state);
+    mods = build(state, rungs);
     cache.set(key, mods);
   }
   return mods;

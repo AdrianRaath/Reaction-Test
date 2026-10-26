@@ -130,9 +130,9 @@ export function milestoneBonus(runLifetime: number): number {
   return 1 + MILESTONE_BONUS * reactorIndex(runLifetime);
 }
 
-/** +10% per isotope, additive (spec §9). */
-export function isotopeBonus(isotopes: number): number {
-  return 1 + ISOTOPE_BONUS * isotopes;
+/** +10% per isotope, additive (spec §9); +15% with Enrichment (the run's `isotopeRate`). */
+export function isotopeBonus(isotopes: number, rate: number = ISOTOPE_BONUS): number {
+  return 1 + rate * isotopes;
 }
 
 /** The combo the formulas see: none at all when a perk switches it off. */
@@ -162,7 +162,7 @@ export function energyPerPress(
     surge *
     afterglow *
     milestoneBonus(state.runLifetime) *
-    isotopeBonus(state.isotopes);
+    isotopeBonus(state.isotopes, mods.isotopeRate);
   // Feedback Loop: each press also pays a share of a second's income.
   const feedback =
     mods.pressPaysEps > 0 ? mods.pressPaysEps * energyPerSecond(state, ctx, mods) : 0;
@@ -221,7 +221,7 @@ export function energyPerSecond(
     idle *
     surge *
     milestoneBonus(state.runLifetime) *
-    isotopeBonus(state.isotopes)
+    isotopeBonus(state.isotopes, mods.isotopeRate)
   );
 }
 

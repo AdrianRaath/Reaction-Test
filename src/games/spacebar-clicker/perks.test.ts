@@ -762,6 +762,7 @@ describe('perks in the save', () => {
       rng: 1234,
       activeS: 0,
       nextDropAtS: null,
+      rerollsUsed: 0,
       codex: { metronome: 2, overtime: 0 },
     });
   });

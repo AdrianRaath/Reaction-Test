@@ -677,6 +677,186 @@ export const PERK_DROPS = {
   windowS: { common: 60, rare: 90, keystone: 150 } as Readonly<Record<PerkRarity, number>>,
 } as const;
 
+/**
+ * The isotope track (SPACEBAR-CLICKER.md §8.3), phase 2. One unlock for each
+ * isotope held, up to twelve. Every third step is a fork: two rungs, and the
+ * player picks one, changing it only at a reset. Nothing is spent; holding
+ * the isotopes is what unlocks them. The rules live in track.ts, mods.ts and
+ * the reset (save.ts).
+ */
+export type RungId =
+  | 'warm-start'
+  | 'capacitor'
+  | 'sixth-slot'
+  | 'prodigy'
+  | 'night-lab'
+  | 'lucky-find'
+  | 'reroll'
+  | 'patience'
+  | 'familiar'
+  | 'hot-start'
+  | 'heirloom'
+  | 'cornerstone'
+  | 'rich-find'
+  | 'perfect-pitch'
+  | 'twin-keystones'
+  | 'enrichment';
+
+export interface RungDef {
+  id: RungId;
+  name: string;
+  detail: string;
+}
+
+/** The track at one isotope count: a single rung, or a fork of two. */
+export interface TrackStep {
+  isotopes: number;
+  rungs: readonly [RungDef] | readonly [RungDef, RungDef];
+}
+
+export const ISOTOPE_TRACK: readonly TrackStep[] = [
+  {
+    isotopes: 1,
+    rungs: [
+      {
+        id: 'warm-start',
+        name: 'Warm Start',
+        detail: 'Each run starts Warming, with 500 energy and a Lab Assistant already working',
+      },
+    ],
+  },
+  {
+    isotopes: 2,
+    rungs: [
+      {
+        id: 'capacitor',
+        name: 'Capacitor',
+        detail: 'Surges last a second longer: 6 seconds instead of 5',
+      },
+    ],
+  },
+  {
+    isotopes: 3,
+    rungs: [
+      { id: 'sixth-slot', name: 'Sixth Slot', detail: 'A sixth perk slot' },
+      {
+        id: 'prodigy',
+        name: 'Prodigy',
+        detail: "Perks you don't hold drop at level II, for their level I price",
+      },
+    ],
+  },
+  {
+    isotopes: 4,
+    rungs: [
+      {
+        id: 'night-lab',
+        name: 'Night Lab',
+        detail: 'Away progress pays 60% instead of 50%, for up to 6 hours instead of 4',
+      },
+    ],
+  },
+  {
+    isotopes: 5,
+    rungs: [
+      { id: 'lucky-find', name: 'Lucky Find', detail: 'Drops lean rarer: rares 35%, keystones 7%' },
+    ],
+  },
+  {
+    isotopes: 6,
+    rungs: [
+      { id: 'reroll', name: 'Reroll', detail: 'Once a run, swap a perk on offer for a fresh drop' },
+      { id: 'patience', name: 'Patience', detail: 'Perks stay on offer twice as long' },
+    ],
+  },
+  {
+    isotopes: 7,
+    rungs: [{ id: 'familiar', name: 'Familiar', detail: "Perks you've held before cost 25% less" }],
+  },
+  {
+    isotopes: 8,
+    rungs: [
+      {
+        id: 'hot-start',
+        name: 'Hot Start',
+        detail: 'Each run also starts with Finger Strength III and a Pneumatic Key',
+      },
+    ],
+  },
+  {
+    isotopes: 9,
+    rungs: [
+      {
+        id: 'heirloom',
+        name: 'Heirloom',
+        detail: "Keep one perk that isn't a keystone through a reset, at level I",
+      },
+      {
+        id: 'cornerstone',
+        name: 'Cornerstone',
+        detail: 'Keep your keystone through a reset, at level I',
+      },
+    ],
+  },
+  {
+    isotopes: 10,
+    rungs: [
+      {
+        id: 'rich-find',
+        name: 'Rich Find',
+        detail: 'Drops lean rarer still: rares 40%, keystones 10%',
+      },
+    ],
+  },
+  {
+    isotopes: 11,
+    rungs: [
+      {
+        id: 'perfect-pitch',
+        name: 'Perfect Pitch',
+        detail: 'Rhythm tolerance widens from 25% to 30%',
+      },
+    ],
+  },
+  {
+    isotopes: 12,
+    rungs: [
+      { id: 'twin-keystones', name: 'Twin Keystones', detail: 'Hold two keystones at once' },
+      {
+        id: 'enrichment',
+        name: 'Enrichment',
+        detail: 'Each isotope adds 15% to all gains instead of 10%',
+      },
+    ],
+  },
+];
+
+/** What the rungs do, quoted in their `detail`. */
+export const TRACK_EFFECT = {
+  /** Warm Start: energy credited as a run begins, enough to reach Warming. */
+  warmStartEnergy: 500,
+  /** Hot Start: the Finger Strength levels a run begins with. */
+  hotStartFinger: 3,
+  /** Capacitor: seconds added to a surge, after any perk sets its length. */
+  capacitorS: 1,
+  nightLabRate: 0.6,
+  nightLabCapS: 6 * 3600,
+  luckyFindOdds: { common: 0.58, rare: 0.35, keystone: 0.07 } as Readonly<
+    Record<PerkRarity, number>
+  >,
+  richFindOdds: { common: 0.5, rare: 0.4, keystone: 0.1 } as Readonly<Record<PerkRarity, number>>,
+  familiarDiscount: 0.25,
+  perfectPitchTolerance: 0.3,
+  sixthSlotSlots: 6,
+  /** Prodigy: the level a perk not held drops at. */
+  prodigyLevel: 2,
+  rerollsPerRun: 1,
+  patienceWindowMult: 2,
+  twinKeystoneSlots: 2,
+  /** Enrichment: what each isotope adds to every gain, instead of ISOTOPE_BONUS. */
+  enrichmentRate: 0.15,
+} as const;
+
 /** Spec §10. Cosmetic; the checks live in achievements.ts. */
 export const ACHIEVEMENTS: readonly AchievementDef[] = [
   { id: 'first-press', name: 'First Press', detail: 'Press the spacebar once' },

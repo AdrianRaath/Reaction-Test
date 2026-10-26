@@ -11,16 +11,19 @@ import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
   PERK_MAX_LEVEL,
-  PERK_SLOTS,
   PERKS,
   PRESS_UPGRADES,
   SAVE_VERSION,
+  TRACK_EFFECT,
   type AchievementId,
   type AutoTapperId,
   type PerkId,
   type PressUpgradeId,
   type ShopItemId,
 } from './config';
+import { earn } from './economy';
+import { modsOf } from './mods';
+import { activeRungs, cleanPicks, type ForkPicks } from './track';
 
 export interface OwnedPerk {
   id: PerkId;
@@ -55,6 +58,8 @@ export interface PerkState {
   activeS: number;
   /** The `activeS` at which the next drop comes; null until it is drawn. */
   nextDropAtS: number | null;
+  /** Offers swapped for a fresh drop this run (the Reroll rung). Wiped by prestige. */
+  rerollsUsed: number;
   /**
    * Every perk ever dropped, with the best level ever held (0 if only seen).
    * Survives prestige; only the full reset clears it.
@@ -83,6 +88,11 @@ export interface SaveState {
    */
   announced: Partial<Record<ShopItemId, number>>;
   isotopes: number;
+  /**
+   * The isotope track's fork picks (track.ts), keyed by the fork's isotope
+   * count. Survives prestige; only the full reset clears it.
+   */
+  forks: ForkPicks;
   prestiges: number;
   bestCombo: number;
   bestSurgeCps: number;
@@ -114,6 +124,7 @@ function freshRun(perks: Pick<PerkState, 'rng' | 'codex'>): PerkState {
     rng: perks.rng,
     activeS: 0,
     nextDropAtS: null,
+    rerollsUsed: 0,
     codex: { ...perks.codex },
   };
 }
@@ -136,6 +147,7 @@ export function defaultSave(now: number): SaveState {
     seen: ['assistant'],
     announced: {},
     isotopes: 0,
+    forks: {},
     prestiges: 0,
     bestCombo: 0,
     bestSurgeCps: 0,
@@ -191,27 +203,34 @@ function whole(value: unknown, min: number, max: number): number | null {
     : null;
 }
 
+/** The run's perk rules the isotope track can bend: slots, keystones, a fresh perk's level. */
+interface PerkRules {
+  perkSlots: number;
+  keystoneSlots: number;
+  freshLevel: number;
+}
+
 /**
  * The perks block, tolerating anything. Owned perks keep the slot cap and the
- * one-keystone rule; an offer survives only if it is consistent with what is
+ * keystone limit; an offer survives only if it is consistent with what is
  * owned, one per tab.
  */
-function parsePerks(value: unknown, now: number): PerkState {
+function parsePerks(value: unknown, now: number, rules: PerkRules): PerkState {
   const d = (value && typeof value === 'object' && !Array.isArray(value) ? value : {}) as Record<
     string,
     unknown
   >;
 
   const owned: OwnedPerk[] = [];
-  let keystone = false;
+  let keystones = 0;
   for (const raw of Array.isArray(d.owned) ? d.owned : []) {
-    if (owned.length >= PERK_SLOTS || !raw || typeof raw !== 'object') continue;
+    if (owned.length >= rules.perkSlots || !raw || typeof raw !== 'object') continue;
     const { id, level } = raw as Record<string, unknown>;
     const lvl = whole(level, 1, PERK_MAX_LEVEL);
     if (!isPerkId(id) || lvl === null || owned.some((o) => o.id === id)) continue;
     if (PERK_BY_ID.get(id)!.rarity === 'keystone') {
-      if (keystone) continue;
-      keystone = true;
+      if (keystones >= rules.keystoneSlots) continue;
+      keystones++;
     }
     owned.push({ id, level: lvl });
   }
@@ -223,12 +242,14 @@ function parsePerks(value: unknown, now: number): PerkState {
     if (!isPerkId(o.id)) continue;
     const id = o.id;
     const held = owned.find((p) => p.id === id)?.level ?? 0;
+    // An upgrade goes one level up; a perk not held drops at the run's fresh level.
+    const level = held > 0 ? held + 1 : rules.freshLevel;
     const tab = PERK_BY_ID.get(id)!.tab;
     const price = num(o.price, -1);
     const droppedAt = num(o.droppedAt, -1);
     const expiresAt = num(o.expiresAt, -1);
     if (
-      o.level !== held + 1 ||
+      o.level !== level ||
       held >= PERK_MAX_LEVEL ||
       price <= 0 ||
       droppedAt < 0 ||
@@ -239,7 +260,7 @@ function parsePerks(value: unknown, now: number): PerkState {
     }
     offers.push({
       id,
-      level: held + 1,
+      level,
       price,
       droppedAt,
       expiresAt,
@@ -266,6 +287,7 @@ function parsePerks(value: unknown, now: number): PerkState {
     activeS: num(d.activeS, 0),
     // Unknown means undrawn: the next tick draws it.
     nextDropAtS: num(d.nextDropAtS, -1) >= 0 ? (d.nextDropAtS as number) : null,
+    rerollsUsed: Math.floor(num(d.rerollsUsed, 0)),
     codex,
   };
 }
@@ -303,6 +325,10 @@ export function parseSave(raw: string | null, now: number): SaveState {
   if (!seen.includes('assistant')) seen.unshift('assistant');
 
   const runLifetime = num(d.runLifetime, 0);
+  const isotopes = Math.floor(num(d.isotopes, 0));
+  const forks = cleanPicks(d.forks);
+  // The track decides how many perks and keystones the run may hold.
+  const rules = modsOf({ ...fresh, isotopes, forks });
   return {
     v: SAVE_VERSION,
     energy: num(d.energy, 0),
@@ -314,7 +340,8 @@ export function parseSave(raw: string | null, now: number): SaveState {
     revealed,
     seen,
     announced: levels(d.announced),
-    isotopes: Math.floor(num(d.isotopes, 0)),
+    isotopes,
+    forks,
     prestiges: Math.floor(num(d.prestiges, 0)),
     bestCombo: Math.floor(num(d.bestCombo, 0)),
     bestSurgeCps: num(d.bestSurgeCps, 0),
@@ -324,7 +351,7 @@ export function parseSave(raw: string | null, now: number): SaveState {
     // A lastSeen in the future (clock change) must not mint negative time.
     lastSeen: Math.min(num(d.lastSeen, now, 1), now),
     createdAt: Math.min(num(d.createdAt, now, 1), now),
-    perks: parsePerks(d.perks, now),
+    perks: parsePerks(d.perks, now, rules),
   };
 }
 
@@ -332,14 +359,34 @@ export function serializeSave(state: SaveState): string {
   return JSON.stringify(state);
 }
 
+/** What the player chooses as they reset: fork picks, and the perk a keeping rung carries. */
+export interface ResetChoices {
+  /** Picks for forks, new or changed. Anything invalid is ignored. */
+  forks?: ForkPicks;
+  /** Heirloom's held non-keystone, or Cornerstone's held keystone. */
+  keep?: PerkId;
+}
+
 /**
  * Prestige (spec §9). Wipes the run — energy, shop, reactor state, perks and
  * offers — and keeps isotopes, achievements, lifetime stats and best records.
  * The shop's revealed list survives too: a player on their second run knows
- * the shop. So do the perk codex and the drop generator's state.
+ * the shop. So do the perk codex, the drop generator's state and the fork
+ * picks.
+ *
+ * Then the isotope track (§8.3) starts the new run, with the isotopes it now
+ * holds and the picks just made: Warm Start and Hot Start give it a head
+ * start, and Heirloom or Cornerstone carries one perk across at level I.
  */
-export function prestigeReset(state: SaveState, isotopesGained: number, now: number): SaveState {
-  return {
+export function prestigeReset(
+  state: SaveState,
+  isotopesGained: number,
+  now: number,
+  choices: ResetChoices = {}
+): SaveState {
+  const isotopes = state.isotopes + isotopesGained;
+  const forks = cleanPicks({ ...state.forks, ...choices.forks });
+  const next: SaveState = {
     ...state,
     energy: 0,
     runLifetime: 0,
@@ -347,9 +394,33 @@ export function prestigeReset(state: SaveState, isotopesGained: number, now: num
     announced: {},
     upgrades: zeroed(UPGRADE_IDS),
     tappers: zeroed(TAPPER_IDS),
-    isotopes: state.isotopes + isotopesGained,
+    revealed: [...state.revealed],
+    seen: [...state.seen],
+    isotopes,
+    forks,
     prestiges: state.prestiges + 1,
     lastSeen: now,
     perks: freshRun(state.perks),
   };
+
+  const rungs = activeRungs(isotopes, forks);
+  if (rungs.includes('warm-start')) {
+    earn(next, TRACK_EFFECT.warmStartEnergy);
+    next.tappers.assistant = 1;
+  }
+  if (rungs.includes('hot-start')) {
+    next.upgrades.finger = TRACK_EFFECT.hotStartFinger;
+    next.tappers.pneumatic = 1;
+    if (!next.revealed.includes('pneumatic')) next.revealed.push('pneumatic');
+    if (!next.seen.includes('pneumatic')) next.seen.push('pneumatic');
+  }
+
+  const kept = choices.keep && state.perks.owned.find((o) => o.id === choices.keep);
+  if (kept) {
+    const keystone = PERK_BY_ID.get(kept.id)!.rarity === 'keystone';
+    if (rungs.includes(keystone ? 'cornerstone' : 'heirloom')) {
+      next.perks.owned = [{ id: kept.id, level: 1 }];
+    }
+  }
+  return next;
 }
