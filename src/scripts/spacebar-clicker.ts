@@ -45,9 +45,11 @@ import {
   energyPerPress,
   energyPerSecond,
   isotopeBonus,
+  isotopeProgress,
   luckyMultiplier,
   markShopTabSeen,
   nextComboTier,
+  nextIsotopeAt,
   offerOn,
   offlineAward,
   perk,
@@ -171,9 +173,20 @@ const sparksEl = el('sc-sparks');
 const scopeEl = document.getElementById('sc-scope') as HTMLCanvasElement | null;
 const keycapEl = el('sc-keycap');
 const bezelEl = document.getElementById('sc-bezel') as SVGSVGElement | null;
+// The isotope shelf over the face's top-left corner: the beads held, then a
+// ring for the next reset once one is open, and a tooltip of its own.
 const shelfEl = el('sc-shelf');
+const isotopesHeld = el<HTMLButtonElement>('sc-isotopes-held');
 const pelletsEl = el('sc-pellets');
 const shelfMoreEl = el('sc-shelf-more');
+const isotopeNext = el<HTMLButtonElement>('sc-isotope-next');
+const isotopeRing = document.getElementById('sc-isotope-ring') as SVGCircleElement | null;
+const isotopeNextCount = el('sc-isotope-next-count');
+const isotopeTip = el('sc-isotope-tip');
+const isotopeTipName = el('sc-isotope-tip-name');
+const isotopeTipKind = el('sc-isotope-tip-kind');
+const isotopeTipDetail = el('sc-isotope-tip-detail');
+const reactorWrap = el('sc-reactor-wrap');
 const gameSection = el('game-section');
 
 // The perk shelf over the face's top-right corner: five sockets, a chip and
@@ -300,16 +313,15 @@ const statEls = {
 };
 
 const achCount = el('sc-ach-count');
-const prestigeLocked = el('sc-prestige-locked');
-const prestigeReady = el('sc-prestige-ready');
+const prestigeTab = el('sc-tab-prestige');
+const prestigeHeld = el('sc-prestige-held');
+const prestigeNow = el('sc-prestige-now');
+const isotopeMeter = el('sc-isotope-meter');
 const prestigeProgress = el('sc-prestige-progress');
-const prestigeGainEl = el('sc-prestige-gain');
 const prestigeBtn = el<HTMLButtonElement>('sc-prestige-btn');
-const isotopesEl = el('sc-isotopes');
-const isotopeBonusEl = el('sc-isotope-bonus');
 
 const prestigeModal = el('sc-prestige-modal');
-const prestigeModalGain = el('sc-prestige-modal-gain');
+const prestigeModalMessage = el('sc-prestige-modal-message');
 const prestigeCancel = el('sc-prestige-cancel');
 const prestigeConfirm = el('sc-prestige-confirm');
 
@@ -945,30 +957,39 @@ function renderPerkShelf(): void {
       slot.shown = held.id;
     }
   });
+  fitShelves();
   renderTip();
 }
 
-// The tooltip shows for the chip under a mouse, else the one with keyboard
-// focus, else the one last tapped. Escape dismisses it until the next hover,
+// A shelf's tooltip: a perk chip's, by its slot, or the isotope shelf's beads
+// or ring. It shows for whatever is under a mouse, else what has keyboard
+// focus, else what was last tapped. Escape dismisses it until the next hover,
 // focus or tap.
-let tipHover: number | null = null;
-let tipFocus: number | null = null;
-let tipPinned: number | null = null;
+type TipTarget = number | 'held' | 'next';
+let tipHover: TipTarget | null = null;
+let tipFocus: TipTarget | null = null;
+let tipPinned: TipTarget | null = null;
 let tipDismissed = false;
-let tipShown = '';
+let perkTipShown = '';
+let isotopeTipShown = '';
 let lastPointer = 'mouse';
 
 function renderTip(): void {
-  const slot = tipDismissed ? null : (tipHover ?? tipFocus ?? tipPinned);
+  const target = tipDismissed ? null : (tipHover ?? tipFocus ?? tipPinned);
+  renderPerkTip(typeof target === 'number' ? target : null);
+  renderIsotopeTip(typeof target === 'string' ? target : null);
+}
+
+function renderPerkTip(slot: number | null): void {
   const held = slot === null ? undefined : state.perks.owned[slot];
   perkTip.hidden = !held;
   if (!held || slot === null) {
-    tipShown = '';
+    perkTipShown = '';
     return;
   }
   const key = `${slot}:${held.id}:${held.level}`;
-  if (key === tipShown) return;
-  tipShown = key;
+  if (key === perkTipShown) return;
+  perkTipShown = key;
 
   const def = perk(held.id);
   perkTip.dataset.family = def.family;
@@ -982,6 +1003,37 @@ function renderTip(): void {
   perkTip.style.setProperty('--caret-right', `${shelf.right - (chip.left + chip.width / 2)}px`);
 }
 
+/** The isotopes held, or the next reset: what it pays now and where the next one comes. */
+function renderIsotopeTip(target: 'held' | 'next' | null): void {
+  const held = state.isotopes;
+  const gain = prestigeGain(state.runLifetime);
+  const shown = target === 'held' ? held > 0 : target === 'next' && gain > 0;
+  isotopeTip.hidden = !shown;
+  if (!shown) {
+    isotopeTipShown = '';
+    return;
+  }
+  const key = `${target}:${held}:${gain}`;
+  if (key === isotopeTipShown) return;
+  isotopeTipShown = key;
+
+  if (target === 'held') {
+    isotopeTipName.textContent = isotopeCount(held);
+    isotopeTipKind.textContent = `${bonusText(held)} to all gains`;
+    isotopeTipDetail.textContent =
+      'Each one adds 10% to everything you earn, and they last through every reset.';
+  } else {
+    isotopeTipName.textContent = `Reset now for ${isotopeCount(gain)}`;
+    isotopeTipKind.textContent = `${bonusText(held)} now, ${bonusText(held + gain)} after`;
+    isotopeTipDetail.textContent = `The next isotope comes at ${formatEnergy(nextIsotopeAt(state.runLifetime))} energy this run. Click to open the Reset the experiment tab.`;
+  }
+  // The caret points at the beads or the ring, and stays clear of the corner.
+  const anchor = (target === 'held' ? isotopesHeld : isotopeNext).getBoundingClientRect();
+  const tip = isotopeTip.getBoundingClientRect();
+  const caret = Math.max(12, anchor.left + anchor.width / 2 - tip.left);
+  isotopeTip.style.setProperty('--caret-left', `${caret}px`);
+}
+
 /** Close a tooltip a tap opened: tapping anywhere else, or pressing. */
 function unpinTip(): void {
   if (tipPinned === null) return;
@@ -989,50 +1041,86 @@ function unpinTip(): void {
   renderTip();
 }
 
-perkSlots.forEach((slot, i) => {
-  slot.chip.addEventListener('pointerdown', (e) => {
+/**
+ * Hover, keyboard focus or a tap shows a shelf button's tooltip. A button
+ * with an action (the isotope ring) runs it on any click instead of pinning.
+ */
+function wireTip(
+  button: HTMLButtonElement,
+  target: TipTarget,
+  action?: (fromKeyboard: boolean) => void
+): void {
+  button.addEventListener('pointerdown', (e) => {
     lastPointer = e.pointerType;
   });
-  slot.chip.addEventListener('pointerenter', (e) => {
+  button.addEventListener('pointerenter', (e) => {
     if (e.pointerType !== 'mouse') return;
-    tipHover = i;
+    tipHover = target;
     tipDismissed = false;
     renderTip();
   });
-  slot.chip.addEventListener('focus', () => {
-    if (!slot.chip.matches(':focus-visible')) return;
-    tipFocus = i;
+  button.addEventListener('focus', () => {
+    if (!button.matches(':focus-visible')) return;
+    tipFocus = target;
     tipDismissed = false;
     renderTip();
   });
-  slot.chip.addEventListener('blur', () => {
-    if (tipFocus !== i) return;
+  button.addEventListener('blur', () => {
+    if (tipFocus !== target) return;
     tipFocus = null;
     renderTip();
   });
-  slot.chip.addEventListener('click', (e) => {
+  button.addEventListener('click', (e) => {
+    if (action) {
+      action(e.detail === 0);
+      return;
+    }
     // From the keyboard (no pointer), focus is already showing it.
     if (e.detail === 0) return;
     // Touch has no hover, so a tap pins the tooltip open; a second tap closes it.
     if (lastPointer !== 'mouse') {
-      tipPinned = tipPinned === i ? null : i;
+      tipPinned = tipPinned === target ? null : target;
       tipDismissed = false;
       renderTip();
     }
-    // Space is the game's input; a focused chip would swallow it.
-    slot.chip.blur();
+    // Space is the game's input; a focused button would swallow it.
+    button.blur();
   });
-});
+}
 
-perkShelf.addEventListener('pointerleave', (e) => {
-  if (e.pointerType !== 'mouse' || tipHover === null) return;
-  tipHover = null;
-  renderTip();
-});
+perkSlots.forEach((slot, i) => wireTip(slot.chip, i));
+wireTip(isotopesHeld, 'held');
+wireTip(isotopeNext, 'next', openResetTab);
+
+for (const shelf of [shelfEl, perkShelf]) {
+  shelf.addEventListener('pointerleave', (e) => {
+    if (e.pointerType !== 'mouse' || tipHover === null) return;
+    tipHover = null;
+    renderTip();
+  });
+}
 
 document.addEventListener('pointerdown', (e) => {
-  if (!perkShelf.contains(e.target as Node)) unpinTip();
+  const on = e.target as Node;
+  if (!perkShelf.contains(on) && !shelfEl.contains(on)) unpinTip();
 });
+
+/**
+ * The ring's way in: select the Reset the experiment tab and bring it into
+ * view. From the keyboard, focus follows to the tab; from a pointer it lets
+ * go, so Space keeps pressing the reactor.
+ */
+function openResetTab(fromKeyboard: boolean): void {
+  tipHover = null;
+  tipPinned = null;
+  renderTip();
+  selectTab('prestige');
+  prestigeTab
+    .closest('.panels')
+    ?.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
+  if (fromKeyboard) prestigeTab.focus();
+  else isotopeNext.blur();
+}
 
 /** How long a bought perk takes to fly from its offer to its socket. */
 const PERK_FLY_MS = 650;
@@ -1162,7 +1250,9 @@ function renderStats(): void {
   statEls.epp.textContent = formatEnergy(energyPerPress(state, play));
   statEls.bestCombo.textContent = String(state.bestCombo);
   statEls.bestSurge.textContent = state.surges ? state.bestSurgeCps.toFixed(1) : '—';
-  statEls.isotopes.textContent = String(state.isotopes);
+  statEls.isotopes.textContent = state.isotopes
+    ? `${state.isotopes}, ${bonusText(state.isotopes)}`
+    : '0';
   statEls.prestiges.textContent = String(state.prestiges);
   statEls.played.textContent = formatDuration(state.playedS);
 }
@@ -1178,17 +1268,91 @@ function renderAchievements(): void {
   achCount.textContent = `${unlocked.size} of ${ACHIEVEMENTS.length}`;
 }
 
+// --- Isotopes: the Reset the experiment tab and the shelf ---------------------------
+
+function isotopeNoun(n: number): string {
+  return n === 1 ? 'isotope' : 'isotopes';
+}
+
+/** "1 isotope", "3 isotopes". */
+function isotopeCount(n: number): string {
+  return `${n} ${isotopeNoun(n)}`;
+}
+
+/** What n isotopes add to every gain, as "+30%". */
+function bonusText(n: number): string {
+  return `+${Math.round((isotopeBonus(n) - 1) * 100)}%`;
+}
+
+/** A word, or a number set as a readout (with an extra class, if given). */
+type SentencePart = string | [value: string, className?: string];
+
+/** Write a sentence whose numbers are readouts; unchanged, it is left alone. */
+function setSentence(target: HTMLElement, ...parts: SentencePart[]): void {
+  const key = JSON.stringify(parts);
+  if (target.dataset.sentence === key) return;
+  target.dataset.sentence = key;
+  target.replaceChildren(
+    ...parts.map((part) => {
+      if (typeof part === 'string') return part;
+      const number = document.createElement('span');
+      number.className = part[1] ? `readout ${part[1]}` : 'readout';
+      number.textContent = part[0];
+      return number;
+    })
+  );
+}
+
+/** The isotopes held, what a reset gives now, and the run's way to the next isotope. */
 function renderPrestige(): void {
+  const held = state.isotopes;
+  const gain = prestigeGain(state.runLifetime);
   const ready = prestigeUnlocked(state);
-  prestigeLocked.hidden = ready;
-  prestigeReady.hidden = !ready;
-  isotopesEl.textContent = String(state.isotopes);
-  isotopeBonusEl.textContent = `+${Math.round((isotopeBonus(state.isotopes) - 1) * 100)}%`;
-  if (ready) {
-    prestigeGainEl.textContent = String(prestigeGain(state.runLifetime));
+  if (held) {
+    setSentence(
+      prestigeHeld,
+      'You hold ',
+      [String(held)],
+      ` ${isotopeNoun(held)}, `,
+      [bonusText(held)],
+      ' to all gains.'
+    );
   } else {
-    prestigeProgress.textContent = `${formatEnergy(state.runLifetime)} of ${formatEnergy(PRESTIGE_UNLOCK)}`;
+    setSentence(prestigeHeld, 'No isotopes yet.');
   }
+  if (ready) {
+    setSentence(
+      prestigeNow,
+      'Resetting now gives ',
+      [String(gain), 'prestige-gain'],
+      ` ${isotopeNoun(gain)}: `,
+      [bonusText(held)],
+      ' now, ',
+      [bonusText(held + gain)],
+      ' after.'
+    );
+    const next = nextIsotopeAt(state.runLifetime);
+    setSentence(
+      prestigeProgress,
+      'Next isotope at ',
+      [formatEnergy(next)],
+      ', ',
+      [formatEnergy(next - state.runLifetime)],
+      ' to go'
+    );
+  } else {
+    setSentence(
+      prestigeNow,
+      'Resetting unlocks at ',
+      [PRESTIGE_UNLOCK.toLocaleString('en-US')],
+      ' energy earned this run.'
+    );
+    setSentence(prestigeProgress, [formatEnergy(state.runLifetime)], ' of ', [
+      formatEnergy(PRESTIGE_UNLOCK),
+    ]);
+  }
+  isotopeMeter.style.transform = `scaleX(${isotopeProgress(state.runLifetime)})`;
+  prestigeBtn.hidden = !ready;
 }
 
 function renderPanels(): void {
@@ -1201,13 +1365,35 @@ function renderPanels(): void {
 /** Pellets shown on the shelf before the rest collapse into "+N". */
 const SHELF_MAX = 10;
 
-/** The trophy shelf: one bead per isotope, kept across every reset. */
+/** What a reset paid when the shelf last drew, so a rise can pop the ring; null before the first draw. */
+let shelfGain: number | null = null;
+
+/**
+ * The trophy shelf: one bead per isotope, kept across every reset. Once a
+ * reset is open, the ring after them: the isotopes it pays now, filling
+ * toward the next. Runs on the panel tick, so it only touches what changed.
+ */
 function renderShelf(): void {
   const count = state.isotopes;
-  shelfEl.hidden = count === 0;
-  const label = `${count} isotope${count === 1 ? '' : 's'}, +${count * 10}% to all gains`;
-  shelfEl.setAttribute('aria-label', count ? label : 'No isotopes yet');
-  shelfEl.title = count ? label : '';
+  const gain = prestigeGain(state.runLifetime);
+  shelfEl.hidden = count === 0 && gain === 0;
+
+  isotopesHeld.hidden = count === 0;
+  const heldLabel = `${isotopeCount(count)}, ${bonusText(count)} to all gains, kept through every reset.`;
+  if (isotopesHeld.getAttribute('aria-label') !== heldLabel) {
+    isotopesHeld.setAttribute('aria-label', heldLabel);
+  }
+
+  isotopeNext.hidden = gain === 0;
+  if (gain > 0) renderRing(gain);
+  if (shelfGain !== null && gain > shelfGain) {
+    // A reset just opened, or pays one more: the ring grows in, or pops. The
+    // other motion's class goes first, since the ring keeps its last one
+    // through a hidden run.
+    isotopeNext.classList.remove('is-arriving', 'is-up');
+    replay(isotopeNext, shelfGain === 0 ? 'is-arriving' : 'is-up');
+  }
+  shelfGain = gain;
 
   const shown = Math.min(count, SHELF_MAX);
   while (pelletsEl.childElementCount < shown) {
@@ -1218,6 +1404,57 @@ function renderShelf(): void {
   while (pelletsEl.childElementCount > shown) pelletsEl.lastElementChild!.remove();
   shelfMoreEl.hidden = count <= SHELF_MAX;
   shelfMoreEl.textContent = `+${count - SHELF_MAX}`;
+  fitShelves();
+  renderTip();
+}
+
+/** The room the two shelves keep between them before the perk shelf drops a row. */
+const SHELF_GAP = 12;
+
+/**
+ * On a narrow face the shelves can meet in the middle. Measured, since the
+ * isotope row's length depends on its beads, its "+N" and the ring; the
+ * perk shelf's left edge is the same stacked or not, so this never flips
+ * back and forth.
+ */
+function fitShelves(): void {
+  let meet = false;
+  if (!shelfEl.hidden && !perkShelf.hidden) {
+    const last = !isotopeNext.hidden
+      ? isotopeNext.querySelector('svg')!
+      : !shelfMoreEl.hidden
+        ? shelfMoreEl
+        : pelletsEl;
+    meet = last.getBoundingClientRect().right + SHELF_GAP > perkShelf.getBoundingClientRect().left;
+  }
+  reactorWrap.classList.toggle('is-stacked', meet);
+}
+
+new ResizeObserver(fitShelves).observe(reactorWrap);
+
+/** The ring: its count, its fill toward the next isotope, and its name for screen readers. */
+function renderRing(gain: number): void {
+  const count = gain < 10 ? `+${gain}` : String(gain);
+  if (isotopeNextCount.textContent !== count) {
+    isotopeNextCount.textContent = count;
+    isotopeNextCount.dataset.digits = String(String(gain).length);
+  }
+  const next = formatEnergy(nextIsotopeAt(state.runLifetime));
+  const label = `Reset the experiment now for ${isotopeCount(gain)}, taking all gains to ${bonusText(state.isotopes + gain)}. The next isotope comes at ${next} energy.`;
+  if (isotopeNext.getAttribute('aria-label') !== label)
+    isotopeNext.setAttribute('aria-label', label);
+
+  if (!isotopeRing) return;
+  const offset = (100 * (1 - isotopeProgress(state.runLifetime))).toFixed(2);
+  if (shelfGain !== null && gain > shelfGain) {
+    // A fresh count starts an empty ring at once, rather than winding back.
+    isotopeRing.style.transition = 'none';
+    isotopeRing.style.strokeDashoffset = offset;
+    void isotopeRing.getBoundingClientRect();
+    isotopeRing.style.transition = '';
+  } else {
+    isotopeRing.style.strokeDashoffset = offset;
+  }
 }
 
 function renderAll(now = performance.now()): void {
@@ -1421,8 +1658,15 @@ if (scopeEl) new ResizeObserver(sizeScope).observe(scopeEl);
 
 // --- Game events -------------------------------------------------------------------
 
+/** Whether this run has reached a reset yet, for the notice when it first does. */
+let resetOpen = prestigeUnlocked(state);
+
 function afterEarn(): void {
   const idx = reactorIndex(state.runLifetime);
+  // A reset opens at Unstable, so the two notices usually come as one.
+  const opened = !resetOpen && prestigeUnlocked(state);
+  if (opened) resetOpen = true;
+  const resetNote = opened ? ' You can reset the experiment.' : '';
   if (idx !== reactorIdx) {
     const prevIdx = reactorIdx;
     reactorIdx = idx;
@@ -1430,11 +1674,15 @@ function afterEarn(): void {
     replay(coreEl, 'is-stepped');
     if (idx > prevIdx) celebrateStage(prevIdx);
     const name = REACTOR_STATES[idx]!.name;
-    toast(`Reactor is now ${name}`);
-    announce(`Reactor is now ${name}.`);
+    toast(opened ? `Reactor is now ${name}.${resetNote}` : `Reactor is now ${name}`);
+    announce(`Reactor is now ${name}.${resetNote}`);
     SOUND.reactorUp();
     awardAchievements();
+  } else if (opened) {
+    toast('You can now reset the experiment.');
+    announce('You can now reset the experiment.');
   }
+  if (opened) renderShelf();
   for (const id of updateReveals(state)) {
     toast(`New in the shop: ${autoTapper(id).name}`);
   }
@@ -1824,6 +2072,8 @@ function frame(now: number): void {
   if (now - lastPanelRender > 500) {
     renderStats();
     renderPrestige();
+    // The shelf waits out a reset's collapse: the beads it earns fly in after.
+    if (!imploding) renderShelf();
     lastPanelRender = now;
   }
 
@@ -1920,8 +2170,8 @@ document.addEventListener('keydown', (e) => {
   if (!resetModal.hidden) closeDialog(resetModal);
   if (!prestigeModal.hidden) closeDialog(prestigeModal);
   if (!swapModal.hidden) closeDialog(swapModal);
-  // A perk tooltip can always be dismissed without moving the pointer or focus.
-  if (!perkTip.hidden) {
+  // A shelf's tooltip can always be dismissed without moving the pointer or focus.
+  if (!perkTip.hidden || !isotopeTip.hidden) {
     tipDismissed = true;
     renderTip();
   }
@@ -1932,6 +2182,7 @@ function restartRun(): void {
   combo.reset();
   lastTierMultiplier = 1;
   reactorIdx = reactorIndex(state.runLifetime);
+  resetOpen = prestigeUnlocked(state);
   clearArcTimers();
   setSurgePhase('idle');
   tallyGen++;
@@ -2053,7 +2304,18 @@ resetConfirm.addEventListener('click', () => {
 
 // Prestige (spec §9).
 prestigeBtn.addEventListener('click', () => {
-  prestigeModalGain.textContent = String(prestigeGain(state.runLifetime));
+  const held = state.isotopes;
+  const gain = prestigeGain(state.runLifetime);
+  setSentence(
+    prestigeModalMessage,
+    "Your energy, upgrades, auto-tappers, reactor state and this run's perks are wiped. You gain ",
+    [String(gain)],
+    ` ${isotopeNoun(gain)}, taking all gains from `,
+    [bonusText(held)],
+    ' to ',
+    [bonusText(held + gain)],
+    ', and keep your achievements, records and perk codex.'
+  );
   openDialog(prestigeModal, prestigeCancel);
 });
 prestigeCancel.addEventListener('click', () => closeDialog(prestigeModal));
@@ -2068,8 +2330,9 @@ prestigeConfirm.addEventListener('click', () => {
   restartRun();
   closeDialog(prestigeModal);
   playReset(isotopesBefore);
-  toast(`Experiment reset. ${gain} isotope${gain === 1 ? '' : 's'} gained.`);
-  announce(`Experiment reset. You now hold ${state.isotopes} isotopes.`);
+  const bonus = `${bonusText(state.isotopes)} to all gains`;
+  toast(`Experiment reset. ${isotopeCount(gain)} gained: ${bonus}.`);
+  announce(`Experiment reset. You now hold ${isotopeCount(state.isotopes)}, ${bonus}.`);
   SOUND.prestige();
   awardAchievements();
   save();

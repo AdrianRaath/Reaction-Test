@@ -147,13 +147,17 @@ test('reset the experiment: isotopes paid, the run wiped', async ({ page }) => {
   await expect(page.locator('#sc-reactor')).toHaveAttribute('data-state', 'unstable');
 
   await page.click('[data-tab="prestige"]');
-  await expect(page.locator('#sc-prestige-gain')).toHaveText('2');
+  await expect(page.locator('#sc-prestige-now')).toHaveText(
+    'Resetting now gives 2 isotopes: +0% now, +20% after.'
+  );
   await page.click('#sc-prestige-btn');
   await expect(page.locator('#sc-prestige-modal')).toBeVisible();
   await page.click('#sc-prestige-confirm');
   await page.waitForTimeout(1600); // implode, then bloom
 
-  await expect(page.locator('#sc-isotopes')).toHaveText('2');
+  await expect(page.locator('#sc-prestige-held')).toHaveText(
+    'You hold 2 isotopes, +20% to all gains.'
+  );
   expect(await energy(page)).toBe(0);
   await expect(page.locator('#sc-state')).toHaveText('Dormant');
   await expect(page.locator('.shop-item[data-id="pneumatic"] [data-owned]')).toHaveText('0');

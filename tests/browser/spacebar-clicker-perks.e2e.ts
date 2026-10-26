@@ -11,28 +11,8 @@
 import type { Page } from '@playwright/test';
 
 import type { PerkId } from '../../src/games/spacebar-clicker/config';
-import type { PerkOffer, PerkState, SaveState } from '../../src/games/spacebar-clicker/save';
-import { SAVE_KEY, energy, expect, openGame, pressSteady, test } from './fixtures';
-
-type Staged = Partial<Omit<SaveState, 'perks'>> & { perks?: Partial<PerkState> };
-
-/**
- * Write a save before the page's own scripts run, on the first load only.
- * Fields left out fall back to a fresh save's. `awayMs` backdates the last
- * visit at load time, for away progress.
- */
-async function seedSave(page: Page, save: Staged, awayMs = 0): Promise<void> {
-  await page.addInitScript(
-    ([key, json, away]) => {
-      if (sessionStorage.getItem('seeded')) return;
-      sessionStorage.setItem('seeded', '1');
-      const s = JSON.parse(json);
-      if (away) s.lastSeen = Date.now() - away;
-      localStorage.setItem(key, JSON.stringify(s));
-    },
-    [SAVE_KEY, JSON.stringify(save), awayMs] as const
-  );
-}
+import type { PerkOffer, PerkState } from '../../src/games/spacebar-clicker/save';
+import { SAVE_KEY, energy, expect, openGame, pressSteady, seedSave, test } from './fixtures';
 
 /** The perks block as the page would save it now. */
 async function savedPerks(page: Page): Promise<PerkState> {

@@ -20,9 +20,11 @@ import {
   earn,
   energyPerPress,
   energyPerSecond,
+  isotopeProgress,
   markShopTabSeen,
   milestoneBonus,
   nextComboTier,
+  nextIsotopeAt,
   offlineAward,
   prestigeGain,
   reactorProgress,
@@ -229,6 +231,20 @@ describe('prestige', () => {
     expect(prestigeGain(4e6)).toBe(2);
     expect(prestigeGain(25e6)).toBe(5);
     expect(prestigeGain(100e6)).toBe(10);
+  });
+
+  it('knows where the next isotope comes, and how far along the run is', () => {
+    expect(nextIsotopeAt(0)).toBe(1e6);
+    expect(nextIsotopeAt(999_999)).toBe(1e6);
+    expect(nextIsotopeAt(1e6)).toBe(4e6);
+    expect(nextIsotopeAt(3_999_999)).toBe(4e6);
+    expect(nextIsotopeAt(4e6)).toBe(9e6);
+    expect(isotopeProgress(0)).toBe(0);
+    expect(isotopeProgress(250_000)).toBe(0.25);
+    expect(isotopeProgress(1e6)).toBe(0);
+    expect(isotopeProgress(2.5e6)).toBe(0.5);
+    expect(isotopeProgress(4e6)).toBe(0);
+    expect(isotopeProgress(8e6)).toBe(0.8);
   });
 
   it('wipes the run and keeps what the spec says survives', () => {

@@ -7,7 +7,7 @@
 
 import { test as base, expect, type Page } from '@playwright/test';
 
-import type { SaveState } from '../../src/games/spacebar-clicker/save';
+import type { PerkState, SaveState } from '../../src/games/spacebar-clicker/save';
 
 export const SAVE_KEY = 'reflexlab:spacebar-clicker:save';
 
@@ -52,6 +52,29 @@ export async function editSave(page: Page, mutate: (s: SaveState) => void): Prom
     [SAVE_KEY, mutate.toString()] as const
   );
   await page.reload({ waitUntil: 'networkidle' });
+}
+
+/** A save to stage: any fields left out fall back to a fresh save's. */
+export type Staged = Partial<Omit<SaveState, 'perks' | 'tappers'>> & {
+  tappers?: Partial<SaveState['tappers']>;
+  perks?: Partial<PerkState>;
+};
+
+/**
+ * Write a save before the page's own scripts run, on the first load only.
+ * `awayMs` backdates the last visit at load time, for away progress.
+ */
+export async function seedSave(page: Page, save: Staged, awayMs = 0): Promise<void> {
+  await page.addInitScript(
+    ([key, json, away]) => {
+      if (sessionStorage.getItem('seeded')) return;
+      sessionStorage.setItem('seeded', '1');
+      const s = JSON.parse(json);
+      if (away) s.lastSeen = Date.now() - away;
+      localStorage.setItem(key, JSON.stringify(s));
+    },
+    [SAVE_KEY, JSON.stringify(save), awayMs] as const
+  );
 }
 
 /** Press Space `count` times on a real-time beat. */

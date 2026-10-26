@@ -62,29 +62,29 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 
 ## 3. Code map
 
-| File                                                  | Responsibility                                                                                                                                                                                                                         |
-| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, offline, achievements. Pure data.                                                                                                          |
-| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, the luck roll, reactor state and progress, prestige gain, offline award, buying, shop reveals, shop-tab notices, and which one-off upgrades a perk switches off. |
-| `src/games/spacebar-clicker/mods.ts`                  | A run's modifiers: every rule a perk can bend, in one object. `BASE_MODS` is the shipped game; `modsOf(state)` folds in the Stabiliser, Synchronisation and every owned perk at its level.                                             |
-| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo. Takes timestamps from the caller, so it has no clock of its own, and reads the run's rules on every press.                                                                                           |
-| `src/games/spacebar-clicker/rng.ts`                   | A seeded random generator (mulberry32). Pure; for perk drops, so a reload can't reroll them.                                                                                                                                           |
-| `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together, without a surge's or Afterglow's boost. Perk prices and windows are set in it.                                                 |
-| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`.                                                                                                                                                                           |
-| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                                                                       |
-| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                 |
-| `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                              |
-| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks (66 as of 2026-10-23).                                                                                                                                                                           |
-| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12).                                                                                                             |
-| `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                         |
-| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (61 as of 2026-10-23).                                                                                                                              |
-| `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, every reactor state, and perks in play (§7).                                                                                                              |
-| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, perks in play, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine.                                                |
-| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the perk shelf and its tooltip, the swap dialog, the Perks panel and the glyph template. The frontmatter computes the dial, bezel, mote and offer-ring geometry.               |
-| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                                                                             |
-| `src/components/games/PerkIcon.astro`                 | The 25 perk glyphs, in ShopIcon's idiom. The page renders them all into a `<template>` for the script to clone.                                                                                                                        |
-| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`.                                                                                                                                                                 |
-| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                                                                    |
+| File                                                  | Responsibility                                                                                                                                                                                                                                                          |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, offline, achievements. Pure data.                                                                                                                                           |
+| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, the luck roll, reactor state and progress, prestige gain and where the next isotope comes, offline award, buying, shop reveals, shop-tab notices, and which one-off upgrades a perk switches off. |
+| `src/games/spacebar-clicker/mods.ts`                  | A run's modifiers: every rule a perk can bend, in one object. `BASE_MODS` is the shipped game; `modsOf(state)` folds in the Stabiliser, Synchronisation and every owned perk at its level.                                                                              |
+| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo. Takes timestamps from the caller, so it has no clock of its own, and reads the run's rules on every press.                                                                                                                            |
+| `src/games/spacebar-clicker/rng.ts`                   | A seeded random generator (mulberry32). Pure; for perk drops, so a reload can't reroll them.                                                                                                                                                                            |
+| `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together, without a surge's or Afterglow's boost. Perk prices and windows are set in it.                                                                                  |
+| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`.                                                                                                                                                                                                            |
+| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                                                                                                        |
+| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                                                  |
+| `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                                                               |
+| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks (67 as of 2026-10-26).                                                                                                                                                                                                            |
+| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12).                                                                                                                                              |
+| `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                                                          |
+| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (61 as of 2026-10-23).                                                                                                                                                               |
+| `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, every reactor state, perks in play, and isotopes (§7).                                                                                                                                     |
+| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, perks in play, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine.                                                                                 |
+| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the isotope and perk shelves and their tooltips, the swap dialog, the Perks panel and the glyph template. The frontmatter computes the dial, bezel, mote and offer-ring geometry.                               |
+| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                                                                                                              |
+| `src/components/games/PerkIcon.astro`                 | The 25 perk glyphs, in ShopIcon's idiom. The page renders them all into a `<template>` for the script to clone.                                                                                                                                                         |
+| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`.                                                                                                                                                                                                  |
+| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                                                                                                     |
 
 ## 4. How the game works
 
@@ -233,7 +233,9 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
 
 - Unlocks at 1,000,000 `runLifetime`.
 - Pays `floor(sqrt(runLifetime / 1,000,000))` isotopes: 1M gives 1, 4M gives 2,
-  25M gives 5. Each isotope is +10% to all gains, permanently.
+  25M gives 5. Each isotope is +10% to all gains, permanently. The next one
+  comes at (n + 1)² million (`nextIsotopeAt`), and `isotopeProgress` is how far
+  the run has come from the last threshold to the next.
 - **Wipes**: energy, `runLifetime`, upgrades, tappers, `announced`, and the
   run's perks and offers. The reactor returns to Dormant, and the perk shelf
   fades with the imploding core.
@@ -242,6 +244,30 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
 - It has its own tab and its own confirm dialog. Separately, the toolbar
   Reset, the site's shared modal, wipes everything including isotopes. Sound
   settings survive both.
+- **When a reset opens.** That is at 1M, which is also Unstable, so the stage
+  toast carries it: "Reactor is now Unstable. You can reset the experiment."
+  It is announced the same way, once a run.
+- **The isotope shelf**, over the face's top-left corner:
+  - One bead per isotope, up to ten, then "+N". Hover, focus or a tap shows a
+    tooltip: "3 isotopes", "+30% to all gains", and that each adds 10% and
+    lasts through every reset.
+  - Once a reset is open, a ring follows the beads. It shows the isotopes a
+    reset pays now ("+1") and fills toward the next one. When the count rises
+    it pops, and the fill starts again from empty.
+  - The ring's tooltip: "Reset now for 1 isotope", "+30% now, +40% after",
+    and where the next isotope comes. A click or tap opens the Reset the
+    experiment tab and scrolls it into view. From the keyboard, focus follows
+    to the tab.
+  - Like the perk shelf, it sits beside the face in the markup, so a click or
+    tap on it is never a press.
+- **The Reset the experiment tab**, top to bottom: what a reset is; Wiped and
+  Kept lists; the isotopes held and their bonus; when a reset unlocks, or what
+  it gives now with the bonus before and after; a meter to the next isotope,
+  captioned "420K of 1.00M" or "Next isotope at 4.00M, 1.40M to go"; and the
+  button, once a reset is open.
+- **The dialog** names what's wiped, the isotopes gained, and the bonus before
+  and after. The toast after it: "Experiment reset. 1 isotope gained: +40% to
+  all gains." Stats shows isotopes with their bonus: "3, +30%".
 
 ### 4.8 Away progress
 
@@ -472,7 +498,10 @@ the build plan are in §8.1.
   Reset the experiment.
 - **The reactor face**, top to bottom:
   - Energy readout, with per-second and per-press rates.
-  - Isotope shelf in the top-left, perk shelf in the top-right.
+  - Isotope shelf in the top-left, perk shelf in the top-right. Both sit
+    beside the face in the markup, positioned over its corners. The isotope
+    shelf's buttons are padded to 24px targets, and the beads sit 16px in from
+    the face's outer edge, where they always have.
   - The core: a progress dial with six state lights, a turning dashed bezel,
     motes, the core heart, and the readout inside.
   - State name and surge label.
@@ -487,14 +516,23 @@ the build plan are in §8.1.
 - **The perk shelf** answers to `reactor-wrap`, a container around the face.
   At 566px of face (1440 and 1280 wide) it clears the readout as it is. Below
   530px the readout steps down to clear it, measured from the face's padding
-  token, `--face-pad`, so it holds on phones too. Below 340px with six or more
-  isotope beads, the shelf drops below the beads and the readout with it.
+  token, `--face-pad`, so it holds on phones too.
+- **When the shelves would meet.** If the isotope row's last bead, "+N" or
+  ring would come within 12px of the perk shelf, the perk shelf drops below
+  the isotopes, and the readout with it. The script measures this
+  (`fitShelves`), on every shelf change and on resize, since the row's length
+  depends on its contents. On a 390-wide phone that is 10 isotopes with the
+  ring showing, or 12 without it. Until 2026-10-26 a fixed rule did this, at
+  six beads below 340px of face.
 
 ### 5.2 Color
 
 - **Reactor-Ramp.** The Cherenkov ramp in §4.6. It covers the core, bezel,
-  motes, dial and lights, gains, the rhythm scope and the state name. Isotope
-  beads are blue-white on Cherenkov blue at every stage. Stages fade into each
+  motes, dial and lights, gains, the rhythm scope and the state name.
+  Isotopes are blue-white on Cherenkov blue at every stage, on and off the
+  face: the beads, the ring for the next reset, the isotope tooltip, and the
+  meter in the Reset the experiment tab. The ramp's tokens live on
+  `.game-section` so they reach past the face. Stages fade into each
   other over 0.8 s through registered custom properties (`--stage`, `--halo`,
   `--core-heart`, `--core-alpha`, `--core-glow`, `--wash-r`) and
   `color-mix()`.
@@ -548,11 +586,15 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - **Perks, step 5 (2026-10-23).** A bought perk flies in an arc from its offer
   tile to its socket, and the chip lands with a pop. The shelf fades as the
   core implodes on a reset.
+- **Isotopes (2026-10-26).** The ring grows in when a reset opens and pops
+  each time its count rises; its fill starts again at once rather than winding
+  back. The tab's meter glides.
 - **Reduced motion.** Color changes and lights stay; all travel, spin, flight
   and implosion goes. Totals and collected energy apply at once, and the scope
   redraws only on presses. Perk rows appear and go at once, and the ring steps
   rather than glides and never breathes. A bought perk is simply on the shelf,
-  and the shelf clears without fading.
+  and the shelf clears without fading. The isotope ring appears and counts
+  without growing or popping, and its fill and the meter step.
 
 ### 5.4 Accessibility
 
@@ -564,8 +606,14 @@ The visuals were built in three passes, all shipped 2026-10-22.
   load. Shop buttons use `aria-disabled` so they stay focusable while
   unaffordable.
 - Tabs follow the ARIA tab pattern, with arrow keys.
-- The isotope shelf is `role="img"` with an aria-label such as "N isotopes, +X%
-  to all gains". It ignores the pointer, so a tap on it is a press.
+- The isotope shelf is two buttons. The beads are named like "3 isotopes,
+  +30% to all gains, kept through every reset." The ring is named like "Reset
+  the experiment now for 1 isotope, taking all gains to +40%. The next isotope
+  comes at 4.00M energy." Their tooltips are visual only, like the perk
+  shelf's. Tab goes from the reactor to the beads, the ring, then the perk
+  chips. Opening the tab from the ring by keyboard moves focus to the tab.
+- A reset opening is announced with the stage change. A rise in what a reset
+  pays is not announced; the ring's name carries it.
 - A perk offer row reads as one button: its name and level ("level 2", not the
   numeral), its effect ("now 40%, then 55%" on an upgrade), any note, how much
   of its window is left in tens of percent, the price and the rarity.
@@ -603,7 +651,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  30 as of 2026-10-23, in about six minutes.
+  39 as of 2026-10-26, in about six minutes.
   - **Coverage:** the page shell, presses and the combo, buying, the shop tabs
     and "New" tag, save and reload, away progress, prestige, the full reset,
     the phone layout, a whole surge on a fake clock with and without reduced
@@ -618,13 +666,22 @@ The visuals were built in three passes, all shipped 2026-10-22.
     with no press; the Perks panel and codex, through a prestige; the drop,
     expiry and away-dialog wording; the shelf clearing the readout and the
     isotope beads on a phone.
-  - **Staging a save.** The perk checks write a whole save before the page
-    loads (`seedSave`), with seed 7 when they need a known draw: its first
-    draw is under one in eight, so the first surge drops a perk.
+  - **Isotopes** (`spacebar-clicker-isotopes.e2e.ts`): the beads' tooltip on
+    hover, focus and Escape, with no press; a reset opening, with its one
+    notice, the ring and its way into the tab by mouse and keyboard; the ring
+    counting up; the tab locked and open, the dialog, the toast and plurals;
+    a tap on the beads and on the ring; the ring, beads and perk shelf on a
+    phone with 4, 9 and 12 isotopes.
+  - **Staging a save.** The perk and isotope checks write a whole save before
+    the page loads (`seedSave` in `fixtures.ts`), with seed 7 when they need a
+    known draw: its first draw is under one in eight, so the first surge drops
+    a perk.
   - **Browser:** your installed Chrome (`channel: 'chrome'`), so there is
     nothing to download.
-  - **Dev server:** a server already on port 4321 is reused; otherwise one is
-    started. Astro backgrounds its dev server when an AI agent launches it, so
+  - **Dev server:** a server already on `127.0.0.1:4321` is reused; otherwise
+    one is started. One started with a bare `npx astro dev` listens on IPv6
+    `localhost` only and isn't found, so start it with
+    `npm run dev -- --host 127.0.0.1 --port 4321`. Astro backgrounds its dev server when an AI agent launches it, so
     an agent should start one first with `npm run dev`. Stop it with
     `npx astro dev stop`.
   - **Speed:** one worker, because several checks press on a real-time beat.
@@ -665,9 +722,10 @@ pacing simulation, shop offers with perk effects in play, and the shelf,
 tooltips and Perks panel. Perks are now whole in the live game (§4.13).
 
 Signed off so far: the step 3 tuning with the pace (option 1, §4.12), and
-step 4 with its calls in §8.1.10. Waiting on the maintainer's review of
-step 5, especially the calls in §8.1.11, before step 6: content, docs and the
-final verification.
+step 4 with its calls in §8.1.10. Step 5's calls are in §8.1.11. On
+2026-10-26 the maintainer called the game solid and asked for an isotope UX
+pass first (§8.2); step 6, content, docs and the final verification, comes
+after it.
 
 Check in with the maintainer after each step.
 
@@ -1137,7 +1195,50 @@ Made while building step 5. Each is small to change.
    half to three minutes, which would be chatty; the plan's list was drops,
    purchases, upgrades and expiries.
 
-### 8.2 Unassigned ideas
+### 8.2 Isotope UX pass: built 2026-10-26, awaiting review
+
+**The brief.** The maintainer found the isotope shelf odd once you have one:
+hovering a bead said nothing about its bonus. Asked to look at the whole
+mechanic first, without changing anything.
+
+**What was wrong.** The shelf ignored the pointer, so its hover label never
+showed. Nothing said when a reset opened: the only notice was "Reactor is now
+Unstable", and the tab sits under the game, off screen at 1440x900. The tab
+said what a reset gives now, but not what waiting gets. The copy dropped
+spaces ("worth+30%", "You gain1 isotopes"), said "1 isotopes", and predated
+perks. After a reset, nothing said what the isotopes do.
+
+**Approved 2026-10-26:** A, the shelf explains itself; B, a ring for the next
+reset; C, a clearer tab and dialog. Declined: a time estimate to the next
+isotope, and any nudge to wait.
+
+**Calls for the maintainer to review.** Each is small to change.
+
+1. **The ring's fill runs between thresholds**, from the last isotope to the
+   next, so it empties and starts again at each one. The tab's meter does the
+   same, captioned "Next isotope at 4.00M, 1.40M to go" so the numbers match
+   the bar.
+2. **Only the ring opens the tab.** A click on the beads does nothing more
+   than hover does, like a perk chip.
+3. **One notice, joined to Unstable's toast**, once a run. A second toast
+   would follow the stage change by a few seconds.
+4. **A rise in the ring's count isn't announced**, only popped. It comes every
+   ten minutes or so, and the ring's name carries it.
+5. **The perk shelf now drops below the isotopes by measurement** (§5.1), not
+   a fixed rule. The ring makes the isotope row longer, and the old rule would
+   have stacked it on a 390-wide phone with 4 isotopes and 60px to spare.
+6. **Isotope colors reach off the face**: the ring, the tooltip and the tab's
+   meter, under the Reactor-Ramp Exception in DESIGN.md.
+7. **"+N" no longer makes the shelf taller.** With more than ten isotopes the
+   beads used to sit 5px lower.
+
+**For step 6.** The page's "Reset the experiment" section says that going from
+one million to four takes far more time than resetting and earning a million
+again. By the simulation it is the reverse now: about 12 minutes to wait for
+the second isotope, against about 23 to reach a million again with one
+isotope. The pace change of 2026-10-23 turned it around. Content is step 6's.
+
+### 8.3 Unassigned ideas
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
 the maintainer asks.
@@ -1147,7 +1248,7 @@ the maintainer asks.
 - On a combo break, the combo row desaturates and shakes. This shakes the row
   only, never the screen.
 
-### 8.3 Known gaps
+### 8.4 Known gaps
 
 - Not playtested, and not checked on real touch devices, Firefox or Safari.
 - Not yet merged to `main`.
@@ -1218,3 +1319,13 @@ the maintainer asks.
   are announced, the away dialog names a waiting offer, and toasts moved to
   the hint line. 5 more browser checks, and more assertions in the perk
   checks. Calls to review in §8.1.11.
+- **2026-10-26.** Isotope UX pass (§8.2). The isotope shelf moved beside the
+  face like the perk shelf, so its beads have a tooltip on hover, focus and
+  tap and are never a press. Once a reset opens, a ring follows the beads with
+  what a reset pays now and its fill toward the next isotope; it opens the
+  Reset the experiment tab. Unstable's toast says a reset is open. The tab
+  lists what's wiped and kept, shows the bonus before and after and a meter
+  to the next isotope, and its dialog and toast name the bonus. Fixed the
+  dropped spaces and "1 isotopes". The perk shelf drops below the isotopes by
+  measurement now. 1 more unit test and 9 browser checks. Calls to review in
+  §8.2.

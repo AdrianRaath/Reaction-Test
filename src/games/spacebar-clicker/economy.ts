@@ -235,6 +235,19 @@ export function prestigeUnlocked(state: SaveState): boolean {
   return state.runLifetime >= PRESTIGE_UNLOCK;
 }
 
+/** Run energy at which a reset pays one more isotope: 1M, 4M, 9M, and so on. */
+export function nextIsotopeAt(runLifetime: number): number {
+  return PRESTIGE_UNLOCK * (prestigeGain(runLifetime) + 1) ** 2;
+}
+
+/** How far the run has come from the last isotope's threshold to the next, 0 to 1. */
+export function isotopeProgress(runLifetime: number): number {
+  const gain = prestigeGain(runLifetime);
+  const from = PRESTIGE_UNLOCK * gain ** 2;
+  const to = nextIsotopeAt(runLifetime);
+  return Math.min(1, Math.max(0, (runLifetime - from) / (to - from)));
+}
+
 export interface OfflineAward {
   /** Seconds credited, after the cap. */
   seconds: number;

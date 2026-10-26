@@ -121,8 +121,8 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
   <section id="game-section" class="game-section">
     <div class="game-card">
       <div class="game-grid">
-        <!-- The reactor face, with the perk shelf over its top-right corner. -->
-        <div class="reactor-wrap">
+        <!-- The reactor face, with the isotope and perk shelves over its top corners. -->
+        <div class="reactor-wrap" id="sc-reactor-wrap">
           <!-- The reactor face: the instrument the whole game is played on. -->
           <div
             id="sc-reactor"
@@ -134,13 +134,6 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
           >
             <!-- Stage change: the graticule lights in a band travelling out from the core. -->
             <div class="grid-wash" id="sc-wash" aria-hidden="true"></div>
-
-            <!-- The trophy shelf: one pellet per isotope (up to ten shown), kept
-               across every reset of the experiment. -->
-            <div class="isotope-shelf" id="sc-shelf" role="img" aria-label="No isotopes yet" hidden>
-              <span class="pellets" id="sc-pellets"></span>
-              <span class="shelf-more readout" id="sc-shelf-more" hidden></span>
-            </div>
 
             <div class="energy-block">
               <p class="energy-row">
@@ -254,6 +247,48 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
             <p class="visually-hidden" id="sc-announce" aria-live="polite"></p>
           </div>
 
+          <!-- The isotope shelf, the trophy shelf: one bead per isotope (up to
+             ten shown), kept across every reset of the experiment. Once a
+             reset is open, a ring follows the beads: the isotopes a reset
+             would pay now, filling toward the next one, and a way into the
+             Reset the experiment tab. It sits beside the face like the perk
+             shelf, so hover, focus and a tap reach it and never press. -->
+          <div class="isotope-shelf" id="sc-shelf" hidden>
+            <button type="button" class="isotope-held" id="sc-isotopes-held" hidden>
+              <span class="pellets" id="sc-pellets"></span>
+              <span class="shelf-more readout" id="sc-shelf-more" hidden></span>
+            </button>
+            <button type="button" class="isotope-next" id="sc-isotope-next" hidden>
+              <svg
+                class="isotope-ring"
+                viewBox="0 0 20 20"
+                width="20"
+                height="20"
+                aria-hidden="true"
+              >
+                <circle class="isotope-ring-track" cx="10" cy="10" r="8.75"></circle>
+                <circle
+                  class="isotope-ring-fill"
+                  id="sc-isotope-ring"
+                  cx="10"
+                  cy="10"
+                  r="8.75"
+                  pathLength="100"
+                  stroke-dasharray="100"
+                  stroke-dashoffset="100"></circle>
+              </svg>
+              <span class="isotope-next-count readout" id="sc-isotope-next-count"></span>
+            </button>
+            <!-- Visual only: each button's accessible name carries the same text. -->
+            <div class="shelf-tip" id="sc-isotope-tip" aria-hidden="true" hidden>
+              <div class="shelf-tip-box">
+                <p class="shelf-tip-name" id="sc-isotope-tip-name"></p>
+                <p class="shelf-tip-kind" id="sc-isotope-tip-kind"></p>
+                <p class="shelf-tip-detail" id="sc-isotope-tip-detail"></p>
+              </div>
+            </div>
+          </div>
+
           <!-- The perk shelf: this run's perks, mirroring the isotopes top-left,
              with level pips and a tooltip on hover, focus or tap. It sits
              beside the face rather than inside it, so its buttons aren't
@@ -277,14 +312,14 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
               }
             </ul>
             <!-- Visual only: each chip's accessible name carries the same text. -->
-            <div class="perk-tip" id="sc-perk-tip" aria-hidden="true" hidden>
-              <div class="perk-tip-box">
-                <p class="perk-tip-name">
+            <div class="shelf-tip" id="sc-perk-tip" aria-hidden="true" hidden>
+              <div class="shelf-tip-box">
+                <p class="shelf-tip-name">
                   <span id="sc-perk-tip-name"></span>
                   <span class="perk-level" id="sc-perk-tip-level" hidden></span>
                 </p>
-                <p class="perk-tip-kind" id="sc-perk-tip-kind"></p>
-                <p class="perk-tip-detail" id="sc-perk-tip-detail"></p>
+                <p class="shelf-tip-kind" id="sc-perk-tip-kind"></p>
+                <p class="shelf-tip-detail" id="sc-perk-tip-detail"></p>
               </div>
             </div>
           </div>
@@ -598,24 +633,42 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
           aria-labelledby="sc-tab-prestige"
           hidden
         >
+          <!-- What a reset costs and pays, then where this run stands: the
+               isotopes held, what a reset gives now, and a meter to the next
+               isotope. The script writes the sentences with numbers in them. -->
           <div class="prestige">
             <p class="prestige-copy">
-              Resetting the experiment wipes your energy, upgrades, auto-tappers and reactor state.
-              In return you keep isotopes, and each one adds 10% to every gain from then on. You
-              hold <span class="readout" id="sc-isotopes">0</span> isotopes, worth
-              <span class="readout" id="sc-isotope-bonus">+0%</span>.
+              Resetting the experiment starts the run over. Isotopes carry across: each one adds 10%
+              to every gain, on every run after.
             </p>
-            <p class="prestige-locked" id="sc-prestige-locked">
-              Unlocks at <span class="readout">{whole(PRESTIGE_UNLOCK)}</span> energy earned this run.
-              You are at <span class="readout" id="sc-prestige-progress">0 of 1.00M</span>.
-            </p>
-            <div class="prestige-ready" id="sc-prestige-ready" hidden>
-              <p class="prestige-gain-row">
-                Resetting now gives <span class="prestige-gain readout" id="sc-prestige-gain"
-                  >1</span
-                > isotopes.
+            <dl class="prestige-terms">
+              <div>
+                <dt>Wiped</dt>
+                <dd>
+                  Energy, upgrades, auto-tappers, the reactor's state, and this run's perks and
+                  offers.
+                </dd>
+              </div>
+              <div>
+                <dt>Kept</dt>
+                <dd>
+                  Isotopes, achievements, records and all-time stats, the perk codex, and every
+                  auto-tapper the shop has shown you.
+                </dd>
+              </div>
+            </dl>
+            <div class="prestige-status">
+              <p class="prestige-held" id="sc-prestige-held">No isotopes yet.</p>
+              <p class="prestige-now" id="sc-prestige-now">
+                Resetting unlocks at {whole(PRESTIGE_UNLOCK)} energy earned this run.
               </p>
-              <button type="button" class="btn btn-primary" id="sc-prestige-btn"
+              <div class="isotope-meter">
+                <div class="isotope-meter-track" aria-hidden="true">
+                  <div class="isotope-meter-fill" id="sc-isotope-meter"></div>
+                </div>
+                <p class="isotope-meter-label" id="sc-prestige-progress"></p>
+              </div>
+              <button type="button" class="btn btn-primary" id="sc-prestige-btn" hidden
                 >Reset the experiment</button
               >
             </div>
@@ -639,11 +692,8 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     >
       <div class="modal">
         <h3 class="modal-title" id="sc-prestige-modal-title">Reset the experiment?</h3>
-        <p class="modal-message">
-          Your energy, upgrades, auto-tappers and reactor state go back to zero. You gain
-          <span class="readout" id="sc-prestige-modal-gain">1</span> isotopes and keep your achievements
-          and records.
-        </p>
+        <!-- The script writes this, with the isotopes and the bonus before and after. -->
+        <p class="modal-message" id="sc-prestige-modal-message"></p>
         <div class="modal-actions">
           <button class="btn btn-secondary" id="sc-prestige-cancel" type="button">Keep going</button
           >
@@ -772,6 +822,15 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
   /* --- Game card --------------------------------------------------------------- */
 
   .game-section {
+    /* The Reactor-Ramp (DESIGN.md), here rather than on the face because
+       isotopes wear Blue-White on Cherenkov Blue off the face too: the
+       shelf beside it and the Reset the experiment tab. */
+    --ramp-green: #22c55e;
+    --ramp-teal: #2dd4bf;
+    --ramp-cyan: #22d3ee;
+    --ramp-blue: #38bdf8;
+    --ramp-white: #e0f2fe;
+
     /* Surge Gold (DESIGN.md): the reactor in overdrive. Lighter than Caution
        Amber, so it never reads as the shop's "New" tag. */
     --gold: #fcd34d;
@@ -835,8 +894,8 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     align-items: stretch;
   }
 
-  /* The face and the perk shelf over its top-right corner. A container of
-     its own, so the shelf can answer to the face's width. */
+  /* The face and the two shelves over its top corners. A container of its
+     own, so the shelves can answer to the face's width. */
   .reactor-wrap {
     container: reactor-wrap / inline-size;
     position: relative;
@@ -864,12 +923,6 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
      colors rather than swapping. Without @property support they simply swap. */
   .reactor-face {
     container: reactor / inline-size;
-
-    --ramp-green: #22c55e;
-    --ramp-teal: #2dd4bf;
-    --ramp-cyan: #22d3ee;
-    --ramp-blue: #38bdf8;
-    --ramp-white: #e0f2fe;
 
     --stage: var(--ramp-green);
     /* The dial follows the stage, except while a surge counts down. */
@@ -1343,14 +1396,16 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
   }
 
   /* Reset the experiment: everything else on the face dims while the core
-     collapses to a point; then it blooms back as Dormant. No flash. */
-  .reactor-face
-    > :is(.energy-block, .state-label, .surge-label, .combo, .test-hint, .keycap, .isotope-shelf) {
+     collapses to a point; then it blooms back as Dormant. No flash. The
+     isotope shelf sits beside the face, so it dims as a sibling. */
+  .reactor-face > :is(.energy-block, .state-label, .surge-label, .combo, .test-hint, .keycap),
+  .reactor-face ~ .isotope-shelf {
     transition: opacity 600ms ease;
   }
 
   .reactor-face.is-imploding
-    > :is(.energy-block, .state-label, .surge-label, .combo, .test-hint, .keycap, .isotope-shelf) {
+    > :is(.energy-block, .state-label, .surge-label, .combo, .test-hint, .keycap),
+  .reactor-face.is-imploding ~ .isotope-shelf {
     opacity: 0.3;
     transition-duration: 400ms;
   }
@@ -1391,20 +1446,35 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
      shelf, step the readout down clear of it. Keyed to the face's own width,
      not the screen's. */
   @container reactor (max-width: 520px) {
-    .reactor-face:has(> .isotope-shelf:not([hidden])) .energy-block {
+    .reactor-wrap:has(> .isotope-shelf:not([hidden])) .energy-block {
       padding-block-start: 0.875rem;
     }
   }
 
+  /* Over the face's top-left corner. Each button is padded to a 24px target,
+     and the shelf is pulled out by that padding so the beads sit where they
+     always have: 16px in from the face's outer edge. */
   .isotope-shelf {
     position: absolute;
-    inset-block-start: 12px;
-    inset-inline-start: 14px;
-    z-index: 2;
+    inset-block-start: 6px;
+    inset-inline-start: 8px;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+  }
+
+  .isotope-held {
     display: flex;
     align-items: center;
     gap: 6px;
-    pointer-events: none;
+    min-height: 24px;
+    padding: 8px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: default;
   }
 
   .pellets {
@@ -1447,6 +1517,93 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     inset-inline-start: 0;
     z-index: 3;
     pointer-events: none;
+  }
+
+  /* The next reset: a ring after the beads with the isotopes a reset pays
+     now, filling toward the next one. It glows because it reports a state:
+     a reset is open. A click opens the Reset the experiment tab. */
+  .isotope-next {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-full);
+    background: none;
+    color: var(--ramp-white);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  /* With no beads before it, the ring takes the first bead's place. */
+  .isotope-held[hidden] + .isotope-next {
+    margin-inline-start: 6px;
+  }
+
+  .isotope-ring,
+  .isotope-next-count {
+    grid-area: 1 / 1;
+  }
+
+  .isotope-ring {
+    overflow: visible;
+    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--ramp-blue) 60%, transparent));
+    transform: rotate(-90deg);
+  }
+
+  .isotope-ring circle {
+    fill: none;
+    stroke-width: 1.5;
+  }
+
+  .isotope-ring-track {
+    stroke: color-mix(in srgb, var(--ramp-blue) 30%, transparent);
+    transition: stroke 150ms ease;
+  }
+
+  .isotope-ring-fill {
+    stroke: var(--ramp-blue);
+    stroke-linecap: round;
+    transition: stroke-dashoffset 500ms linear;
+  }
+
+  .isotope-next:hover .isotope-ring-track {
+    stroke: color-mix(in srgb, var(--ramp-blue) 55%, transparent);
+  }
+
+  .isotope-next-count {
+    font-size: 0.5625rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .isotope-next-count[data-digits='2'] {
+    font-size: 0.5rem;
+  }
+
+  /* A reset opens: the ring grows in. Each isotope more: it pops. */
+  .isotope-next.is-arriving {
+    animation: ring-arrive 560ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .isotope-next.is-up {
+    animation: ring-up 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes ring-arrive {
+    0% {
+      opacity: 0;
+      transform: scale(0.3);
+    }
+  }
+
+  @keyframes ring-up {
+    0% {
+      transform: scale(1.35);
+    }
   }
 
   /* --- Perk shelf ------------------------------------------------------------
@@ -1572,9 +1729,13 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     background-color: var(--perk);
   }
 
-  /* The tooltip hangs under the shelf, right-aligned, its caret on the chip.
-     Its top padding bridges the gap, so the pointer can cross onto it. */
-  .perk-tip {
+  /* A shelf's tooltip hangs under it, its caret on the chip or bead it
+     describes: right-aligned under the perk shelf, left-aligned under the
+     isotopes. Its top padding bridges the gap, so the pointer can cross onto
+     it. A perk's tooltip wears its family's hue; the isotopes' wears theirs. */
+  .shelf-tip {
+    --tip-ink: var(--perk);
+
     position: absolute;
     inset-block-start: 100%;
     inset-inline-end: 0;
@@ -1584,10 +1745,22 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     padding-block-start: 8px;
   }
 
-  .perk-tip-box {
+  .isotope-shelf .shelf-tip {
+    --tip-ink: var(--ramp-blue);
+
+    inset-inline: 8px auto;
+  }
+
+  /* A shelf showing its tooltip comes forward, so the tooltip is never under
+     the other shelf on a narrow face. */
+  .reactor-wrap > :has(> .shelf-tip:not([hidden])) {
+    z-index: 5;
+  }
+
+  .shelf-tip-box {
     position: relative;
     padding: var(--space-sm) var(--space-md);
-    border: 1px solid color-mix(in srgb, var(--perk) 55%, var(--line));
+    border: 1px solid color-mix(in srgb, var(--tip-ink) 55%, var(--line));
     border-radius: var(--radius-md);
     background-color: var(--panel-01);
     box-shadow:
@@ -1596,35 +1769,39 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     text-align: start;
   }
 
-  .perk-tip-box::before {
+  .shelf-tip-box::before {
     content: '';
     position: absolute;
     inset-block-start: -5px;
     inset-inline-end: calc(var(--caret-right, 13px) - 5px);
     width: 8px;
     height: 8px;
-    border-block-start: 1px solid color-mix(in srgb, var(--perk) 55%, var(--line));
-    border-inline-start: 1px solid color-mix(in srgb, var(--perk) 55%, var(--line));
+    border-block-start: 1px solid color-mix(in srgb, var(--tip-ink) 55%, var(--line));
+    border-inline-start: 1px solid color-mix(in srgb, var(--tip-ink) 55%, var(--line));
     background-color: var(--panel-01);
     transform: rotate(45deg);
   }
 
-  .perk-tip-name {
+  .isotope-shelf .shelf-tip-box::before {
+    inset-inline: calc(var(--caret-left, 4px) - 5px) auto;
+  }
+
+  .shelf-tip-name {
     font-size: var(--text-label-size);
     font-weight: 600;
     color: var(--ink-primary);
   }
 
-  .perk-tip-kind {
+  .shelf-tip-kind {
     margin-block: 2px 4px;
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--perk);
+    color: var(--tip-ink);
   }
 
-  .perk-tip-detail {
+  .shelf-tip-detail {
     font-size: 0.75rem;
     line-height: 1.5;
     color: var(--ink-secondary);
@@ -1648,22 +1825,23 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     }
   }
 
-  /* A narrow face with six or more isotope beads has no room for both rows
-     side by side: the perk shelf drops below the beads, and the readout with
-     it. */
-  @container reactor-wrap (max-width: 340px) {
-    .reactor-wrap:has(.pellets > :nth-child(6)) > .perk-shelf {
-      inset-block-start: 34px;
-    }
-
-    .reactor-wrap:has(.pellets > :nth-child(6)) > .reactor-face {
-      --shelf-clear: 74px;
-    }
+  /* On a narrow face the two shelves can meet in the middle: a long row of
+     beads, a "+N", the ring for the next reset. The script measures, and when
+     they would come within 12px it marks the wrap stacked: the perk shelf
+     drops below the beads, and the readout with it. */
+  .reactor-wrap.is-stacked > .perk-shelf {
+    inset-block-start: 34px;
   }
 
+  .reactor-wrap.is-stacked > .reactor-face {
+    --shelf-clear: 74px;
+  }
+
+  /* Line height 1, so a "+N" never makes the shelf taller than its beads' 24px target. */
   .shelf-more {
     font-size: 0.75rem;
     font-weight: 600;
+    line-height: 1;
     color: var(--ink-secondary);
   }
 
@@ -2701,9 +2879,12 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
 
   /* --- Panels -------------------------------------------------------------------- */
 
+  /* The isotope ring scrolls the panels into view; the margin keeps the Reset
+     button off the window's edge. */
   .panels {
     padding-block-start: var(--space-lg);
     border-block-start: 1px solid var(--line-subtle);
+    scroll-margin-block: var(--space-xl);
   }
 
   .tabs {
@@ -2936,32 +3117,84 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
   }
 
   .prestige-copy,
-  .prestige-locked {
+  .prestige-terms,
+  .prestige-held {
     font-size: var(--text-label-size);
     line-height: 1.7;
     color: var(--ink-secondary);
   }
 
-  .prestige-copy .readout,
-  .prestige-locked .readout {
+  .prestige-terms {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--space-xs) var(--space-md);
+  }
+
+  .prestige-terms > div {
+    display: contents;
+  }
+
+  .prestige-terms dt {
+    font-weight: 600;
     color: var(--ink-primary);
   }
 
-  .prestige-ready {
+  .prestige-status {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-md);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding-block-start: var(--space-md);
+    border-block-start: 1px solid var(--line);
   }
 
-  .prestige-gain-row {
+  .prestige-now {
     color: var(--ink-secondary);
   }
 
-  .prestige-gain {
+  /* The script writes these sentences, so their numbers are global. */
+  .prestige :global(.readout),
+  .modal-message :global(.readout) {
+    color: var(--ink-primary);
+  }
+
+  .prestige :global(.prestige-gain) {
     font-size: var(--text-headline-size);
     font-weight: 700;
-    color: var(--ink-primary);
+  }
+
+  /* Run energy toward the next isotope, in the isotopes' Cherenkov blue
+     (DESIGN.md, Reactor-Ramp Exception). */
+  .isotope-meter {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    width: min(100%, 360px);
+  }
+
+  .isotope-meter-track {
+    height: 4px;
+    border-radius: var(--radius-full);
+    background-color: var(--line);
+    overflow: hidden;
+  }
+
+  .isotope-meter-fill {
+    width: 100%;
+    height: 100%;
+    background-color: var(--ramp-blue);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 500ms linear;
+  }
+
+  .isotope-meter-label {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  .prestige-status .btn {
+    margin-block-start: var(--space-xs);
   }
 
   /* --- Buttons and dialogs ---------------------------------------------------------- */
@@ -3206,7 +3439,11 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     .perk-ring-fill,
     .perk-offer.is-fading .perk-ring-fill,
     .perk-chip.is-landed,
-    .perk-shelf {
+    .perk-shelf,
+    .isotope-next.is-arriving,
+    .isotope-next.is-up,
+    .isotope-ring-fill,
+    .isotope-meter-fill {
       animation: none;
       transition: none;
     }
