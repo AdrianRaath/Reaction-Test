@@ -603,6 +603,21 @@ export const PERKS: readonly PerkDef[] = [
   },
 ];
 
+/** Rarity and family in words, so a perk's hue never stands alone. The game and the page share them. */
+export const PERK_RARITY_NAMES: Readonly<Record<PerkRarity, string>> = {
+  common: 'Common',
+  rare: 'Rare',
+  keystone: 'Keystone',
+};
+
+export const PERK_FAMILY_NAMES: Readonly<Record<PerkFamily, string>> = {
+  rhythm: 'Rhythm',
+  press: 'Press power',
+  luck: 'Luck',
+  surge: 'Surge',
+  machines: 'Machines',
+};
+
 /** Fixed parts of some perks' effects, quoted in their `detail`. */
 export const PERK_EFFECT = {
   /** Loaded Dice's raised Double Tap cap. */

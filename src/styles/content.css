@@ -228,8 +228,16 @@
   color: var(--ink-muted);
 }
 
+/* A word in a number's column, such as a rarity: sized like the numbers
+   beside it, but in the UI face, since monospace is for numbers only. */
+.spec-row .spec-word {
+  font-size: var(--text-label-size);
+  color: var(--ink-secondary);
+}
+
 .spec-row.spec-head .spec-name,
 .spec-row.spec-head .spec-num,
+.spec-row.spec-head .spec-word,
 .spec-row.spec-head .spec-desc {
   font: inherit;
   color: inherit;
@@ -385,6 +393,14 @@
 
   .spec-row.spec-head .spec-desc {
     display: none;
+  }
+
+  /* Stacked, a number can lose its column heading; a cell that sets
+     data-label names itself. */
+  .spec-row:not(.spec-head) [data-label]::before {
+    content: attr(data-label) ' ';
+    font-family: var(--font-sans);
+    color: var(--ink-muted);
   }
 
   .tips-grid,

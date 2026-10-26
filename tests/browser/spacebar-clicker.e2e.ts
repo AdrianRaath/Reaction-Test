@@ -4,6 +4,7 @@
  * prestige, the full reset, and the phone layout.
  */
 
+import { PERKS } from '../../src/games/spacebar-clicker/config';
 import { editSave, energy, expect, openGame, pressSteady, test } from './fixtures';
 
 test('page shell: title, heading, no top-bar telemetry', async ({ page }) => {
@@ -14,6 +15,27 @@ test('page shell: title, heading, no top-bar telemetry', async ({ page }) => {
     page.getByRole('heading', { level: 1, name: 'Spacebar Clicker', exact: true })
   ).toBeVisible();
   await expect(page.locator('#topbar-stats')).toHaveCount(0);
+});
+
+test('the page lists every perk and the drop odds, straight from the config', async ({ page }) => {
+  await page.goto('/spacebar-clicker');
+  const tables = page.locator('#perks .spec-table');
+  const rows = (i: number) => tables.nth(i).locator('.spec-row:not(.spec-head)');
+  await expect(rows(0)).toHaveCount(3);
+  await expect(rows(0).first()).toContainText('65%');
+  await expect(rows(1)).toHaveCount(PERKS.filter((p) => p.tab === 'press').length);
+  await expect(rows(2)).toHaveCount(PERKS.filter((p) => p.tab === 'auto').length);
+  await expect(rows(1).first()).toContainText(
+    'Rhythm tolerance widens from 25% to 40% / 55% / 70%.'
+  );
+
+  const faq = await page
+    .locator('script[type="application/ld+json"]')
+    .evaluateAll((nodes) =>
+      nodes.map((n) => n.textContent ?? '').find((t) => t.includes('FAQPage'))
+    );
+  expect(faq).toContain('How do perks work?');
+  await expect(page.locator('#faq summary').last()).toHaveText('How do perks work?');
 });
 
 test('the spacebar speed test keeps its telemetry and its retitle', async ({ page }) => {

@@ -30,9 +30,9 @@ only in chat.
 - **Our edge over the SERP.** The rhythm combo, which no competitor has. The
   full shop and reactor tables published on the page. No ads, and honest copy:
   the "unblocked" query gets one plain FAQ answer, no proxy or VPN advice.
-- **Status (2026-10-22).** Built and committed on `dev`, not yet merged to
-  `main`. Unit-tested and browser-checked, but not playtested: the balance comes
-  from a simulation.
+- **Status (2026-10-26).** Built on `dev` with perk phase 1 and the isotope UX
+  pass, not yet merged to `main`. Unit-tested and browser-checked, but not
+  playtested: the balance comes from a simulation.
 
 ## 2. Working rules
 
@@ -83,7 +83,7 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 | `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the isotope and perk shelves and their tooltips, the swap dialog, the Perks panel and the glyph template. The frontmatter computes the dial, bezel, mote and offer-ring geometry.                               |
 | `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                                                                                                              |
 | `src/components/games/PerkIcon.astro`                 | The 25 perk glyphs, in ShopIcon's idiom. The page renders them all into a `<template>` for the script to clone.                                                                                                                                                         |
-| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`.                                                                                                                                                                                                  |
+| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`, every perk and the drop odds included.                                                                                                                                                           |
 | `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                                                                                                     |
 
 ## 4. How the game works
@@ -632,16 +632,40 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 - **Title**: "Spacebar Clicker - Free Online Idle Spacebar Game", with an
   authored description and FAQ JSON-LD.
-- About 2,300 words below the game. The H2s are:
+- About 2,900 words below the game, tables and FAQ answers included. The H2s
+  are:
   - What is Spacebar Clicker?
   - How to play Spacebar Clicker
   - The combo: steady beats fast
   - Every upgrade and what it costs
+  - Perks: random drops that bend the rules
   - Reactor states
   - Reset the experiment
   - How to reach a million energy
-  - Spacebar Clicker FAQ, with 8 questions
+  - Spacebar Clicker FAQ, with 9 questions
 - The tables render from `config.ts`, so changing a number changes the page.
+  That includes the perks section: the drop odds by rarity, with each tier's
+  price and window, and a table per shop tab of all 25 perks with their
+  rarity, family and every level's effect (`perkDetailAllLevels`). The rarity
+  and family names come from `PERK_RARITY_NAMES` and `PERK_FAMILY_NAMES`,
+  which the game uses too.
+- **Claims from the simulation**, each said to be from it on the page, and to
+  recheck when the pace or the perks change (§4.12):
+  - Four to eight drops in a steady first run to a million (10th to 90th
+    percentile, buying what drops).
+  - A steady player who buys what drops reaches a million about three minutes
+    sooner (about 21 minutes against 24).
+  - With no perks, the first isotope comes at about 24 minutes and the second
+    about 12 minutes later. Until 2026-10-26 the page said waiting for the
+    second isotope was slower than resetting and earning a million again; the
+    pace change of 2026-10-23 had made that false.
+  - "Around 20 to 25 minutes" to the first reset, in the FAQ.
+- **Kept off the page on purpose:** the 10-minute ceiling on the wait for a
+  drop. Published, it would be the visible pity the maintainer ruled out
+  (§8.1.2).
+- On a phone the spec tables stack, and a cell with a `data-label` names
+  itself (`content.css`). The odds table uses it, so its two percentages
+  don't lose their headings.
 - When a mechanic changes, update the copy that describes it.
 
 ## 7. Testing
@@ -651,11 +675,12 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  39 as of 2026-10-26, in about six minutes.
-  - **Coverage:** the page shell, presses and the combo, buying, the shop tabs
-    and "New" tag, save and reload, away progress, prestige, the full reset,
-    the phone layout, a whole surge on a fake clock with and without reduced
-    motion, every reactor state, and a live stage change.
+  40 as of 2026-10-26, in about six minutes.
+  - **Coverage:** the page shell, the perks section and FAQ rendering from
+    the config, presses and the combo, buying, the shop tabs and "New" tag,
+    save and reload, away progress, prestige, the full reset, the phone
+    layout, a whole surge on a fake clock with and without reduced motion,
+    every reactor state, and a live stage change.
   - **Perks** (`spacebar-clicker-perks.e2e.ts`): a live drop, its row, toast
     and tag; buying and an upgrade; the swap dialog and the keystone swap;
     switched-off upgrades and Brute Force's combo row; a window running out,
@@ -715,17 +740,18 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ## 8. Roadmap
 
-### 8.1 Perk system: phase 1 in progress
+### 8.1 Perk system: phase 1 done
 
-**Status (2026-10-23).** Steps 1 to 5 of 6 are done: groundwork, perk logic,
-pacing simulation, shop offers with perk effects in play, and the shelf,
-tooltips and Perks panel. Perks are now whole in the live game (§4.13).
+**Status (2026-10-26).** All six steps are done: groundwork, perk logic,
+pacing simulation, shop offers with perk effects in play, the shelf, tooltips
+and Perks panel, and the page content. Perks are whole in the live game
+(§4.13) and on the page (§6).
 
-Signed off so far: the step 3 tuning with the pace (option 1, §4.12), and
-step 4 with its calls in §8.1.10. Step 5's calls are in §8.1.11. On
-2026-10-26 the maintainer called the game solid and asked for an isotope UX
-pass first (§8.2); step 6, content, docs and the final verification, comes
-after it.
+Signed off: the step 3 tuning with the pace (option 1, §4.12), step 4 with its
+calls in §8.1.10, and step 5 with its calls in §8.1.11 (2026-10-26). Between
+steps 5 and 6 the maintainer asked for an isotope UX pass (§8.2), signed off
+too. Waiting on the maintainer's review of step 6 and its calls in §8.1.12.
+Isotope tie-ins are next to discuss (§8.1.5).
 
 Check in with the maintainer after each step.
 
@@ -1063,7 +1089,8 @@ maintainer can review before the next one, as with the delight passes.
    - The away dialog mentions a waiting offer. Announcements for drops,
      purchases, upgrades and expiries.
    - A reduced-motion version of everything.
-6. **Content, docs and verification.**
+6. **Content, docs and verification.** _Done 2026-10-26._ The calls made
+   along the way are in §8.1.12. The plan was:
    - A perks section in the MDX: a table rendered from config, with rarity and
      drop odds, and an FAQ answer.
    - Update this doc's sections and changelog.
@@ -1169,9 +1196,9 @@ Made while building step 4, and approved with it.
 10. **The income meter leaves out Afterglow** as well as surges, in the script
     and the simulation. The pacing results didn't move.
 
-#### 8.1.11 Step 5: calls for the maintainer to review, 2026-10-23
+#### 8.1.11 Step 5: calls the maintainer signed off, 2026-10-23
 
-Made while building step 5. Each is small to change.
+Made while building step 5, and approved with it on 2026-10-26.
 
 1. **Toasts moved to the hint line**, centred above the keycap, for every
    notice. The shelf took the top-right corner, and anywhere below it covered
@@ -1195,7 +1222,36 @@ Made while building step 5. Each is small to change.
    half to three minutes, which would be chatty; the plan's list was drops,
    purchases, upgrades and expiries.
 
-### 8.2 Isotope UX pass: built 2026-10-26, awaiting review
+#### 8.1.12 Step 6: calls for the maintainer to review, 2026-10-26
+
+Made while writing the page content. Each is small to change.
+
+1. **The perks section sits after the shop tables**, since perks drop into
+   the shop, and the sections after it swap their alternating backgrounds.
+2. **Drop odds as a table**, one row per rarity: the chance per drop, the
+   chance on a surge's bonus drop, and the price and window in seconds of
+   income. The 10-minute ceiling stays unpublished (§6).
+3. **The reset copy now says each isotope comes sooner than the one before**,
+   with the simulation's 24 and 12 minutes, and leaves the timing to the
+   player. It replaces a claim the pace change had made false. In keeping
+   with the call against an in-game nudge, it states the facts and doesn't
+   tell anyone to wait.
+4. **The "Reset early" tip became "Take the perks that fit"**, since its
+   advice no longer held. The section is about reaching a million, so the tip
+   speaks to that.
+5. **Other stale copy fixed along the way:**
+   - "Ten shop items and no more" and "shallow on purpose".
+   - The first upgrade being affordable "within your first few seconds"; it
+     costs 75 since the pace change, about fifteen seconds of steady tapping.
+   - What a reset wipes and keeps, which predated perks.
+   - The FAQ's 25 minutes to a first reset is now 20 to 25.
+6. **Smaller additions:** a perks line in "What is Spacebar Clicker?", a
+   "Catch the perks" step in how to play, the isotope beads and ring in the
+   reset step, and a line under the combo table on Overtone and Glass Rhythm.
+7. **Words in a table column are set in the UI face**, not monospace
+   (`.spec-word` in `content.css`), per the Monospace-Numerals Rule.
+
+### 8.2 Isotope UX pass: built and signed off 2026-10-26
 
 **The brief.** The maintainer found the isotope shelf odd once you have one:
 hovering a bead said nothing about its bonus. Asked to look at the whole
@@ -1212,7 +1268,7 @@ perks. After a reset, nothing said what the isotopes do.
 reset; C, a clearer tab and dialog. Declined: a time estimate to the next
 isotope, and any nudge to wait.
 
-**Calls for the maintainer to review.** Each is small to change.
+**Calls the maintainer signed off** ("fine for now", 2026-10-26):
 
 1. **The ring's fill runs between thresholds**, from the last isotope to the
    next, so it empties and starts again at each one. The tab's meter does the
@@ -1329,3 +1385,12 @@ the maintainer asks.
   dropped spaces and "1 isotopes". The perk shelf drops below the isotopes by
   measurement now. 1 more unit test and 9 browser checks. Calls to review in
   §8.2.
+- **2026-10-26.** Perks step 6, content and docs; perk phase 1 done. The page
+  has a perks section after the shop: how drops work, the drop odds by rarity
+  with each tier's price and window, and a table per shop tab of all 25 perks,
+  all rendered from the config. A ninth FAQ answer covers perks. Stale copy
+  fixed: the reset section's claim about waiting (false since the pace
+  change), the "Reset early" tip, "ten shop items and no more", the first
+  upgrade's timing, what a reset keeps, and the FAQ's time to a first reset.
+  Rarity and family names moved into the config for the game and the page to
+  share. 1 more browser check. Calls to review in §8.1.12.

@@ -20,6 +20,8 @@ import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
   MIN_PRESS_GAP_MS,
+  PERK_FAMILY_NAMES,
+  PERK_RARITY_NAMES,
   PERK_SLOTS,
   PERKS,
   PRESS_UPGRADES,
@@ -675,11 +677,6 @@ function renderShopNotices(): void {
 // the offer, its draining ring and its notes, and folds it away when it is
 // bought or runs out.
 
-const RARITY_NAME: Record<PerkRarity, string> = {
-  common: 'Common',
-  rare: 'Rare',
-  keystone: 'Keystone',
-};
 const ROMAN = ['', 'I', 'II', 'III'];
 
 /** A fresh copy of a perk's glyph. */
@@ -696,7 +693,7 @@ function perkTitle(id: PerkId, level: number): string {
 function dropKind(offer: PerkOffer): string {
   if (offer.level > 1) return 'Upgrade drop';
   const { rarity } = perk(offer.id);
-  return rarity === 'common' ? 'Perk drop' : `${RARITY_NAME[rarity]} drop`;
+  return rarity === 'common' ? 'Perk drop' : `${PERK_RARITY_NAMES[rarity]} drop`;
 }
 
 /** The level badge after a name: "II" on screen, "level 2" to a screen reader. */
@@ -741,24 +738,17 @@ function perkEffect(def: PerkDef, level: number, held = 0): Node[] {
   return nodes;
 }
 
-const FAMILY_NAME: Record<PerkFamily, string> = {
-  rhythm: 'Rhythm',
-  press: 'Press power',
-  luck: 'Luck',
-  surge: 'Surge',
-  machines: 'Machines',
-};
 const TAB_NAME: Record<ShopTab, string> = { press: 'Upgrades', auto: 'Auto-tappers' };
 
 /** "Rare · Rhythm": rarity and family in words, so the hue never stands alone. */
 function perkKind(def: PerkDef): string {
-  return `${RARITY_NAME[def.rarity]} · ${FAMILY_NAME[def.family]}`;
+  return `${PERK_RARITY_NAMES[def.rarity]} · ${PERK_FAMILY_NAMES[def.family]}`;
 }
 
 /** A held perk in full, for its shelf chip's accessible name. */
 function perkLabel(id: PerkId, level: number): string {
   const def = perk(id);
-  const kind = `${def.rarity} ${FAMILY_NAME[def.family].toLowerCase()} perk`;
+  const kind = `${def.rarity} ${PERK_FAMILY_NAMES[def.family].toLowerCase()} perk`;
   return `${def.name}, level ${level}, ${kind}. ${perkDetail(def, level)}`;
 }
 
@@ -849,7 +839,7 @@ function renderOffer(tab: ShopTab): void {
     row.name.textContent = def.name;
     setLevelBadge(row.level, offer.level);
     row.detail.replaceChildren(...perkEffect(def, offer.level, offer.level - 1));
-    row.rarity.textContent = offer.level > 1 ? 'Upgrade' : RARITY_NAME[def.rarity];
+    row.rarity.textContent = offer.level > 1 ? 'Upgrade' : PERK_RARITY_NAMES[def.rarity];
   }
 
   const affordable = state.energy >= offer.price;

@@ -13,19 +13,36 @@ faq:
   - question: 'How is Spacebar Clicker different from the spacebar speed test?'
     answer: 'The spacebar speed test measures your presses per second over a fixed window and gives you a rank. Spacebar Clicker is an idle game: progress carries over between visits, presses buy upgrades, and a steady rhythm matters more than raw speed. The surge event is the one moment the game asks you to mash, and it records your presses per second like the test does.'
   - question: 'How long does it take to reach the first reset?'
-    answer: 'Around 25 minutes of steady tapping if you buy well and hold a combo, about half as long again if you mash with no rhythm, and longer if you leave the auto-tappers to work on their own. Offline progress at half speed brings it closer across a couple of sessions.'
+    answer: 'Around 20 to 25 minutes of steady tapping if you buy well and hold a combo, at the quick end if you also buy the perks that drop. About half as long again if you mash with no rhythm, and longer if you leave the auto-tappers to work on their own. Offline progress at half speed brings it closer across a couple of sessions.'
   - question: 'What does holding a rhythm do?'
     answer: 'Each press that lands within 25% of your recent average interval adds one to your combo. At 10 combo every press is worth 1.5 times as much, at 25 it is doubled, at 50 it is 2.5 times and at 100 it is tripled. Pause for more than 0.8 seconds, or miss the beat three times in a row, and the combo breaks.'
+  - question: 'How do perks work?'
+    answer: 'Perks are random drops that change the rules for one run. One appears at the top of the Upgrades or Auto-tappers tab while you play, and leaves once you have earned past its window, so buy the ones you want before the ring around it runs out. About two drops in three are commons that boost a number, three in ten are rares that change a rule, and one in twenty is a keystone that breaks a rule at a cost. You hold up to five, one keystone at a time, and they all clear when you reset the experiment.'
 ---
 
 import {
   AUTO_TAPPERS,
   COMBO_TIERS,
+  PERK_DROPS,
+  PERK_FAMILY_NAMES,
+  PERK_RARITY_NAMES,
+  PERK_SLOTS,
+  PERK_UPGRADE_SCALE,
+  PERKS,
   PRESS_UPGRADES,
   REACTOR_STATES,
 } from '../../games/spacebar-clicker/config';
+import { perkDetailAllLevels } from '../../games/spacebar-clicker/perks';
 
 export const whole = (v) => v.toLocaleString('en-US');
+export const pct = (v) => `${Math.round(v * 100)}%`;
+export const perksIn = (tab) => PERKS.filter((p) => p.tab === tab);
+export const RARITIES = ['common', 'rare', 'keystone'];
+export const TIER_TEXT = {
+  common: 'Boosts a number.',
+  rare: 'Changes a rule.',
+  keystone: 'Breaks a rule, with a real downside. You hold one at a time.',
+};
 export const scaling = (s) => (s === 1 ? 'one-off' : `x${s} per level`);
 export const tiers = [...COMBO_TIERS].reverse();
 export const tierRange = (i) =>
@@ -47,6 +64,9 @@ export const tierRange = (i) =>
       by a wide margin, which makes it a cousin of the <a href="/spacebar-speed-test">spacebar speed
       test</a> rather than a copy of it.
 
+      Perks add the luck. They drop into the shop at random while you play, and each one bends a
+      rule for the rest of the run, so one run might lean on rhythm and the next on machines.
+
       Everything saves in your browser. No account, no ads, no download.
 
   </div>
@@ -60,8 +80,8 @@ export const tierRange = (i) =>
         <strong>Press the spacebar</strong>
 
           Each press adds energy to the reactor. On a phone, tap the reactor instead. The first
-          upgrade costs {PRESS_UPGRADES[0].baseCost} energy, so you can afford it within your first
-          few seconds.
+          upgrade costs {PRESS_UPGRADES[0].baseCost} energy, so a steady tapper can afford it within
+          fifteen seconds.
 
       </li>
       <li>
@@ -91,12 +111,21 @@ export const tierRange = (i) =>
 
       </li>
       <li>
+        <strong>Catch the perks</strong>
+
+          Now and then a perk drops into the shop: a random bonus that lasts the rest of the run.
+          A ring around it drains as you earn, so decide before it runs out. You can hold up to
+          {PERK_SLOTS} at once, and they show in the reactor's top-right corner.
+
+      </li>
+      <li>
         <strong>Reset the experiment</strong>
 
           Once a run has earned a million energy you can reset it for isotopes. Each isotope adds
-          10% to every gain for good. Your energy, shop and reactor state go back to zero; your
-          isotopes, achievements and records stay. Each isotope sits as a bead in the reactor's top
-          corner, so you can count them at a glance.
+          10% to every gain for good. Your energy, shop, reactor state and perks go back to zero;
+          your isotopes, achievements, records and perk codex stay. Isotopes sit as beads in the
+          reactor's top-left corner: point at them or tap them for their bonus. Once a reset is
+          open, a ring beside them shows what it would pay.
 
       </li>
     </ol>
@@ -138,6 +167,10 @@ export const tierRange = (i) =>
       which gives them half of your current multiplier. Rhythm, not speed, is what the tracker
       measures: a tapper at three presses a second holds a combo as well as one at eight, as long as
       the gaps stay even.
+
+      Two perks change this table for a run. Overtone adds a tier above Harmonic, and Glass Rhythm
+      multiplies every tier by two to three but lets two off-beat presses in a row break the
+      combo.
 
   </div>
 </section>
@@ -186,14 +219,98 @@ export const tierRange = (i) =>
       ))}
     </div>
 
-      There are ten shop items and no more. The game is shallow on purpose: no tech tree, no second
-      shop, one prestige layer. Auto-tappers out-earn your fingers after fifteen or twenty
-      minutes of play, not long before resetting the experiment starts to make sense.
+      Those ten items are the whole shop, apart from the perks that drop into it at random. There
+      is no tech tree and one prestige layer. Auto-tappers out-earn your fingers after fifteen or
+      twenty minutes of play, not long before resetting the experiment starts to make sense.
 
   </div>
 </section>
 
-<section id="reactor" class="info-section">
+<section id="perks" class="info-section">
+  <div class="container">
+    <h2>Perks: random drops that bend the rules</h2>
+
+      While you play, perks drop into the shop at random, each at the top of the Upgrades or
+      Auto-tappers tab. Each one bends a rule for the rest of the run, from a wider rhythm window
+      to an auto-tapper that copies itself. A ring around the perk drains as you earn, and when it
+      runs out the offer is gone.
+
+      You can't time a drop. Perks come only while you are playing, with the page in view and a
+      press in the last minute, and the game draws a fresh wait before each one: two can land a
+      minute apart, or a long stretch can pass with nothing. In the game's own simulation, a
+      steady player gets four to eight drops on a first run to a million. Each surge also has a 1
+      in {Math.round(1 / PERK_DROPS.surgeChance)} chance to end with a bonus drop, on better odds.
+
+    <div class="spec-table section-content">
+      <div class="spec-row spec-head">
+        <span class="spec-name">Rarity</span>
+        <span class="spec-num">Per drop</span>
+        <span class="spec-num">Surge drop</span>
+        <span class="spec-desc">What it is and what it costs</span>
+      </div>
+      {RARITIES.map((r) => (
+        <div class="spec-row">
+          <span class="spec-name">{PERK_RARITY_NAMES[r]}</span>
+          <span class="spec-num" data-label="Per drop">{pct(PERK_DROPS.odds[r])}</span>
+          <span class="spec-num" data-label="Surge drop">{pct(PERK_DROPS.surgeOdds[r])}</span>
+          <span class="spec-desc">
+            {TIER_TEXT[r]} Costs {PERK_DROPS.priceS[r]} seconds of your income, and stays on offer
+            until you earn another {PERK_DROPS.windowS[r]} seconds’ worth.
+          </span>
+        </div>
+      ))}
+    </div>
+
+      The game sets each price and window in your income at the moment the perk drops, so a perk
+      costs the same share of your earnings early in a run as late. Energy you collect for time
+      away doesn't count against a window.
+
+      You can hold {PERK_SLOTS} perks, and one keystone at a time. A perk you already hold can
+      drop again as an upgrade, to level II and then III, at {PERK_UPGRADE_SCALE} times the price
+      for each level you hold. With every slot full, the game asks which perk to let go before you
+      buy a new one, and a new keystone replaces the old. Perks last until you reset the
+      experiment. The Perks tab holds a codex of every perk you have found, across all your runs.
+
+    <h3>Upgrade perks</h3>
+    <div class="spec-table">
+      <div class="spec-row spec-head">
+        <span class="spec-name">Perk</span>
+        <span class="spec-word">Rarity</span>
+        <span class="spec-word">Family</span>
+        <span class="spec-desc">Effect at levels I, II and III</span>
+      </div>
+      {perksIn('press').map((p) => (
+        <div class="spec-row">
+          <span class="spec-name">{p.name}</span>
+          <span class="spec-word">{PERK_RARITY_NAMES[p.rarity]}</span>
+          <span class="spec-word">{PERK_FAMILY_NAMES[p.family]}</span>
+          <span class="spec-desc">{perkDetailAllLevels(p)}.</span>
+        </div>
+      ))}
+    </div>
+
+    <h3>Auto-tapper perks</h3>
+    <div class="spec-table">
+      <div class="spec-row spec-head">
+        <span class="spec-name">Perk</span>
+        <span class="spec-word">Rarity</span>
+        <span class="spec-word">Family</span>
+        <span class="spec-desc">Effect at levels I, II and III</span>
+      </div>
+      {perksIn('auto').map((p) => (
+        <div class="spec-row">
+          <span class="spec-name">{p.name}</span>
+          <span class="spec-word">{PERK_RARITY_NAMES[p.rarity]}</span>
+          <span class="spec-word">{PERK_FAMILY_NAMES[p.family]}</span>
+          <span class="spec-desc">{perkDetailAllLevels(p)}.</span>
+        </div>
+      ))}
+    </div>
+
+  </div>
+</section>
+
+<section id="reactor" class="info-section alt-bg">
   <div class="container">
     <h2>Reactor states</h2>
 
@@ -219,7 +336,7 @@ export const tierRange = (i) =>
   </div>
 </section>
 
-<section id="prestige" class="info-section alt-bg">
+<section id="prestige" class="info-section">
   <div class="container">
     <h2>Reset the experiment</h2>
 
@@ -227,16 +344,19 @@ export const tierRange = (i) =>
       exchange for starting over. Isotopes gained equal the square root of your run's energy in
       millions, rounded down: one million gives 1, four million gives 2, twenty-five million gives
       5, a hundred million gives 10. Each isotope adds 10% to every gain, presses and auto-tappers
-      alike, on every run from then on.
+      alike, on every run from then on. Your perks go with the reset, but the codex of perks you
+      have found stays.
 
-      Waiting longer pays off slowly. Going from one million to four million takes far more time
-      than it takes to reset, start again with a 10% bonus, and reach a million a second time. The
-      game shows you how many isotopes a reset would give right now, and asks you to confirm.
+      The thresholds climb, but a run keeps speeding up as it goes, so each isotope after the first
+      arrives sooner than the one before. In the game's simulation, a steady player with no perks
+      earns the first isotope at about 24 minutes and the second about 12 minutes later. The
+      isotope beads and the Reset the experiment tab show what a reset gives now and how far off
+      the next isotope is, so when to reset is your call, and the game asks you to confirm.
 
   </div>
 </section>
 
-<section id="million" class="info-section">
+<section id="million" class="info-section alt-bg">
   <div class="container">
     <h2>How to reach a million energy</h2>
     <div class="tips-grid section-content">
@@ -283,13 +403,13 @@ export const tierRange = (i) =>
       </div>
       <div class="tip-card">
         <span class="tip-card-icon" aria-hidden="true">
-          🔁
+          🎲
         </span>
-        <h3>Reset early</h3>
+        <h3>Take the perks that fit</h3>
 
-          Your first reset at exactly one million gives one isotope and a 10% bonus on the next run.
-          That run reaches a million faster than the first one did, and the one after is faster
-          still.
+          Buy the perks that suit how you play: rhythm perks if you hold a beat, machine perks if
+          you leave the game running. In the simulation, a steady player who buys what drops
+          reaches a million about three minutes sooner.
 
       </div>
       <div class="tip-card">
@@ -307,7 +427,7 @@ export const tierRange = (i) =>
   </div>
 </section>
 
-<section id="faq" class="info-section alt-bg">
+<section id="faq" class="info-section">
   <div class="container">
     <h2>Spacebar Clicker FAQ</h2>
     <div class="faq-list section-content">
@@ -365,10 +485,10 @@ export const tierRange = (i) =>
       <details class="faq-item">
         <summary>How long does it take to reach the first reset?</summary>
 
-          Around 25 minutes of steady tapping if you buy well and hold a combo, about half as long
-          again if you mash with no rhythm, and longer if you leave the auto-tappers to work on their
-          own.
-          Offline progress at half speed brings it closer across a couple of sessions.
+          Around 20 to 25 minutes of steady tapping if you buy well and hold a combo, at the quick
+          end if you also buy the perks that drop. About half as long again if you mash with no
+          rhythm, and longer if you leave the auto-tappers to work on their own. Offline progress at
+          half speed brings it closer across a couple of sessions.
 
       </details>
       <details class="faq-item">
@@ -378,6 +498,18 @@ export const tierRange = (i) =>
           At 10 combo every press is worth 1.5 times as much, at 25 it is doubled, at 50 it is 2.5
           times and at 100 it is tripled. Pause for more than 0.8 seconds, or miss the beat three
           times in a row, and the combo breaks.
+
+      </details>
+      <details class="faq-item">
+        <summary>How do perks work?</summary>
+
+          Perks are random drops that change the rules for one run. One appears at the top of the
+          Upgrades or Auto-tappers tab while you play, and leaves once you have earned past its
+          window, so buy the ones you want before the ring around it runs out. About two drops in
+          three are commons that boost a number, three in ten are rares that change a rule, and one
+          in twenty is a keystone that breaks a rule at a cost. You hold up to five, one keystone at
+          a time, and they all clear when you reset the experiment. The <a href="#perks">perks
+          section</a> above lists every one.
 
       </details>
     </div>
