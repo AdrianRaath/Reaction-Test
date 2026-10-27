@@ -130,7 +130,7 @@ export function milestoneBonus(runLifetime: number): number {
   return 1 + MILESTONE_BONUS * reactorIndex(runLifetime);
 }
 
-/** +10% per isotope, additive (spec §9); +15% with Enrichment (the run's `isotopeRate`). */
+/** +10% per isotope, additive (spec §9); +13% with Enrichment (the run's `isotopeRate`). */
 export function isotopeBonus(isotopes: number, rate: number = ISOTOPE_BONUS): number {
   return 1 + rate * isotopes;
 }

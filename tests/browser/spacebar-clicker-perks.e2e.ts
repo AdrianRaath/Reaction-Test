@@ -378,7 +378,10 @@ test('the shelf shows the perks held this run, with a tooltip on hover and focus
   const shelf = page.locator('#sc-perk-shelf');
   await expect(shelf).toBeVisible();
   await expect(shelf.locator('.perk-chip:not([hidden])')).toHaveCount(2);
-  await expect(shelf.locator('.perk-slot[data-empty]'), 'three empty sockets').toHaveCount(3);
+  await expect(
+    shelf.locator('.perk-slot[data-empty]:not([hidden])'),
+    'three empty sockets'
+  ).toHaveCount(3);
   await expect(shelf.locator('.perk-pips').first()).toHaveAttribute('data-level', '2');
   await expect(page.locator('#sc-perk-slots')).toHaveAttribute(
     'aria-label',

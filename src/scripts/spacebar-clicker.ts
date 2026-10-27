@@ -15,26 +15,31 @@
 import { browserAdapter, KEY_PREFIX } from '../engine/storage';
 import { createBeeper } from '../engine/sound';
 import { checkAchievements } from '../games/spacebar-clicker/achievements';
-import { ComboTracker } from '../games/spacebar-clicker/combo';
+import { ComboTracker, type PressResult } from '../games/spacebar-clicker/combo';
 import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
+  COMBO,
+  ISOTOPE_TRACK,
   MIN_PRESS_GAP_MS,
+  OFFLINE,
   PERK_FAMILY_NAMES,
   PERK_RARITY_NAMES,
-  PERK_SLOTS,
   PERKS,
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
   REACTOR_STATES,
   SAVE_INTERVAL_MS,
+  TRACK_EFFECT,
   type AutoTapperId,
   type PerkDef,
   type PerkFamily,
   type PerkId,
   type PerkRarity,
   type PressUpgradeId,
+  type RungId,
   type ShopTab,
+  type TrackStep,
 } from '../games/spacebar-clicker/config';
 import {
   autoTapper,
@@ -46,7 +51,6 @@ import {
   earn,
   energyPerPress,
   energyPerSecond,
-  isotopeBonus,
   isotopeProgress,
   luckyMultiplier,
   markShopTabSeen,
@@ -81,21 +85,39 @@ import {
   formatPerkValue,
   keystoneSwap,
   needsSlot,
+  offerCredits,
   offerRemaining,
   perkDetail,
   perkLevel,
   perkTick,
   replicate,
+  rerollOffer,
+  rerollsLeft,
   surgeDrop,
+  swapChoices,
+  type OfferCredit,
 } from '../games/spacebar-clicker/perks';
 import {
   defaultSave,
+  keepable,
   parseSave,
   prestigeReset,
   serializeSave,
   type PerkOffer,
   type SaveState,
 } from '../games/spacebar-clicker/save';
+import {
+  activeRungs,
+  hasRung,
+  isFork,
+  isotopeRate,
+  isPickFor,
+  nextSteps,
+  rung,
+  stepsReached,
+  unpickedForks,
+  type ForkPicks,
+} from '../games/spacebar-clicker/track';
 
 const SAVE_KEY = `${KEY_PREFIX}:spacebar-clicker:save`;
 const SETTINGS_KEY = `${KEY_PREFIX}:spacebar-clicker:settings`;
@@ -188,11 +210,12 @@ const isotopeTip = el('sc-isotope-tip');
 const isotopeTipName = el('sc-isotope-tip-name');
 const isotopeTipKind = el('sc-isotope-tip-kind');
 const isotopeTipDetail = el('sc-isotope-tip-detail');
+const isotopeTipUnlock = el('sc-isotope-tip-unlock');
 const reactorWrap = el('sc-reactor-wrap');
 const gameSection = el('game-section');
 
-// The perk shelf over the face's top-right corner: five sockets, a chip and
-// level pips in each, and one shared tooltip.
+// The perk shelf over the face's top-right corner: a socket per slot, five or
+// six, a chip and level pips in each, and one shared tooltip.
 const perkShelf = el('sc-perk-shelf');
 const perkSlotList = el('sc-perk-slots');
 const perkSlots = Array.from(perkSlotList.querySelectorAll<HTMLElement>('.perk-slot')).map(
@@ -228,6 +251,9 @@ const surgeBest = el('sc-surge-best');
 const surgeDropEl = el('sc-surge-drop');
 const surgeDropKind = el('sc-surge-drop-kind');
 const surgeDropName = el('sc-surge-drop-name');
+const surgeCredit = el('sc-surge-credit');
+const unlockCard = el('sc-unlock-card');
+const unlockList = el('sc-unlock-list');
 
 const toastEl = el('sc-toast');
 const toastText = el('sc-toast-text');
@@ -257,10 +283,14 @@ interface OfferRow {
   level: HTMLElement;
   detail: HTMLElement;
   note: HTMLElement;
+  /** What the isotope track did for the offer, when it did something. */
+  credit: HTMLElement;
   window: HTMLElement;
   cost: HTMLElement;
   rarity: HTMLElement;
-  /** The offer the row shows, as "id:level"; empty when none. */
+  /** The Reroll rung's button under the row, shown while the run has a reroll. */
+  reroll: HTMLButtonElement;
+  /** The offer the row shows, as "id:level:held"; empty when none. */
   shown: string;
   /** The fold-away while the row leaves, bought or run out. */
   leaving: Animation | null;
@@ -280,9 +310,11 @@ function offerRow(tab: ShopTab): OfferRow {
     level: part('[data-perk-level]'),
     detail: part('[data-perk-detail]'),
     note: part('[data-perk-note]'),
+    credit: part('[data-perk-credit]'),
     window: part('[data-perk-window]'),
     cost: part('[data-perk-cost]'),
     rarity: part('[data-perk-rarity]'),
+    reroll: part<HTMLButtonElement>('[data-perk-reroll]'),
     shown: '',
     leaving: null,
   };
@@ -321,17 +353,30 @@ const prestigeNow = el('sc-prestige-now');
 const isotopeMeter = el('sc-isotope-meter');
 const prestigeProgress = el('sc-prestige-progress');
 const prestigeBtn = el<HTMLButtonElement>('sc-prestige-btn');
+const trackCount = el('sc-track-count');
+const trackList = el('sc-track-list');
+/** The track's sockets in the Reset tab, a fork's two halves in each of those. */
+const trackSockets = Array.from(document.querySelectorAll<HTMLElement>('.track-socket')).map(
+  (li) => ({
+    li,
+    isotopes: Number(li.dataset.isotopes),
+    halves: Array.from(li.querySelectorAll<HTMLElement>('.track-half')),
+  })
+);
 
 const prestigeModal = el('sc-prestige-modal');
 const prestigeModalMessage = el('sc-prestige-modal-message');
 const prestigeCancel = el('sc-prestige-cancel');
 const prestigeConfirm = el('sc-prestige-confirm');
+const resetChoices = el('sc-reset-choices');
+const resetPickHint = el('sc-reset-pick-hint');
 
 const awayModal = el('sc-away-modal');
 const awayTime = el('sc-away-time');
 const awayRate = el('sc-away-rate');
 const awayEnergy = el('sc-away-energy');
 const awayOffers = el('sc-away-offers');
+const awayCredit = el('sc-away-credit');
 const awayCollect = el('sc-away-collect');
 
 const swapModal = el('sc-swap-modal');
@@ -394,8 +439,20 @@ function updateSoundIcon(): void {
 
 // --- Announcements -------------------------------------------------------------
 
+/** Messages for the announcer from one moment. */
+let announcing: string[] = [];
+
+/**
+ * Tell a screen reader. Messages from the same moment are read as one, so a
+ * reset's unlocks aren't replaced by the achievement the reset earns.
+ */
 function announce(text: string): void {
-  announceEl.textContent = text;
+  announcing.push(text);
+  if (announcing.length > 1) return;
+  queueMicrotask(() => {
+    announceEl.textContent = announcing.join(' ');
+    announcing = [];
+  });
 }
 
 const toastQueue: { text: string; family?: PerkFamily }[] = [];
@@ -467,6 +524,10 @@ const surge = {
   /** This surge's timings, fixed as it starts so a perk bought mid-surge cannot skew its clock. */
   warningS: 0,
   durationS: 0,
+  /** Capacitor's extra seconds at the end of this surge, and what they brought in. */
+  bonusS: 0,
+  bonusPresses: 0,
+  bonusEarned: 0,
 };
 /** Seconds of active play: page visible and a press within the last minute. */
 let activeS = 0;
@@ -689,9 +750,12 @@ function perkTitle(id: PerkId, level: number): string {
   return level > 1 ? `${perk(id).name} ${ROMAN[level]}` : perk(id).name;
 }
 
-/** What a drop is called: "Perk drop", "Rare drop", "Keystone drop", "Upgrade drop". */
+/**
+ * What a drop is called: "Perk drop", "Rare drop", "Keystone drop", "Upgrade
+ * drop". A perk not held is never an upgrade, even at level II (Prodigy).
+ */
 function dropKind(offer: PerkOffer): string {
-  if (offer.level > 1) return 'Upgrade drop';
+  if (perkLevel(state, offer.id) > 0) return 'Upgrade drop';
   const { rarity } = perk(offer.id);
   return rarity === 'common' ? 'Perk drop' : `${PERK_RARITY_NAMES[rarity]} drop`;
 }
@@ -829,17 +893,20 @@ function renderOffer(tab: ShopTab): void {
   }
 
   const def = perk(offer.id);
-  const key = `${offer.id}:${offer.level}`;
+  // An upgrade strikes out the level held; a perk not held shows its level
+  // alone, which with Prodigy is level II.
+  const held = perkLevel(state, offer.id);
+  const key = `${offer.id}:${offer.level}:${held}`;
   if (row.shown !== key) {
     row.shown = key;
     row.li.dataset.family = def.family;
     row.li.dataset.rarity = def.rarity;
-    row.li.classList.toggle('is-upgrade', offer.level > 1);
+    row.li.classList.toggle('is-upgrade', held > 0);
     row.glyph.replaceChildren(perkGlyph(def.id));
     row.name.textContent = def.name;
     setLevelBadge(row.level, offer.level);
-    row.detail.replaceChildren(...perkEffect(def, offer.level, offer.level - 1));
-    row.rarity.textContent = offer.level > 1 ? 'Upgrade' : PERK_RARITY_NAMES[def.rarity];
+    row.detail.replaceChildren(...perkEffect(def, offer.level, held));
+    row.rarity.textContent = held > 0 ? 'Upgrade' : PERK_RARITY_NAMES[def.rarity];
   }
 
   const affordable = state.energy >= offer.price;
@@ -854,14 +921,57 @@ function renderOffer(tab: ShopTab): void {
 
   // What buying it would cost besides energy.
   const out = keystoneSwap(state, tab);
+  const choices = swapChoices(state, tab);
   const note = out
     ? `Swaps out your keystone, ${perkTitle(out, perkLevel(state, out))}`
-    : needsSlot(state, tab)
-      ? `All ${PERK_SLOTS} slots are full: you'll pick one to drop`
-      : '';
+    : choices.length === 0
+      ? ''
+      : keystonesOnly(choices)
+        ? "Both keystone slots are full: you'll pick one to drop"
+        : `All ${modsOf(state).perkSlots} slots are full: you'll pick one to drop`;
   row.note.hidden = !note;
   setText(row.note, note);
+  // What the isotope track did for it, a line each.
+  const credits = offerCredits(state, offer).map((c) => creditWords(c, offer));
+  const creditKey = credits.join('|');
+  row.credit.hidden = credits.length === 0;
+  if (row.credit.dataset.shown !== creditKey) {
+    row.credit.dataset.shown = creditKey;
+    // A screen reader hears the lines as sentences: "… price. Lucky Find: …".
+    row.credit.replaceChildren(
+      ...credits.flatMap((words, i) => {
+        const line = cardLine('credit', words);
+        if (i === 0) return [line];
+        const pause = cardLine('visually-hidden', '. ');
+        return [pause, line];
+      })
+    );
+  }
+  row.reroll.hidden = rerollsLeft(state) === 0;
   row.li.hidden = false;
+}
+
+/** A rung's credit on an offer: "Familiar: 25% off". */
+function creditWords(credit: OfferCredit, offer: PerkOffer): string {
+  const name = rung(credit).name;
+  switch (credit) {
+    case 'prodigy':
+      return `${name}: level ${ROMAN[offer.level]} for the level I price`;
+    case 'lucky-find':
+    case 'rich-find':
+      return perk(offer.id).rarity === 'keystone'
+        ? `${name}: a keystone, not a rare`
+        : `${name}: a rare, not a common`;
+    case 'patience':
+      return `${name}: still on offer`;
+    case 'familiar':
+      return `${name}: ${Math.round(modsOf(state).familiarDiscount * 100)}% off`;
+  }
+}
+
+/** True when the perks to pick from are keystones: Twin Keystones' two, both held. */
+function keystonesOnly(ids: readonly PerkId[]): boolean {
+  return ids.every((id) => perk(id).rarity === 'keystone');
 }
 
 /** A drop lands in its row: the row slides in and the tile pops (CSS, by rarity). */
@@ -918,13 +1028,16 @@ let shelfShown: string | null = null;
 function renderPerkShelf(): void {
   perkShelf.classList.remove('is-clearing');
   const owned = state.perks.owned;
-  const key = owned.map((o) => `${o.id}:${o.level}`).join(',');
+  // Five sockets, or six with the Sixth Slot rung.
+  const slots = modsOf(state).perkSlots;
+  const key = `${slots}|${owned.map((o) => `${o.id}:${o.level}`).join(',')}`;
   if (key === shelfShown) return;
   shelfShown = key;
 
   perkShelf.hidden = owned.length === 0;
-  perkSlotList.setAttribute('aria-label', `Perks this run, ${owned.length} of ${PERK_SLOTS} slots`);
+  perkSlotList.setAttribute('aria-label', `Perks this run, ${owned.length} of ${slots} slots`);
   perkSlots.forEach((slot, i) => {
+    slot.li.hidden = i >= slots;
     const held = owned[i];
     slot.chip.hidden = !held;
     slot.li.toggleAttribute('data-empty', !held);
@@ -1003,20 +1116,33 @@ function renderIsotopeTip(target: 'held' | 'next' | null): void {
     isotopeTipShown = '';
     return;
   }
-  const key = `${target}:${held}:${gain}`;
+  const key = `${target}:${held}:${gain}:${JSON.stringify(state.forks)}`;
   if (key === isotopeTipShown) return;
   isotopeTipShown = key;
 
+  // The track's line: the next unlock, or what this reset unlocks.
+  let unlock: Node[] = [];
   if (target === 'held') {
+    const rate = Math.round(isotopeRate(held, state.forks) * 100);
     isotopeTipName.textContent = isotopeCount(held);
     isotopeTipKind.textContent = `${bonusText(held)} to all gains`;
-    isotopeTipDetail.textContent =
-      'Each one adds 10% to everything you earn, and they last through every reset.';
+    isotopeTipDetail.textContent = `Each one adds ${rate}% to everything you earn, and they last through every reset.`;
+    const next = nextSteps(held, 1)[0];
+    unlock = next
+      ? [text(`Next at ${isotopeCount(next.isotopes)}: `), ...unlockNodes([next]), text('.')]
+      : [text('Every rung of the isotope track is unlocked.')];
   } else {
     isotopeTipName.textContent = `Reset now for ${isotopeCount(gain)}`;
     isotopeTipKind.textContent = `${bonusText(held)} now, ${bonusText(held + gain)} after`;
     isotopeTipDetail.textContent = `The next isotope comes at ${formatEnergy(nextIsotopeAt(state.runLifetime))} energy this run. Click to open the Reset the experiment tab.`;
+    const steps = stepsReached(held, held + gain);
+    if (steps.length > 0) unlock = [text('Unlocks '), ...unlockNodes(steps), text('.')];
   }
+  isotopeTipUnlock.hidden = unlock.length === 0;
+  isotopeTipUnlock.replaceChildren(...unlock);
+  // The ring's hook is what the reset unlocks, so it leads; the beads' next unlock follows.
+  if (target === 'held') isotopeTipDetail.after(isotopeTipUnlock);
+  else isotopeTipDetail.before(isotopeTipUnlock);
   // The caret points at the beads or the ring, and stays clear of the corner.
   const anchor = (target === 'held' ? isotopesHeld : isotopeNext).getBoundingClientRect();
   const tip = isotopeTip.getBoundingClientRect();
@@ -1158,11 +1284,12 @@ let perksPanelShown = '';
 /** The Perks panel: this run's perks in full, then the codex. */
 function renderPerksPanel(): void {
   const { owned, codex } = state.perks;
-  const key = JSON.stringify([owned, codex]);
+  const slots = modsOf(state).perkSlots;
+  const key = JSON.stringify([slots, owned, codex]);
   if (key === perksPanelShown) return;
   perksPanelShown = key;
 
-  perksSlotsEl.textContent = `${owned.length} of ${PERK_SLOTS}`;
+  perksSlotsEl.textContent = `${owned.length} of ${slots}`;
   perksEmptyEl.hidden = owned.length > 0;
   perksRunEl.replaceChildren(
     ...owned.map((o) => {
@@ -1269,9 +1396,57 @@ function isotopeCount(n: number): string {
   return `${n} ${isotopeNoun(n)}`;
 }
 
-/** What n isotopes add to every gain, as "+30%". */
-function bonusText(n: number): string {
-  return `+${Math.round((isotopeBonus(n) - 1) * 100)}%`;
+/**
+ * What n isotopes add to every gain, as "+30%": at Enrichment's rate once it
+ * is picked. `forks` are the picks to count, the save's unless a reset is
+ * about to change them.
+ */
+function bonusText(n: number, forks: ForkPicks = state.forks): string {
+  return `+${Math.round(isotopeRate(n, forks) * n * 100)}%`;
+}
+
+function text(words: string): Text {
+  return document.createTextNode(words);
+}
+
+/** A step's rungs by name: "Warm Start", or a fork's two, "Sixth Slot or Prodigy". */
+function stepName(step: TrackStep): string {
+  return step.rungs.map((r) => r.name).join(' or ');
+}
+
+/** "a", "a and b", "a, b and c". */
+function listWords(words: readonly string[]): string {
+  if (words.length < 2) return words[0] ?? '';
+  return `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`;
+}
+
+/** What reaching these steps unlocks, in words: "Capacitor and a choice of Sixth Slot or Prodigy". */
+function unlockWords(steps: readonly TrackStep[]): string {
+  return listWords(steps.map((s) => (isFork(s) ? `a choice of ${stepName(s)}` : stepName(s))));
+}
+
+/** The same, with each rung's name lit: the isotope tooltip's line. */
+function unlockNodes(steps: readonly TrackStep[]): Node[] {
+  const name = (words: string) => {
+    const node = document.createElement('span');
+    node.className = 'rung-name';
+    node.textContent = words;
+    return node;
+  };
+  const parts = steps.map((step): Node[] =>
+    isFork(step)
+      ? [text('a choice of '), name(step.rungs[0].name), text(' or '), name(step.rungs[1]!.name)]
+      : [name(step.rungs[0].name)]
+  );
+  return parts.flatMap((part, i) => [
+    ...(i === 0 ? [] : [text(i === parts.length - 1 ? ' and ' : ', ')]),
+    ...part,
+  ]);
+}
+
+/** A rung's detail as a sentence. */
+function rungSentence(id: RungId): string {
+  return `${rung(id).detail}.`;
 }
 
 /** A word, or a number set as a readout (with an extra class, if given). */
@@ -1343,6 +1518,78 @@ function renderPrestige(): void {
   }
   isotopeMeter.style.transform = `scaleX(${isotopeProgress(state.runLifetime)})`;
   prestigeBtn.hidden = !ready;
+  renderTrack();
+}
+
+/** What the track shows, as the isotopes held and the picks. */
+let trackShown = '';
+
+/**
+ * The isotope track in the Reset tab: the sockets lit to the isotopes held,
+ * each fork's picked half, a rim on the next two; then a card for each rung
+ * held and the next two.
+ */
+function renderTrack(): void {
+  const held = state.isotopes;
+  const key = `${held}:${JSON.stringify(state.forks)}`;
+  if (key === trackShown) return;
+  trackShown = key;
+
+  const reached = ISOTOPE_TRACK.filter((s) => s.isotopes <= held);
+  const next = nextSteps(held);
+  trackCount.textContent = `${reached.length} of ${ISOTOPE_TRACK.length}`;
+  for (const socket of trackSockets) {
+    const lit = socket.isotopes <= held;
+    socket.li.classList.toggle('is-lit', lit);
+    socket.li.classList.toggle(
+      'is-next',
+      next.some((s) => s.isotopes === socket.isotopes)
+    );
+    for (const half of socket.halves) {
+      half.classList.toggle('is-picked', lit && half.dataset.rung === state.forks[socket.isotopes]);
+    }
+  }
+  trackList.replaceChildren(
+    ...reached.map((s) => trackCard(s, false)),
+    ...next.map((s) => trackCard(s, true))
+  );
+}
+
+/** A rung on the track as a card: where it sits, its name, what it does. */
+function trackCard(step: TrackStep, upcoming: boolean): HTMLLIElement {
+  const item = document.createElement('li');
+  item.className = upcoming ? 'track-rung is-next' : 'track-rung';
+  const at = `${upcoming ? 'Next at' : 'At'} ${isotopeCount(step.isotopes)}`;
+  const pick = state.forks[step.isotopes];
+  if (!isFork(step)) {
+    const r = step.rungs[0];
+    item.append(
+      cardLine('track-rung-at', at),
+      cardLine('track-rung-name', r.name),
+      cardLine('track-rung-detail', rungSentence(r.id))
+    );
+  } else if (upcoming) {
+    item.append(
+      cardLine('track-rung-at', `${at} · a choice`),
+      cardLine('track-rung-name', stepName(step)),
+      ...step.rungs.map((r) => cardLine('track-rung-detail', `${r.name}: ${rungSentence(r.id)}`))
+    );
+  } else if (pick && isPickFor(step.isotopes, pick)) {
+    const other = step.rungs.find((r) => r.id !== pick)!;
+    item.append(
+      cardLine('track-rung-at', `${at} · your pick`),
+      cardLine('track-rung-name', rung(pick).name),
+      cardLine('track-rung-detail', rungSentence(pick)),
+      cardLine('track-rung-other', `Or ${other.name}: switch at any reset.`)
+    );
+  } else {
+    item.append(
+      cardLine('track-rung-at', `${at} · a choice`),
+      cardLine('track-rung-name', stepName(step)),
+      cardLine('track-rung-detail', 'Pick one when you next reset the experiment.')
+    );
+  }
+  return item;
 }
 
 function renderPanels(): void {
@@ -1369,7 +1616,10 @@ function renderShelf(): void {
   shelfEl.hidden = count === 0 && gain === 0;
 
   isotopesHeld.hidden = count === 0;
-  const heldLabel = `${isotopeCount(count)}, ${bonusText(count)} to all gains, kept through every reset.`;
+  const next = nextSteps(count, 1)[0];
+  const heldLabel =
+    `${isotopeCount(count)}, ${bonusText(count)} to all gains, kept through every reset.` +
+    (next ? ` Next unlock at ${isotopeCount(next.isotopes)}: ${unlockWords([next])}.` : '');
   if (isotopesHeld.getAttribute('aria-label') !== heldLabel) {
     isotopesHeld.setAttribute('aria-label', heldLabel);
   }
@@ -1430,7 +1680,9 @@ function renderRing(gain: number): void {
     isotopeNextCount.dataset.digits = String(String(gain).length);
   }
   const next = formatEnergy(nextIsotopeAt(state.runLifetime));
-  const label = `Reset the experiment now for ${isotopeCount(gain)}, taking all gains to ${bonusText(state.isotopes + gain)}. The next isotope comes at ${next} energy.`;
+  const steps = stepsReached(state.isotopes, state.isotopes + gain);
+  const unlocks = steps.length > 0 ? ` and unlocking ${unlockWords(steps)}` : '';
+  const label = `Reset the experiment now for ${isotopeCount(gain)}, taking all gains to ${bonusText(state.isotopes + gain)}${unlocks}. The next isotope comes at ${next} energy.`;
   if (isotopeNext.getAttribute('aria-label') !== label)
     isotopeNext.setAttribute('aria-label', label);
 
@@ -1514,7 +1766,7 @@ function spawnIdleFloat(amount: number): void {
  * Something drifting up off the core's rim: auto-tapper income, or a perk
  * at work (Self-Replicator's free copy) in the perk's own hue.
  */
-function spawnRimFloat(text: string, family?: PerkFamily): void {
+function spawnRimFloat(text: string, tint?: PerkFamily | 'track'): void {
   if (reducedMotion() || floats.childElementCount >= MAX_FLOATS) return;
   const box = floats.getBoundingClientRect();
   const core = coreEl.getBoundingClientRect();
@@ -1522,8 +1774,13 @@ function spawnRimFloat(text: string, family?: PerkFamily): void {
   const angle = (-160 + Math.random() * 140) * (Math.PI / 180);
   const r = core.width * 0.48;
   const span = document.createElement('span');
-  span.className = family ? 'float is-idle is-perk' : 'float is-idle readout';
-  if (family) span.dataset.family = family;
+  span.className =
+    tint === 'track'
+      ? 'float is-idle is-track'
+      : tint
+        ? 'float is-idle is-perk'
+        : 'float is-idle readout';
+  if (tint && tint !== 'track') span.dataset.family = tint;
   span.textContent = text;
   span.style.left = `${core.left - box.left + core.width / 2 + r * Math.cos(angle)}px`;
   span.style.top = `${core.top - box.top + core.height / 2 + r * Math.sin(angle)}px`;
@@ -1575,7 +1832,16 @@ function spawnSparks(): void {
 
 const SCOPE_WINDOW_MS = 2400;
 const scopeCtx = scopeEl?.getContext('2d') ?? null;
-const blips: { t: number; kept: boolean }[] = [];
+/** Presses on the scope; `pitch` marks one Perfect Pitch caught. */
+const blips: { t: number; kept: boolean; pitch: boolean }[] = [];
+/** The isotopes' colors, from the page's tokens, for the scope's beads. */
+const isotopeInk = (() => {
+  const css = getComputedStyle(gameSection);
+  return {
+    blue: css.getPropertyValue('--ramp-blue').trim() || '#38bdf8',
+    white: css.getPropertyValue('--ramp-white').trim() || '#e0f2fe',
+  };
+})();
 let scopeColor = '#22c55e';
 /** The idle baseline is already on the canvas; skip redrawing it. */
 let scopeFlat = false;
@@ -1640,6 +1906,18 @@ function drawScope(now: number): void {
   ctx.shadowColor = scopeColor;
   ctx.shadowBlur = 6;
   ctx.stroke();
+
+  // A press Perfect Pitch caught wears an isotope bead on its peak, a shape
+  // as well as a color, so it shows at any stage.
+  ctx.fillStyle = isotopeInk.white;
+  ctx.shadowColor = isotopeInk.blue;
+  for (const blip of blips) {
+    if (!blip.pitch) continue;
+    const x = w * (1 - (now - blip.t) / SCOPE_WINDOW_MS);
+    ctx.beginPath();
+    ctx.arc(x, base - peak, 2.5, 0, 2 * Math.PI);
+    ctx.fill();
+  }
   ctx.shadowBlur = 0;
   scopeFlat = false;
 }
@@ -1720,10 +1998,20 @@ function press(e?: Event): void {
   if (play.surging) {
     surge.presses++;
     surge.earned += value;
+    // Capacitor's second, the last of the surge.
+    if (surge.bonusS > 0 && now >= surge.phaseEndsAt - surge.bonusS * 1000) {
+      surge.bonusPresses++;
+      surge.bonusEarned += value;
+    }
     spawnSparks();
   }
 
-  blips.push({ t: now, kept: result.kept });
+  const pitch = pitchCaught(result, mods);
+  if (pitch && now - pitchCreditAt >= PITCH_CREDIT_MS) {
+    pitchCreditAt = now;
+    spawnRimFloat(rung('perfect-pitch').name, 'track');
+  }
+  blips.push({ t: now, kept: result.kept, pitch });
   if (reducedMotion()) drawScope(now);
   spawnFloat(value, lucky, e);
   replay(coreEl, 'is-pressed');
@@ -1737,6 +2025,25 @@ function press(e?: Event): void {
   ) {
     awardAchievements({ combo: counted });
   }
+}
+
+/** Perfect Pitch's credit floats off the core at most this often; the scope marks every press it catches. */
+const PITCH_CREDIT_MS = 30_000;
+let pitchCreditAt = -Infinity;
+
+/**
+ * Perfect Pitch caught this press: it kept the beat inside the rung's wider
+ * window but outside the usual one, and no perk's window is wider still.
+ */
+function pitchCaught(result: PressResult, mods: ReturnType<typeof modsOf>): boolean {
+  return (
+    result.kept &&
+    result.drift !== null &&
+    result.drift > COMBO.tolerance &&
+    !mods.comboOff &&
+    hasRung(state, 'perfect-pitch') &&
+    mods.combo.tolerance === TRACK_EFFECT.perfectPitchTolerance
+  );
 }
 
 /** The combo the formulas count: none at all under Brute Force. */
@@ -1803,6 +2110,7 @@ function surgeTick(now: number): void {
       if (activeS < surge.dueAt || now - lastPressAt >= rules.idleAfterS * 1000) break;
       surge.warningS = rules.warningS;
       surge.durationS = rules.durationS;
+      surge.bonusS = hasRung(state, 'capacitor') ? TRACK_EFFECT.capacitorS : 0;
       // A surge with no countdown (Storm Front) strikes at once.
       if (surge.warningS <= 0) {
         startOverdrive(now, true);
@@ -1850,6 +2158,8 @@ function startOverdrive(now: number, struck = false): void {
   surge.phaseEndsAt = now + surge.durationS * 1000;
   surge.presses = 0;
   surge.earned = 0;
+  surge.bonusPresses = 0;
+  surge.bonusEarned = 0;
   surgeLabel.textContent = `Surge x${modsOf(state).surge.multiplier}`;
   coreNum.textContent = '0.0';
   coreUnit.textContent = 'per second';
@@ -1895,15 +2205,27 @@ function endSurge(now: number): void {
     surgeDropName.textContent = perkTitle(dropped.id, dropped.level);
     onPerkDropped(dropped, true);
   }
+  // Capacitor's extra second, with what it brought in.
+  const bonus = surge.bonusS > 0 ? capacitorWords() : '';
+  surgeCredit.hidden = !bonus;
+  surgeCredit.textContent = bonus;
 
   announce(
     `Surge over. ${surge.presses} presses, ${cps.toFixed(1)} per second, ${formatEnergy(surge.earned)} energy.` +
       (isBest ? ' New best.' : '') +
+      (bonus ? ` ${bonus}.` : '') +
       (dropped ? ` ${dropAnnouncement(dropped)}` : '')
   );
   SOUND.surgeEnd();
   awardAchievements({ surgeCps: cps });
   renderStats();
+}
+
+/** "Capacitor +1 s: 9 presses, 1,240 energy", what its extra second brought in. */
+function capacitorWords(): string {
+  const n = surge.bonusPresses;
+  const what = `${n} ${n === 1 ? 'press' : 'presses'}, ${formatEnergy(surge.bonusEarned)} energy`;
+  return `${rung('capacitor').name} +${surge.bonusS} s: ${what}`;
 }
 
 // --- Perks in play -------------------------------------------------------------------------
@@ -1923,7 +2245,10 @@ function onPerkDropped(offer: PerkOffer, fromSurge = false): void {
     window.setTimeout(() => SOUND.perkDrop(def.rarity), 450);
   } else {
     SOUND.perkDrop(def.rarity);
-    toast(`${dropKind(offer)}: ${perkTitle(offer.id, offer.level)}`, def.family);
+    toast(
+      `${dropKind(offer)}: ${perkTitle(offer.id, offer.level)}${findThanks(offer)}`,
+      def.family
+    );
     announce(dropAnnouncement(offer));
   }
   dirty = true;
@@ -1932,7 +2257,13 @@ function onPerkDropped(offer: PerkOffer, fromSurge = false): void {
 /** "Rare drop: Overtone, in the Upgrades tab for 18,000 energy." */
 function dropAnnouncement(offer: PerkOffer): string {
   const where = TAB_NAME[perk(offer.id).tab];
-  return `${dropKind(offer)}: ${perkTitle(offer.id, offer.level)}, in the ${where} tab for ${formatEnergy(offer.price)} energy.`;
+  return `${dropKind(offer)}: ${perkTitle(offer.id, offer.level)}${findThanks(offer)}, in the ${where} tab for ${formatEnergy(offer.price)} energy.`;
+}
+
+/** ", thanks to Lucky Find" on a drop a find rung raised a tier; nothing otherwise. */
+function findThanks(offer: PerkOffer): string {
+  if (!offer.lifted) return '';
+  return `, thanks to ${rung(hasRung(state, 'rich-find') ? 'rich-find' : 'lucky-find').name}`;
 }
 
 /** An offer's window ran out: its row fades away, and a screen reader hears it go. */
@@ -2084,11 +2415,22 @@ function settleAbsence(): void {
 
   const award = offlineAward(state, awayS);
   if (award) {
-    const { rate } = modsOf(state).offline;
+    const { rate, capS } = modsOf(state).offline;
     awayTime.textContent = formatDuration(award.seconds);
-    // Night Shift pays all of it.
+    // Night Shift pays all of it. Night Lab's rate and cap are credited where
+    // they are the ones in force.
+    const lab = hasRung(state, 'night-lab');
+    const labName = rung('night-lab').name;
     awayRate.textContent =
-      rate >= 1 ? 'full speed' : rate === 0.5 ? 'half speed' : `${Math.round(rate * 100)}% speed`;
+      (rate >= 1
+        ? 'full speed'
+        : rate === 0.5
+          ? 'half speed'
+          : `${Math.round(rate * 100)}% speed`) +
+      (lab && rate === TRACK_EFFECT.nightLabRate ? ` with ${labName}` : '');
+    const longer = lab && capS === TRACK_EFFECT.nightLabCapS && award.seconds > OFFLINE.capS;
+    awayCredit.hidden = !longer;
+    awayCredit.textContent = ` ${labName} kept them running past the usual ${OFFLINE.capS / 3600} hours.`;
     awayEnergy.textContent = formatEnergy(award.energy);
     // An offer still in the shop is worth a mention: time away didn't use it up.
     const waiting = state.perks.offers.map((o) => perkTitle(o.id, o.level));
@@ -2186,6 +2528,8 @@ function restartRun(): void {
   replicateClock = 0;
   reactor.classList.remove('is-afterglow');
   surgeDropEl.hidden = true;
+  window.clearTimeout(unlockTimer);
+  unlockCard.hidden = true;
   for (const tab of SHOP_TABS) {
     const row = offerRows[tab];
     row.leaving?.cancel();
@@ -2202,6 +2546,9 @@ function restartRun(): void {
 const IMPLODE_MS = 500;
 const BLOOM_MS = 900;
 const FLY_MS = 700;
+/** How long the unlock card stays over the core. */
+const UNLOCK_MS = 5000;
+let unlockTimer = 0;
 /** True while the core collapses; presses are ignored for that half second. */
 let imploding = false;
 
@@ -2209,11 +2556,13 @@ let imploding = false;
  * The core collapses to a point while the rest of the face dims, then blooms
  * back as a Dormant reactor while the isotopes just earned fly from the core
  * to the shelf. The save has already been reset; this only holds the reactor's
- * old look until the collapse completes. Reduced motion shows the result.
+ * old look until the collapse completes. Once the beads land, a card names
+ * the rungs the reset unlocked. Reduced motion shows the result at once.
  */
-function playReset(isotopesBefore: number): void {
+function playReset(isotopesBefore: number, unlocked: readonly RungId[]): void {
   if (reducedMotion()) {
     renderAll();
+    showUnlocks(unlocked);
     return;
   }
   imploding = true;
@@ -2230,13 +2579,34 @@ function playReset(isotopesBefore: number): void {
     imploding = false;
     renderAll();
     reactor.classList.replace('is-imploding', 'is-blooming');
-    flyIsotopes(isotopesBefore);
+    const landed = flyIsotopes(isotopesBefore);
     window.setTimeout(() => reactor.classList.remove('is-blooming'), BLOOM_MS);
+    unlockTimer = window.setTimeout(() => showUnlocks(unlocked), landed);
   }, IMPLODE_MS);
 }
 
-/** Beads fly from the core to each new slot on the shelf, then land. */
-function flyIsotopes(before: number): void {
+/** The unlock card: each new rung by name, with what it does, for a few seconds. */
+function showUnlocks(unlocked: readonly RungId[]): void {
+  window.clearTimeout(unlockTimer);
+  if (unlocked.length === 0) return;
+  unlockList.replaceChildren(
+    ...unlocked.map((id) => {
+      const item = document.createElement('li');
+      item.append(
+        cardLine('unlock-name', rung(id).name),
+        cardLine('unlock-detail', rungSentence(id))
+      );
+      return item;
+    })
+  );
+  unlockCard.hidden = false;
+  unlockTimer = window.setTimeout(() => {
+    unlockCard.hidden = true;
+  }, UNLOCK_MS);
+}
+
+/** Beads fly from the core to each new slot on the shelf, then land. Returns ms until the last lands. */
+function flyIsotopes(before: number): number {
   const fresh = Array.from(pelletsEl.children).slice(Math.min(before, SHELF_MAX)) as HTMLElement[];
   for (const pellet of fresh) pellet.classList.add('is-pending');
   // Past ten on the shelf, a few beads fly to the "+N" count instead.
@@ -2276,6 +2646,7 @@ function flyIsotopes(before: number): void {
       }
     };
   });
+  return 150 + Math.max(0, targets.length - 1) * 90 + FLY_MS;
 }
 
 // Reset everything (top bar). Settings survive, as the dialog promises.
@@ -2292,10 +2663,159 @@ resetConfirm.addEventListener('click', () => {
   announce('All progress erased.');
 });
 
-// Prestige (spec §9).
-prestigeBtn.addEventListener('click', () => {
+// Prestige (spec §9), with the isotope track's part (SPACEBAR-CLICKER.md §8.3):
+// the rungs the reset unlocks, a pick at every fork the new count reaches, the
+// last pick chosen, and the perk Heirloom or Cornerstone carries. A fork
+// reached for the first time has no pick, and the reset waits for one.
+
+/** The isotopes the dialog's reset goes to. */
+let resetTo = 0;
+
+/** The picks the dialog shows, over the save's. */
+function dialogPicks(): ForkPicks {
+  const picks: ForkPicks = { ...state.forks };
+  for (const input of resetChoices.querySelectorAll<HTMLInputElement>(
+    '[data-fork] input:checked'
+  )) {
+    picks[Number(input.name.slice('fork-'.length))] = input.value as RungId;
+  }
+  return picks;
+}
+
+/** A radio as an option card: its name, then what it does. */
+function resetOption(name: string, value: string, label: string, detail: string): HTMLLabelElement {
+  const option = document.createElement('label');
+  option.className = 'reset-option';
+  const input = document.createElement('input');
+  input.type = 'radio';
+  input.name = name;
+  input.value = value;
+  option.append(
+    input,
+    cardLine('reset-option-name', label),
+    cardLine('reset-option-detail', detail)
+  );
+  return option;
+}
+
+/** A titled group of the dialog's: a fieldset when it holds a choice. */
+function resetGroup(title: string, choice: boolean): HTMLElement {
+  const group = document.createElement(choice ? 'fieldset' : 'div');
+  group.className = 'reset-group';
+  const heading = document.createElement(choice ? 'legend' : 'p');
+  heading.className = 'reset-group-title';
+  heading.textContent = title;
+  group.append(heading);
+  return group;
+}
+
+/**
+ * Build the dialog's track part for a reset to `resetTo`: the rungs it
+ * unlocks, then each fork reached with `chosen` picked, then the keeping
+ * rung's perks.
+ */
+function buildResetChoices(chosen: ForkPicks): void {
+  const groups: HTMLElement[] = [];
+  const fresh = stepsReached(state.isotopes, resetTo).filter((s) => !isFork(s));
+  if (fresh.length > 0) {
+    const group = resetGroup('This reset unlocks', false);
+    const list = document.createElement('ul');
+    list.className = 'reset-unlocks';
+    for (const step of fresh) {
+      const item = document.createElement('li');
+      const id = step.rungs[0].id;
+      item.append(
+        cardLine('reset-option-name', rung(id).name),
+        text(' '),
+        cardLine('reset-option-detail', rungSentence(id))
+      );
+      list.append(item);
+    }
+    group.append(list);
+    groups.push(group);
+  }
+
+  for (const step of ISOTOPE_TRACK.filter((s) => isFork(s) && s.isotopes <= resetTo)) {
+    const picked = isPickFor(step.isotopes, chosen[step.isotopes]) ? chosen[step.isotopes] : null;
+    const isNew = !isPickFor(step.isotopes, state.forks[step.isotopes]);
+    const group = resetGroup(
+      `At ${isotopeCount(step.isotopes)}: ${isNew ? 'pick one' : 'your pick'}`,
+      true
+    );
+    group.dataset.fork = String(step.isotopes);
+    const options = document.createElement('div');
+    options.className = 'reset-options';
+    for (const r of step.rungs) {
+      const option = resetOption(`fork-${step.isotopes}`, r.id, r.name, rungSentence(r.id));
+      option.querySelector('input')!.checked = r.id === picked;
+      options.append(option);
+    }
+    group.append(options);
+    groups.push(group);
+  }
+
+  const keep = document.createElement('div');
+  keep.id = 'sc-reset-keep';
+  groups.push(keep);
+  resetChoices.replaceChildren(...groups);
+  renderKeep();
+}
+
+/**
+ * The keeping rung's perks, for the picks the dialog shows: Heirloom offers
+ * the perks held that aren't keystones, Cornerstone the keystones. The best
+ * comes chosen, or the one chosen before if it is still on offer.
+ */
+function renderKeep(): void {
+  const keep = resetChoices.querySelector<HTMLElement>('#sc-reset-keep');
+  if (!keep) return;
+  const before = keep.querySelector<HTMLInputElement>('input:checked')?.value;
+  const rungs = activeRungs(resetTo, dialogPicks());
+  const perks = keepable(state.perks.owned, rungs);
+  if (perks.length === 0) {
+    keep.replaceChildren();
+    return;
+  }
+  const cornerstone = rungs.includes('cornerstone');
+  const group = resetGroup(
+    cornerstone ? 'Cornerstone: keep your keystone' : 'Heirloom: keep a perk',
+    true
+  );
+  const options = document.createElement('div');
+  options.className = 'reset-options is-list';
+  for (const held of perks) {
+    options.append(
+      resetOption(
+        'keep',
+        held.id,
+        perkTitle(held.id, held.level),
+        'Starts the next run in its slot, at level I.'
+      )
+    );
+  }
+  options.append(resetOption('keep', '', 'Keep none', 'Start the next run with no perks.'));
+  group.append(options);
+  keep.replaceChildren(group);
+  const chosen = perks.some((o) => o.id === before) ? before : perks[0]!.id;
+  for (const input of options.querySelectorAll('input')) input.checked = input.value === chosen;
+}
+
+/** The dialog's sentence: what goes, what comes, and the new run's head start. */
+function renderResetMessage(): void {
   const held = state.isotopes;
-  const gain = prestigeGain(state.runLifetime);
+  const gain = resetTo - held;
+  const picks = dialogPicks();
+  const rungs = activeRungs(resetTo, picks);
+  const warm = rungs.includes('warm-start');
+  const hot = rungs.includes('hot-start');
+  const energy = TRACK_EFFECT.warmStartEnergy.toLocaleString('en-US');
+  const finger = `Finger Strength ${ROMAN[TRACK_EFFECT.hotStartFinger]}`;
+  const headStart =
+    warm && hot
+      ? ` Warm Start and Hot Start begin the new run with ${energy} energy, a Lab Assistant, a Pneumatic Key and ${finger}.`
+      : warm
+        ? ` Warm Start begins the new run with ${energy} energy and a Lab Assistant.`
+        : '';
   setSentence(
     prestigeModalMessage,
     "Your energy, upgrades, auto-tappers, reactor state and this run's perks are wiped. You gain ",
@@ -2303,10 +2823,23 @@ prestigeBtn.addEventListener('click', () => {
     ` ${isotopeNoun(gain)}, taking all gains from `,
     [bonusText(held)],
     ' to ',
-    [bonusText(held + gain)],
-    ', and keep your achievements, records and perk codex.'
+    [bonusText(resetTo, picks)],
+    `, and keep your achievements, records and perk codex.${headStart}`
   );
+}
+
+prestigeBtn.addEventListener('click', () => {
+  resetTo = state.isotopes + prestigeGain(state.runLifetime);
+  buildResetChoices(state.forks);
+  renderResetMessage();
+  resetPickHint.hidden = true;
   openDialog(prestigeModal, prestigeCancel);
+});
+resetChoices.addEventListener('change', (e) => {
+  // A fork pick can change which perks a keeping rung offers, and the bonus.
+  if ((e.target as HTMLInputElement).name !== 'keep') renderKeep();
+  renderResetMessage();
+  if (unpickedForks(resetTo, dialogPicks()).length === 0) resetPickHint.hidden = true;
 });
 prestigeCancel.addEventListener('click', () => closeDialog(prestigeModal));
 prestigeConfirm.addEventListener('click', () => {
@@ -2316,13 +2849,44 @@ prestigeConfirm.addEventListener('click', () => {
     return;
   }
   const isotopesBefore = state.isotopes;
-  state = prestigeReset(state, gain, Date.now());
+  // The run kept earning while the dialog was open: a reset that now pays
+  // more may reach a new fork, which needs a pick first.
+  if (isotopesBefore + gain !== resetTo) {
+    resetTo = isotopesBefore + gain;
+    buildResetChoices(dialogPicks());
+    renderResetMessage();
+  }
+  const picks = dialogPicks();
+  const missing = unpickedForks(resetTo, picks)[0];
+  if (missing) {
+    resetPickHint.textContent = `Pick one at ${isotopeCount(missing.isotopes)} to reset: ${stepName(missing)}.`;
+    resetPickHint.hidden = false;
+    resetChoices
+      .querySelector<HTMLInputElement>(`[data-fork="${missing.isotopes}"] input`)
+      ?.focus();
+    return;
+  }
+  const keep = resetChoices.querySelector<HTMLInputElement>('[name="keep"]:checked')?.value;
+
+  state = prestigeReset(state, gain, Date.now(), {
+    forks: picks,
+    keep: (keep || undefined) as PerkId | undefined,
+  });
+  // The rungs this reset reached, a fork as its pick.
+  const unlocked = stepsReached(isotopesBefore, state.isotopes).map((step) =>
+    isFork(step) ? state.forks[step.isotopes]! : step.rungs[0].id
+  );
   restartRun();
   closeDialog(prestigeModal);
-  playReset(isotopesBefore);
+  playReset(isotopesBefore, unlocked);
   const bonus = `${bonusText(state.isotopes)} to all gains`;
   toast(`Experiment reset. ${isotopeCount(gain)} gained: ${bonus}.`);
-  announce(`Experiment reset. You now hold ${isotopeCount(state.isotopes)}, ${bonus}.`);
+  const kept = state.perks.owned[0];
+  announce(
+    `Experiment reset. You now hold ${isotopeCount(state.isotopes)}, ${bonus}.` +
+      unlocked.map((id) => ` Unlocked ${rung(id).name}: ${rungSentence(id)}`).join('') +
+      (kept ? ` ${perk(kept.id).name} stays with you, at level I.` : '')
+  );
   SOUND.prestige();
   awardAchievements();
   save();
@@ -2376,6 +2940,27 @@ for (const tab of SHOP_TABS) {
   });
 }
 
+// The Reroll rung: once a run, swap an offer for a fresh drop on the run's odds.
+for (const tab of SHOP_TABS) {
+  const row = offerRows[tab];
+  row.reroll.addEventListener('click', () => {
+    // Space is the game's input; a focused button would swallow it.
+    row.reroll.blur();
+    const old = offerOn(state, tab);
+    const offer = rerollOffer(state, tab, income.rate(performance.now()));
+    if (!old || !offer) {
+      announce('Nothing else can drop in this tab right now.');
+      return;
+    }
+    SOUND.perkDrop(perk(offer.id).rarity);
+    arriveOffer(tab);
+    renderShopNotices();
+    renderPerksPanel(); // the codex has found it
+    announce(`Rerolled ${perkTitle(old.id, old.level)}. ${dropAnnouncement(offer)}`);
+    dirty = true;
+  });
+}
+
 /** Buy the offer on a tab, dropping `replace` from its slot if every slot is full. */
 function buyOffer(tab: ShopTab, replace?: PerkId): void {
   const offer = offerOn(state, tab);
@@ -2416,9 +3001,10 @@ function buyOffer(tab: ShopTab, replace?: PerkId): void {
 }
 
 /**
- * The swap dialog. 'slot': every slot is full, so pick a perk to drop. Each
- * held perk is a button, and choosing one buys. 'keystone': one keystone at
- * a time, so confirm the swap.
+ * The swap dialog. 'slot': every slot is full, or with Twin Keystones both
+ * keystone slots are, so pick a perk to drop. Each perk that may go is a
+ * button, and choosing one buys. 'keystone': one keystone at a time, so
+ * confirm the swap.
  */
 function openSwap(tab: ShopTab, mode: 'slot' | 'keystone'): void {
   const offer = offerOn(state, tab);
@@ -2429,13 +3015,19 @@ function openSwap(tab: ShopTab, mode: 'slot' | 'keystone'): void {
   swapList.replaceChildren();
 
   if (mode === 'slot') {
-    swapTitle.textContent = `All ${PERK_SLOTS} slots are full`;
-    swapMessage.textContent = `Pick a perk to drop for ${incoming.name}. The one you drop is gone for the rest of this run.`;
-    for (const held of state.perks.owned) {
-      const card = swapCard(held.id, held.level, true);
+    const choices = swapChoices(state, tab);
+    const keystones = keystonesOnly(choices);
+    swapTitle.textContent = keystones
+      ? 'Both keystone slots are full'
+      : `All ${modsOf(state).perkSlots} slots are full`;
+    swapMessage.textContent = keystones
+      ? `You can hold two keystones at once. Pick one to drop for ${incoming.name}. The one you drop is gone for the rest of this run.`
+      : `Pick a perk to drop for ${incoming.name}. The one you drop is gone for the rest of this run.`;
+    for (const id of choices) {
+      const card = swapCard(id, perkLevel(state, id), true);
       card.addEventListener('click', () => {
         closeDialog(swapModal);
-        buyOffer(tab, held.id);
+        buyOffer(tab, id);
       });
       const item = document.createElement('li');
       item.append(card);

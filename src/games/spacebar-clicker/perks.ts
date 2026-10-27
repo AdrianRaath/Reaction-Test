@@ -47,6 +47,7 @@ import { bestTapper, offerOn, perk } from './economy';
 import { modsOf } from './mods';
 import { nextRandom } from './rng';
 import type { PerkOffer, PerkState, SaveState } from './save';
+import { hasRung } from './track';
 
 const TABS: readonly ShopTab[] = ['press', 'auto'];
 const TIERS: readonly PerkRarity[] = ['common', 'rare', 'keystone'];
@@ -114,19 +115,38 @@ function firstEver(state: SaveState): boolean {
   return Object.keys(state.perks.codex).length === 0;
 }
 
+interface DropOptions {
+  /** A player's first drop ever: commons, while any are left. */
+  commonOnly?: boolean;
+  /** One tab only, leaving one perk out: a reroll. */
+  only?: { tab: ShopTab; not: PerkId };
+  /**
+   * The run's own odds, which Lucky Find and Rich Find lean: mark the offer
+   * `lifted` when the same roll at the usual odds lands a tier lower.
+   */
+  credit?: boolean;
+}
+
+/** The tier a roll in [0, 1) lands on, among `tiers`, at these odds. */
+function tierAt(
+  roll: number,
+  tiers: readonly PerkRarity[],
+  odds: Readonly<Record<PerkRarity, number>>
+): PerkRarity {
+  let pick = roll * tiers.reduce((sum, t) => sum + odds[t], 0);
+  return tiers.find((t) => (pick -= odds[t]) < 0) ?? tiers[tiers.length - 1]!;
+}
+
 /**
  * Put a perk on offer in a tab with no live one: a tier by its odds (among
- * tiers with anything left to drop), then a perk in that tier. `commonOnly`
- * (a player's first drop ever) keeps to commons while any are left. `only`
- * keeps to one tab and leaves one perk out, for a reroll. Null when both tabs
- * are taken or nothing is left.
+ * tiers with anything left to drop), then a perk in that tier. Null when both
+ * tabs are taken or nothing is left.
  */
 function dropPerk(
   state: SaveState,
   income: number,
   odds: Readonly<Record<PerkRarity, number>>,
-  commonOnly = false,
-  only?: { tab: ShopTab; not: PerkId }
+  { commonOnly = false, only, credit = false }: DropOptions = {}
 ): PerkOffer | null {
   const perks = state.perks;
   const open = only ? [only.tab] : TABS.filter((tab) => !offerOn(state, tab));
@@ -139,11 +159,14 @@ function dropPerk(
   if (pool.length === 0) return null;
 
   const tiers = TIERS.filter((t) => pool.some((def) => def.rarity === t));
-  let pick = draw(perks) * tiers.reduce((sum, t) => sum + odds[t], 0);
-  const tier = tiers.find((t) => (pick -= odds[t]) < 0) ?? tiers[tiers.length - 1]!;
+  const roll = draw(perks);
+  const tier = tierAt(roll, tiers, odds);
   const inTier = pool.filter((def) => def.rarity === tier);
   const def = inTier[Math.floor(draw(perks) * inTier.length)]!;
-  return placeOffer(state, def, income);
+  const offer = placeOffer(state, def, income);
+  const usual = tierAt(roll, tiers, PERK_DROPS.odds);
+  if (credit && TIERS.indexOf(tier) > TIERS.indexOf(usual)) offer.lifted = true;
+  return offer;
 }
 
 /**
@@ -203,7 +226,10 @@ export function perkTick(state: SaveState, income: number, activeDt: number): Pe
   }
   if (perks.activeS < perks.nextDropAtS) return events;
 
-  const offer = dropPerk(state, income, modsOf(state).dropOdds, firstEver(state));
+  const offer = dropPerk(state, income, modsOf(state).dropOdds, {
+    commonOnly: firstEver(state),
+    credit: true,
+  });
   perks.nextDropAtS = perks.activeS + nextGap(perks);
   if (offer) events.dropped.push(offer);
   return events;
@@ -358,13 +384,40 @@ export function rerollOffer(state: SaveState, tab: ShopTab, income: number): Per
   const perks = state.perks;
   const others = perks.offers.filter((o) => o !== old);
   perks.offers = others;
-  const offer = dropPerk(state, income, modsOf(state).dropOdds, false, { tab, not: old.id });
+  const offer = dropPerk(state, income, modsOf(state).dropOdds, {
+    only: { tab, not: old.id },
+    credit: true,
+  });
   if (!offer) {
     perks.offers = [...others, old];
     return null;
   }
   perks.rerollsUsed += 1;
   return offer;
+}
+
+// --- Credits (the isotope track) ---------------------------------------------------
+
+/** Rungs that shape an offer, which the shop credits on its row. */
+export type OfferCredit = 'prodigy' | 'lucky-find' | 'rich-find' | 'patience' | 'familiar';
+
+/**
+ * What the isotope track did for this offer, for the shop to credit where it
+ * acts: Prodigy dropped a perk not held at its higher level; Lucky Find or
+ * Rich Find raised its tier; Patience is keeping it past the window it would
+ * otherwise have had; Familiar took its discount off the price.
+ */
+export function offerCredits(state: SaveState, offer: PerkOffer): OfferCredit[] {
+  const mods = modsOf(state);
+  const credits: OfferCredit[] = [];
+  if (perkLevel(state, offer.id) === 0 && offer.level > 1) credits.push('prodigy');
+  if (offer.lifted) credits.push(hasRung(state, 'rich-find') ? 'rich-find' : 'lucky-find');
+  const usualEnd = offer.droppedAt + (offer.expiresAt - offer.droppedAt) / mods.offerWindowMult;
+  if (mods.offerWindowMult > 1 && state.runLifetime >= usualEnd) credits.push('patience');
+  if (mods.familiarDiscount > 0 && (state.perks.codex[offer.id] ?? 0) > 0) {
+    credits.push('familiar');
+  }
+  return credits;
 }
 
 /** Self-Replicator: a free copy of the best auto-tapper owned. */

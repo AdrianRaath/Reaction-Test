@@ -825,7 +825,7 @@ export const ISOTOPE_TRACK: readonly TrackStep[] = [
       {
         id: 'enrichment',
         name: 'Enrichment',
-        detail: 'Each isotope adds 15% to all gains instead of 10%',
+        detail: 'Each isotope adds 13% to all gains instead of 10%',
       },
     ],
   },
@@ -854,7 +854,7 @@ export const TRACK_EFFECT = {
   patienceWindowMult: 2,
   twinKeystoneSlots: 2,
   /** Enrichment: what each isotope adds to every gain, instead of ISOTOPE_BONUS. */
-  enrichmentRate: 0.15,
+  enrichmentRate: 0.13,
 } as const;
 
 /** Spec §10. Cosmetic; the checks live in achievements.ts. */

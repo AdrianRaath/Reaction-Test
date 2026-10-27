@@ -9,11 +9,13 @@ import ResetModal from '../components/tool/ResetModal.astro';
 import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
+  ISOTOPE_TRACK,
   PERK_SLOTS,
   PERKS,
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
   REACTOR_STATES,
+  TRACK_EFFECT,
 } from '../games/spacebar-clicker/config';
 import '../styles/content.css';
 import '../styles/instrument.css';
@@ -83,6 +85,10 @@ const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
 // the top, like a clock running down. The script sets its dash offset out of
 // a path length of 100.
 const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 0 0 1 8 1Z';
+
+// The perk shelf has a socket for every slot a run can have: five, and a
+// sixth with the Sixth Slot rung. The script hides the ones a run lacks.
+const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 ---
 
 <BaseLayout
@@ -208,9 +214,19 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
                 </p>
                 <!-- A surge is a boss fight: now and then it drops a perk. -->
                 <p class="surge-drop" id="sc-surge-drop" hidden>
-                  <span id="sc-surge-drop-kind">Perk drop</span>:
+                  <span id="sc-surge-drop-kind">Perk drop</span>:{' '}
                   <span class="surge-drop-name" id="sc-surge-drop-name"></span>
                 </p>
+                <!-- Capacitor's extra second, credited with what it brought in. -->
+                <p class="surge-credit" id="sc-surge-credit" hidden></p>
+              </div>
+
+              <!-- After a reset that reaches new rungs of the isotope track, a
+                 card over the core names them once the beads land. Screen
+                 readers hear them from the announcer. -->
+              <div class="unlock-card" id="sc-unlock-card" aria-hidden="true" hidden>
+                <p class="unlock-card-title">Unlocked</p>
+                <ul class="unlock-list" id="sc-unlock-list"></ul>
               </div>
             </div>
 
@@ -285,6 +301,7 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
                 <p class="shelf-tip-name" id="sc-isotope-tip-name"></p>
                 <p class="shelf-tip-kind" id="sc-isotope-tip-kind"></p>
                 <p class="shelf-tip-detail" id="sc-isotope-tip-detail"></p>
+                <p class="shelf-tip-unlock" id="sc-isotope-tip-unlock" hidden></p>
               </div>
             </div>
           </div>
@@ -293,12 +310,13 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
              with level pips and a tooltip on hover, focus or tap. It sits
              beside the face rather than inside it, so its buttons aren't
              nested in the face's role="button" and a tap on it is never a
-             press. Empty sockets show how many of the five slots are free. -->
+             press. Empty sockets show how many of the run's slots are free:
+             five, or six with the Sixth Slot rung. -->
           <div class="perk-shelf" id="sc-perk-shelf" hidden>
             <ul class="perk-slots" id="sc-perk-slots" aria-label="Perks this run">
               {
-                Array.from({ length: PERK_SLOTS }, () => (
-                  <li class="perk-slot" data-empty aria-hidden="true">
+                Array.from({ length: MAX_SLOTS }, (_, i) => (
+                  <li class="perk-slot" data-empty aria-hidden="true" hidden={i >= PERK_SLOTS}>
                     <button type="button" class="perk-chip" hidden>
                       <span class="perk-chip-glyph" />
                     </button>
@@ -377,8 +395,9 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
               <!-- The perk on offer here, if any (SPACEBAR-CLICKER.md §8.1). An
                    empty shell on the shop rows' own grid: the script fills it
                    when a perk drops, keeps its price, ring and notes current,
-                   and hides it once bought or gone. The Auto-tappers tab has
-                   the same row. -->
+                   and hides it once bought or gone. With the Reroll rung, a
+                   small button under it swaps the offer, once a run. The
+                   Auto-tappers tab has the same row. -->
               <li class="perk-offer" id="sc-offer-press" hidden>
                 <button type="button" class="shop-buy perk-buy" aria-disabled="true">
                   <span class="perk-tile">
@@ -395,12 +414,19 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
                     >
                     <span class="shop-detail perk-detail" data-perk-detail></span>
                     <span class="perk-note" data-perk-note hidden></span>
+                    <span class="perk-credit" data-perk-credit hidden></span>
                     <span class="visually-hidden" data-perk-window></span>
                   </span>
                   <span class="shop-nums">
                     <span class="shop-cost readout" data-perk-cost></span>
                     <span class="perk-rarity" data-perk-rarity></span>
                   </span>
+                </button>
+                <button type="button" class="perk-reroll" data-perk-reroll hidden>
+                  <Icon name="ph:arrows-clockwise" width={12} height={12} aria-hidden="true" />
+                  Reroll<span class="visually-hidden"
+                    >: swap this offer for a fresh drop, once a run</span
+                  >
                 </button>
               </li>
               {
@@ -453,12 +479,19 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
                     >
                     <span class="shop-detail perk-detail" data-perk-detail></span>
                     <span class="perk-note" data-perk-note hidden></span>
+                    <span class="perk-credit" data-perk-credit hidden></span>
                     <span class="visually-hidden" data-perk-window></span>
                   </span>
                   <span class="shop-nums">
                     <span class="shop-cost readout" data-perk-cost></span>
                     <span class="perk-rarity" data-perk-rarity></span>
                   </span>
+                </button>
+                <button type="button" class="perk-reroll" data-perk-reroll hidden>
+                  <Icon name="ph:arrows-clockwise" width={12} height={12} aria-hidden="true" />
+                  Reroll<span class="visually-hidden"
+                    >: swap this offer for a fresh drop, once a run</span
+                  >
                 </button>
               </li>
               {
@@ -639,7 +672,7 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
           <div class="prestige">
             <p class="prestige-copy">
               Resetting the experiment starts the run over. Isotopes carry across: each one adds 10%
-              to every gain, on every run after.
+              to every gain, on every run after, and unlocks the next rung of the isotope track.
             </p>
             <dl class="prestige-terms">
               <div>
@@ -652,8 +685,8 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
               <div>
                 <dt>Kept</dt>
                 <dd>
-                  Isotopes, achievements, records and all-time stats, the perk codex, and every
-                  auto-tapper the shop has shown you.
+                  Isotopes and the track's unlocks, achievements, records and all-time stats, the
+                  perk codex, and every auto-tapper the shop has shown you.
                 </dd>
               </div>
             </dl>
@@ -672,6 +705,40 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
                 >Reset the experiment</button
               >
             </div>
+
+            <!-- The isotope track (SPACEBAR-CLICKER.md §8.3): a socket per
+                 isotope, forks drawn larger in two halves. Sockets light as
+                 isotopes are held; the list under them names the rungs held
+                 and the next two. The sockets are a picture of the list. -->
+            <section class="track" aria-labelledby="sc-track-title">
+              <h3 class="perks-title" id="sc-track-title">
+                Isotope track <span class="perks-count"
+                  ><span class="readout" id="sc-track-count">0 of {ISOTOPE_TRACK.length}</span> unlocked</span
+                >
+              </h3>
+              <ol class="track-sockets" id="sc-track-sockets" aria-hidden="true">
+                {
+                  ISOTOPE_TRACK.map((step) => (
+                    <li
+                      class="track-socket"
+                      data-isotopes={step.isotopes}
+                      data-fork={step.rungs.length > 1 ? '' : undefined}
+                    >
+                      <span class="track-gem">
+                        {step.rungs.length > 1 && (
+                          <Fragment>
+                            <span class="track-half" data-rung={step.rungs[0].id} />
+                            <span class="track-half" data-rung={step.rungs[1]!.id} />
+                          </Fragment>
+                        )}
+                      </span>
+                      <span class="track-num">{step.isotopes}</span>
+                    </li>
+                  ))
+                }
+              </ol>
+              <ul class="track-list" id="sc-track-list"></ul>
+            </section>
           </div>
         </div>
       </div>
@@ -690,10 +757,15 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
       aria-labelledby="sc-prestige-modal-title"
       hidden
     >
-      <div class="modal">
+      <div class="modal reset-dialog">
         <h3 class="modal-title" id="sc-prestige-modal-title">Reset the experiment?</h3>
         <!-- The script writes this, with the isotopes and the bonus before and after. -->
         <p class="modal-message" id="sc-prestige-modal-message"></p>
+        <!-- The isotope track's part, filled by the script: the rungs this
+             reset unlocks, a pick at each fork reached, and the perk Heirloom
+             or Cornerstone carries. A new fork must be picked to reset. -->
+        <div class="reset-choices" id="sc-reset-choices"></div>
+        <p class="reset-pick-hint" id="sc-reset-pick-hint" role="alert" hidden></p>
         <div class="modal-actions">
           <button class="btn btn-secondary" id="sc-prestige-cancel" type="button">Keep going</button
           >
@@ -716,10 +788,10 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
       <div class="modal">
         <h3 class="modal-title" id="sc-away-title">While you were away</h3>
         <p class="modal-message">
-          Your auto-tappers ran for <span class="readout" id="sc-away-time">0s</span> at
-          <span id="sc-away-rate">half speed</span> and made
-          <span class="readout" id="sc-away-energy">0</span> energy.<span id="sc-away-offers" hidden
-          ></span>
+          Your auto-tappers ran for{' '}<span class="readout" id="sc-away-time">0s</span> at{' '}
+          <span id="sc-away-rate">half speed</span> and made{' '}
+          <span class="readout" id="sc-away-energy">0</span> energy.<span id="sc-away-credit" hidden
+          ></span><span id="sc-away-offers" hidden></span>
         </p>
         <div class="modal-actions">
           <button class="btn btn-primary" id="sc-away-collect" type="button">Collect</button>
@@ -1807,6 +1879,24 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     color: var(--ink-secondary);
   }
 
+  /* The isotope track's line, rung names lit: after the detail on the beads,
+     before it on the ring. */
+  .shelf-tip-unlock {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
+  .shelf-tip-detail + .shelf-tip-unlock:not([hidden]),
+  .shelf-tip-unlock:not([hidden]) + .shelf-tip-detail {
+    margin-block-start: 4px;
+  }
+
+  .shelf-tip-unlock :global(.rung-name) {
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
   /* A bought perk on its way from the shop to its socket (the script flies it). */
   .game-section :global(.perk-tile.perk-flyer) {
     position: fixed;
@@ -1993,6 +2083,11 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
      in the perk's own hue. */
   .floats :global(.float.is-perk) {
     color: var(--perk);
+  }
+
+  /* A rung of the isotope track at work: Perfect Pitch catching a press. */
+  .floats :global(.float.is-track) {
+    color: var(--ramp-blue);
   }
 
   /* Idle income: small, dim, slow, drifting off the core's rim. */
@@ -2410,6 +2505,62 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     color: var(--perk);
   }
 
+  /* --- Unlock card ------------------------------------------------------------
+
+     After a reset reaches new rungs of the isotope track, the surge card's
+     shape in the isotopes' blue names them over the core (DESIGN.md,
+     Reactor-Ramp Exception). */
+
+  .unlock-card {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    width: max-content;
+    max-width: min(340px, calc(100% - 2rem));
+    padding: var(--space-md) var(--space-lg);
+    border: 1px solid color-mix(in srgb, var(--ramp-blue) 45%, transparent);
+    border-radius: var(--radius-lg);
+    background-color: var(--panel-01);
+    box-shadow: 0 0 32px color-mix(in srgb, var(--ramp-blue) 14%, transparent);
+    text-align: center;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    animation: card-in 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .unlock-card-title {
+    font-size: var(--text-label-size);
+    font-weight: 700;
+    color: var(--ramp-blue);
+  }
+
+  .unlock-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .unlock-list :global(.unlock-name) {
+    display: block;
+    font-weight: 700;
+    color: var(--ink-primary);
+  }
+
+  .unlock-list :global(.unlock-detail) {
+    display: block;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
   /* --- Toast ---------------------------------------------------------------- */
 
   /* Notices sit over the hint line above the keycap: the hint is standing
@@ -2777,6 +2928,46 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     color: var(--ink-secondary);
   }
 
+  /* The isotope track's credit where a rung acts: on an offer (Prodigy, the
+     finds, Patience, Familiar) and on the surge card (Capacitor). In the
+     isotopes' blue after a bead, so it reads as the track's doing (DESIGN.md,
+     Reactor-Ramp Exception). */
+  .perk-credit {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .perk-credit :global(.credit),
+  .surge-credit {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ramp-blue);
+  }
+
+  /* The bead sits on the first line's middle, however the line wraps. */
+  .perk-credit :global(.credit)::before,
+  .surge-credit::before {
+    content: '';
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    margin-block-start: 6px;
+    border-radius: var(--radius-full);
+    background: radial-gradient(
+      circle at 35% 35%,
+      #fff 0,
+      var(--ramp-white) 35%,
+      var(--ramp-blue) 100%
+    );
+  }
+
+  .surge-credit {
+    font-weight: 600;
+  }
+
   /* Rare and keystone call out in the family hue; a common stays quiet, so a
      high tier reads as the event it is. */
   .perk-rarity {
@@ -2875,6 +3066,39 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
   .perk-offer.is-leaving {
     overflow: hidden;
     pointer-events: none;
+  }
+
+  /* With the Reroll rung, a small pill under the offer swaps it for a fresh
+     drop, once a run. It is a sibling of the row's button, not inside it. */
+  .perk-offer {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .perk-reroll {
+    display: inline-flex;
+    align-self: flex-end;
+    align-items: center;
+    gap: 4px;
+    min-height: 24px;
+    margin-block-start: 4px;
+    padding: 0 var(--space-sm);
+    border: 1px solid color-mix(in srgb, var(--perk) 35%, var(--line));
+    border-radius: var(--radius-full);
+    background: none;
+    color: var(--perk);
+    font: inherit;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      border-color var(--duration-fast) var(--ease),
+      background-color var(--duration-fast) var(--ease);
+  }
+
+  .perk-reroll:hover {
+    border-color: var(--perk);
+    background-color: color-mix(in srgb, var(--perk) 10%, transparent);
   }
 
   /* --- Panels -------------------------------------------------------------------- */
@@ -3197,6 +3421,175 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     margin-block-start: var(--space-xs);
   }
 
+  /* The isotope track: twelve sockets on a rail, forks drawn larger in two
+     halves, then the rungs held and the next two as cards. Held sockets are
+     lit like the beads, in the isotopes' blue (DESIGN.md, Reactor-Ramp
+     Exception); the next two wear a blue rim; the rest are dashed outlines,
+     like the codex's undiscovered perks. */
+  .track {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding-block-start: var(--space-md);
+    border-block-start: 1px solid var(--line);
+  }
+
+  .track .perks-title {
+    margin-block-end: 0;
+  }
+
+  .track-sockets {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    max-width: 420px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .track-sockets::before {
+    content: '';
+    position: absolute;
+    inset-inline: 6px;
+    inset-block-start: 11px;
+    height: 1px;
+    background-color: var(--line);
+  }
+
+  .track-socket {
+    position: relative;
+    display: grid;
+    grid-template-rows: 22px auto;
+    justify-items: center;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .track-gem {
+    display: flex;
+    width: 12px;
+    height: 12px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-full);
+    background-color: var(--panel-02);
+    overflow: hidden;
+  }
+
+  .track-socket[data-fork] .track-gem {
+    width: 22px;
+    height: 22px;
+  }
+
+  .track-half {
+    flex: 1;
+  }
+
+  .track-half + .track-half {
+    border-inline-start: 1px dashed var(--line);
+  }
+
+  .track-num {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  /* Held: lit like a bead. A fork held lights its rim and the half picked. */
+  .track-socket.is-lit .track-gem,
+  .track-half.is-picked {
+    background: radial-gradient(
+      circle at 35% 35%,
+      #fff 0,
+      var(--ramp-white) 35%,
+      var(--ramp-blue) 100%
+    );
+  }
+
+  .track-socket.is-lit .track-gem {
+    border: 0;
+    box-shadow: 0 0 6px color-mix(in srgb, var(--ramp-blue) 70%, transparent);
+  }
+
+  .track-socket.is-lit[data-fork] .track-gem {
+    border: 1px solid var(--ramp-blue);
+    background: var(--panel-02);
+  }
+
+  .track-socket.is-lit[data-fork] .track-half + .track-half {
+    border-inline-start: 1px solid color-mix(in srgb, var(--ramp-blue) 60%, transparent);
+  }
+
+  .track-socket.is-lit .track-num {
+    color: var(--ink-secondary);
+  }
+
+  /* The next two: a solid rim in the isotopes' blue, still empty. */
+  .track-socket.is-next .track-gem {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--ramp-blue) 55%, var(--line));
+  }
+
+  .track-socket.is-next .track-half + .track-half {
+    border-inline-start-style: solid;
+    border-inline-start-color: color-mix(in srgb, var(--ramp-blue) 40%, var(--line));
+  }
+
+  .track-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: var(--space-xs) var(--space-sm);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .track-list :global(.track-rung) {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+  }
+
+  .track-list :global(.track-rung.is-next) {
+    border-style: dashed;
+    border-color: var(--line);
+    background-color: transparent;
+  }
+
+  .track-list :global(.track-rung-at) {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ramp-blue);
+  }
+
+  .track-list :global(.track-rung.is-next .track-rung-at) {
+    color: var(--ink-muted);
+  }
+
+  .track-list :global(.track-rung-name) {
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  .track-list :global(.track-rung-detail) {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
+  .track-list :global(.track-rung-other) {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ink-muted);
+  }
+
   /* --- Buttons and dialogs ---------------------------------------------------------- */
 
   .btn {
@@ -3286,6 +3679,148 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     display: flex;
     justify-content: center;
     gap: var(--space-md);
+  }
+
+  /* The reset dialog grows with the isotope track: the rungs a reset
+     unlocks, a pick at each fork, the perk a keeping rung carries. It
+     scrolls inside itself on a short screen. */
+  .reset-dialog {
+    max-width: 480px;
+    max-height: calc(100dvh - 2 * var(--space-lg));
+    overflow-y: auto;
+  }
+
+  .reset-dialog:has(.reset-choices:not(:empty)) .modal-message {
+    margin-block-end: var(--space-lg);
+  }
+
+  .reset-choices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-block-end: var(--space-lg);
+    text-align: start;
+  }
+
+  .reset-choices:empty {
+    display: none;
+  }
+
+  .reset-choices :global(.reset-group) {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .reset-choices :global(.reset-group-title) {
+    margin-block-end: 6px;
+    padding: 0;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ramp-blue);
+  }
+
+  .reset-choices :global(.reset-unlocks) {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .reset-choices :global(.reset-options) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .reset-choices :global(.reset-options.is-list) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* An option is a card with a radio's dot top-right: filled when picked,
+     so the pick never rests on color alone. */
+  .reset-choices :global(.reset-option) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-sm) calc(var(--space-md) + 16px) var(--space-sm) var(--space-md);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+    cursor: pointer;
+    transition:
+      border-color var(--duration-fast) var(--ease),
+      background-color var(--duration-fast) var(--ease);
+  }
+
+  .reset-choices :global(.reset-option::after) {
+    content: '';
+    position: absolute;
+    inset-block-start: 10px;
+    inset-inline-end: 10px;
+    width: 10px;
+    height: 10px;
+    border: 1px solid var(--ink-muted);
+    border-radius: var(--radius-full);
+  }
+
+  .reset-choices :global(.reset-option:hover) {
+    border-color: var(--ink-muted);
+  }
+
+  .reset-choices :global(.reset-option:has(input:checked)) {
+    border-color: var(--ramp-blue);
+    background-color: color-mix(in srgb, var(--ramp-blue) 8%, var(--panel-03));
+  }
+
+  .reset-choices :global(.reset-option:has(input:checked)::after) {
+    border-color: var(--ramp-blue);
+    background-color: var(--ramp-blue);
+    box-shadow: inset 0 0 0 2px var(--panel-03);
+  }
+
+  .reset-choices :global(.reset-option:has(input:focus-visible)) {
+    outline: 2px solid var(--ramp-blue);
+    outline-offset: 2px;
+  }
+
+  .reset-choices :global(.reset-option input) {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .reset-choices :global(.reset-option-name) {
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  .reset-choices :global(.reset-option-detail) {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
+  .reset-pick-hint {
+    margin-block: calc(-1 * var(--space-sm)) var(--space-md);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--caution-amber);
+  }
+
+  @media (max-width: 480px) {
+    .reset-choices :global(.reset-options) {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   /* The swap dialog: the perk on offer at the top, then the perks it could
@@ -3427,6 +3962,7 @@ const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 
     .state-name.is-settling,
     .core-num.is-tick,
     .surge-card,
+    .unlock-card,
     .keycap.is-down,
     .pellets :global(.pellet.is-landed),
     .reactor-face.is-imploding .core,

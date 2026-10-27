@@ -140,9 +140,9 @@ describe('careers with the isotope track', () => {
     }
   });
 
-  it('keeps the two sides of forks 3, 6 and 9 within 15% of each other', () => {
+  it('keeps the two sides of every fork within 15% of each other', () => {
     for (const habit of HABIT_NAMES) {
-      for (const step of FORKS.filter((s) => s.isotopes < 12)) {
+      for (const step of FORKS) {
         expect(apart(sides(habit, step.isotopes)), `${habit}, fork ${step.isotopes}`).toBeLessThan(
           0.15
         );
@@ -150,8 +150,13 @@ describe('careers with the isotope track', () => {
     }
   });
 
-  // Both miss today; SPACEBAR-CLICKER.md §8.3.7 has the numbers and the
-  // proposals that wait on the maintainer.
-  it.todo('keeps the capstone’s two sides within 15% of each other');
-  it.todo('never brings a million in under 8 minutes before the capstone');
+  // Lucky runs may dip a little under 8 minutes, as rare drops land early,
+  // but almost never, and never far (§8.3.7).
+  it('brings a million in 8 minutes or more before the capstone, all but 1 run in 100', () => {
+    for (const habit of HABIT_NAMES) {
+      const minutes = millionsBeforeCapstone(habit);
+      expect(minutes[0], habit).toBeGreaterThanOrEqual(7);
+      expect(minutes.filter((m) => m < 8).length / minutes.length, habit).toBeLessThanOrEqual(0.01);
+    }
+  });
 });

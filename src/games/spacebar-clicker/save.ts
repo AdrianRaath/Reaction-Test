@@ -18,7 +18,9 @@ import {
   type AchievementId,
   type AutoTapperId,
   type PerkId,
+  type PerkRarity,
   type PressUpgradeId,
+  type RungId,
   type ShopItemId,
 } from './config';
 import { earn } from './economy';
@@ -45,6 +47,11 @@ export interface PerkOffer {
   seen: boolean;
   /** The player has looked at its tab while it was affordable. */
   seenAffordable: boolean;
+  /**
+   * Lucky Find or Rich Find raised it a tier: the same roll at the usual odds
+   * gave a lower one. Absent otherwise.
+   */
+  lifted?: boolean;
 }
 
 export interface PerkState {
@@ -266,6 +273,7 @@ function parsePerks(value: unknown, now: number, rules: PerkRules): PerkState {
       expiresAt,
       seen: o.seen === true,
       seenAffordable: o.seenAffordable === true,
+      ...(o.lifted === true ? { lifted: true } : {}),
     });
   }
 
@@ -367,6 +375,24 @@ export interface ResetChoices {
   keep?: PerkId;
 }
 
+const RARITY_RANK: Record<PerkRarity, number> = { common: 0, rare: 1, keystone: 2 };
+
+/**
+ * The held perks a keeping rung may carry through a reset, best first: the
+ * rarest, then the highest level. Cornerstone keeps a keystone, Heirloom any
+ * other perk; with neither rung, none.
+ */
+export function keepable(owned: readonly OwnedPerk[], rungs: readonly RungId[]): OwnedPerk[] {
+  const keystone = (o: OwnedPerk) => PERK_BY_ID.get(o.id)!.rarity === 'keystone';
+  const pool = rungs.includes('cornerstone')
+    ? owned.filter(keystone)
+    : rungs.includes('heirloom')
+      ? owned.filter((o) => !keystone(o))
+      : [];
+  const rank = (o: OwnedPerk) => RARITY_RANK[PERK_BY_ID.get(o.id)!.rarity];
+  return [...pool].sort((a, b) => rank(b) - rank(a) || b.level - a.level);
+}
+
 /**
  * Prestige (spec §9). Wipes the run — energy, shop, reactor state, perks and
  * offers — and keeps isotopes, achievements, lifetime stats and best records.
@@ -415,12 +441,7 @@ export function prestigeReset(
     if (!next.seen.includes('pneumatic')) next.seen.push('pneumatic');
   }
 
-  const kept = choices.keep && state.perks.owned.find((o) => o.id === choices.keep);
-  if (kept) {
-    const keystone = PERK_BY_ID.get(kept.id)!.rarity === 'keystone';
-    if (rungs.includes(keystone ? 'cornerstone' : 'heirloom')) {
-      next.perks.owned = [{ id: kept.id, level: 1 }];
-    }
-  }
+  const kept = keepable(state.perks.owned, rungs).find((o) => o.id === choices.keep);
+  if (kept) next.perks.owned = [{ id: kept.id, level: 1 }];
   return next;
 }

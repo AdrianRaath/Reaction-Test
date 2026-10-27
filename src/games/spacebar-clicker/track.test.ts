@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { ComboTracker } from './combo';
 import {
   COMBO,
   ISOTOPE_TRACK,
@@ -18,17 +19,28 @@ import {
   buyPerk,
   keystoneSwap,
   needsSlot,
+  offerCredits,
   perkLevel,
+  perkTick,
   placeOffer,
   rerollOffer,
   rerollsLeft,
+  surgeDrop,
   swapChoices,
 } from './perks';
-import { defaultSave, parseSave, prestigeReset, serializeSave, type SaveState } from './save';
+import {
+  defaultSave,
+  keepable,
+  parseSave,
+  prestigeReset,
+  serializeSave,
+  type SaveState,
+} from './save';
 import {
   activeRungs,
   cleanPicks,
   hasRung,
+  isotopeRate,
   nextSteps,
   stepsReached,
   unpickedForks,
@@ -297,6 +309,21 @@ describe('track rungs', () => {
     expect(prestigeReset(s, 0, NOW, { keep: 'overtone' }).perks.owned).toEqual([]);
   });
 
+  it('offers the perks a keeping rung may carry, rarest then highest level first', () => {
+    const owned = hold(
+      onTrack(9),
+      ['overtone', 1],
+      ['brute-force', 2],
+      ['momentum', 3],
+      ['ghost-presses', 1],
+      ['storm-front', 1]
+    ).perks.owned;
+    const ids = (rungs: RungId[]) => keepable(owned, rungs).map((o) => o.id);
+    expect(ids(['heirloom'])).toEqual(['momentum', 'overtone', 'ghost-presses']);
+    expect(ids(['cornerstone'])).toEqual(['brute-force', 'storm-front']);
+    expect(ids(['warm-start'])).toEqual([]);
+  });
+
   it('a reset that reaches a fork can pick it, and a keeping rung acts at once', () => {
     const s = hold(onTrack(8), ['overtone', 2]);
     const after = prestigeReset(s, 1, NOW, { forks: { 9: 'heirloom' }, keep: 'overtone' });
@@ -348,11 +375,111 @@ describe('track rungs', () => {
     expect(buyPerk(s, 'auto')).toBe('swapped');
   });
 
-  it('Enrichment makes each isotope worth 15% instead of 10%', () => {
+  it('Enrichment makes each isotope worth 13% instead of 10%', () => {
     const plain = energyPerPress(onTrack(12, FIRSTS));
     const enriched = energyPerPress(onTrack(12, SECONDS));
     const rate = (r: number) => 1 + 12 * r;
     expect(enriched / plain).toBeCloseTo(rate(TRACK_EFFECT.enrichmentRate) / rate(0.1), 10);
+  });
+
+  it('knows the isotope rate a set of picks gives, before the reset is made', () => {
+    expect(isotopeRate(12, SECONDS)).toBe(TRACK_EFFECT.enrichmentRate);
+    expect(isotopeRate(12, FIRSTS)).toBe(0.1);
+    expect(isotopeRate(11, SECONDS), 'not reached yet').toBe(0.1);
+    expect(isotopeRate(12, SECONDS)).toBe(modsOf(onTrack(12, SECONDS)).isotopeRate);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Credits: where a rung acts, so the game can say so
+// ---------------------------------------------------------------------------
+
+/** The share of `n` ordinary drops a find rung raised a tier, checking each is rarer than common. */
+function liftedShare(
+  s: SaveState,
+  n: number,
+  drop = (x: SaveState) => perkTick(x, 10, 0).dropped[0]
+) {
+  s.perks.codex = { overtone: 0 }; // not a first-ever drop
+  let lifted = 0;
+  for (let i = 0; i < n; i++) {
+    s.perks.offers = [];
+    s.perks.nextDropAtS = s.perks.activeS;
+    const offer = drop(s)!;
+    if (offer.lifted) {
+      lifted++;
+      expect(def(offer.id).rarity).not.toBe('common');
+    }
+  }
+  return lifted / n;
+}
+
+describe('track credits', () => {
+  it('marks a drop Lucky Find or Rich Find raised a tier, as often as the odds say', () => {
+    // Lucky Find lifts rolls from 58% to 65% (a rare) and 93% to 95% (a keystone).
+    expect(liftedShare(onTrack(5, { 3: 'prodigy' }), 3000)).toBeCloseTo(0.09, 1);
+    // Rich Find, from 50% to 65% and 90% to 95%.
+    expect(liftedShare(onTrack(10, { 3: 'prodigy' }), 3000)).toBeCloseTo(0.2, 1);
+  });
+
+  it('never marks a drop without a find rung, or a surge’s drop', () => {
+    expect(liftedShare(onTrack(4, { 3: 'prodigy' }), 500)).toBe(0);
+    const surge = (x: SaveState) => {
+      x.perks.rng = (x.perks.rng + 1) >>> 0;
+      return surgeDrop(x, 10) ?? placeOffer(x, def('overtone'), 10);
+    };
+    expect(liftedShare(onTrack(10, { 3: 'prodigy' }), 500, surge)).toBe(0);
+  });
+
+  it('keeps the drop sequence as it was: a find rung marks, it never redraws', () => {
+    const plain = onTrack(4, { 3: 'prodigy' });
+    const lucky = onTrack(5, { 3: 'prodigy' });
+    for (const s of [plain, lucky]) s.perks.rng = 99;
+    liftedShare(plain, 50);
+    liftedShare(lucky, 50);
+    expect(lucky.perks.rng).toBe(plain.perks.rng);
+  });
+
+  it('credits the rungs that shaped an offer', () => {
+    const s = hold(onTrack(7, { 3: 'prodigy', 6: 'patience' }), ['overtone', 1]);
+    // A perk not held drops at level II: Prodigy.
+    const fresh = placeOffer(s, def('momentum'), 10);
+    expect(offerCredits(s, fresh)).toEqual(['prodigy']);
+    // An upgrade of a perk held before is cheaper: Familiar.
+    const upgrade = placeOffer(s, def('overtone'), 10);
+    expect(offerCredits(s, upgrade)).toEqual(['familiar']);
+    // Past the window it would have had, Patience is keeping it.
+    s.runLifetime = fresh.droppedAt + (fresh.expiresAt - fresh.droppedAt) / 2;
+    expect(offerCredits(s, fresh)).toEqual(['prodigy', 'patience']);
+    // A raised drop names the find rung in force.
+    expect(offerCredits(s, { ...fresh, lifted: true })).toEqual([
+      'prodigy',
+      'lucky-find',
+      'patience',
+    ]);
+    const rich = onTrack(10, { 3: 'sixth-slot' });
+    expect(offerCredits(rich, { ...placeOffer(rich, def('momentum'), 10), lifted: true })).toEqual([
+      'rich-find',
+    ]);
+    // With no rungs, nothing to credit.
+    const none = onTrack(0);
+    expect(offerCredits(none, placeOffer(none, def('momentum'), 10))).toEqual([]);
+  });
+
+  it('measures how far a press sat off the beat, for Perfect Pitch', () => {
+    const presses = (tracker: ComboTracker) => {
+      const first = tracker.press(0);
+      for (let t = 200; t <= 1000; t += 200) tracker.press(t);
+      return [first, tracker.press(1255)] as const;
+    };
+    // Five free starts, one on the beat, then one 27.5% off it.
+    const [first, off] = presses(new ComboTracker());
+    expect(first.drift).toBeNull();
+    expect(off.drift).toBeCloseTo(0.275, 6);
+    expect(off.kept, 'outside the usual 25%').toBe(false);
+    const pitch = modsOf(onTrack(11, { 3: 'prodigy' })).combo;
+    const [, caught] = presses(new ComboTracker(undefined, () => pitch));
+    expect(caught.kept, 'inside Perfect Pitch’s 30%').toBe(true);
   });
 });
 
@@ -361,6 +488,16 @@ describe('track rungs', () => {
 // ---------------------------------------------------------------------------
 
 describe('track in the save', () => {
+  it('keeps an offer’s find mark through a reload, and only a true one', () => {
+    const s = onTrack(5, { 3: 'prodigy' });
+    s.perks.codex = { momentum: 0 };
+    const offer = placeOffer(s, def('momentum'), 10);
+    offer.lifted = true;
+    expect(parseSave(serializeSave(s), NOW).perks.offers[0]!.lifted).toBe(true);
+    (offer as { lifted: unknown }).lifted = 'yes';
+    expect(parseSave(serializeSave(s), NOW).perks.offers[0]).not.toHaveProperty('lifted');
+  });
+
   it('round-trips the picks and the run’s rerolls, and drops junk', () => {
     const s = onTrack(6, { 3: 'prodigy', 6: 'reroll' });
     s.perks.rerollsUsed = 1;

@@ -10,7 +10,14 @@
  * mods.ts; a reset applies the head starts and any kept perk (save.ts).
  */
 
-import { ISOTOPE_TRACK, type RungDef, type RungId, type TrackStep } from './config';
+import {
+  ISOTOPE_BONUS,
+  ISOTOPE_TRACK,
+  TRACK_EFFECT,
+  type RungDef,
+  type RungId,
+  type TrackStep,
+} from './config';
 
 /** Fork picks, keyed by the fork's isotope count. */
 export type ForkPicks = Partial<Record<number, RungId>>;
@@ -53,6 +60,17 @@ export function activeRungs(isotopes: number, forks: ForkPicks): RungId[] {
 
 export function hasRung(state: { isotopes: number; forks: ForkPicks }, id: RungId): boolean {
   return activeRungs(state.isotopes, state.forks).includes(id);
+}
+
+/**
+ * What each isotope adds to every gain with this many isotopes and these
+ * picks: Enrichment's rate once picked, else the usual. The run's own rate is
+ * `modsOf(state).isotopeRate`; this answers for a reset not yet made.
+ */
+export function isotopeRate(isotopes: number, forks: ForkPicks): number {
+  return activeRungs(isotopes, forks).includes('enrichment')
+    ? TRACK_EFFECT.enrichmentRate
+    : ISOTOPE_BONUS;
 }
 
 /** The steps a reset from `from` isotopes to `to` reaches for the first time. */

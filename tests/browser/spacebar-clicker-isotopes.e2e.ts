@@ -18,7 +18,7 @@ test('the beads say what they are worth, on hover and on focus, and never press'
   const held = page.locator('#sc-isotopes-held');
   await expect(held).toHaveAttribute(
     'aria-label',
-    '3 isotopes, +30% to all gains, kept through every reset.'
+    '3 isotopes, +30% to all gains, kept through every reset. Next unlock at 4 isotopes: Night Lab.'
   );
   await expect(page.locator('#sc-isotope-next'), 'no reset open yet').toBeHidden();
 
@@ -72,7 +72,7 @@ test('a reset opening: one notice, the ring, and its way into the tab', async ({
   await expect(page.locator('#sc-isotope-next-count')).toHaveText('+1');
   await expect(ring).toHaveAttribute(
     'aria-label',
-    'Reset the experiment now for 1 isotope, taking all gains to +30%. The next isotope comes at 4.00M energy.'
+    'Reset the experiment now for 1 isotope, taking all gains to +30% and unlocking a choice of Sixth Slot or Prodigy. The next isotope comes at 4.00M energy.'
   );
 
   await ring.hover();
@@ -157,7 +157,7 @@ test('resetting: the dialog, the toast and the shelf say what changed', async ({
 
   await page.click('#sc-prestige-btn');
   await expect(page.locator('#sc-prestige-modal-message')).toHaveText(
-    "Your energy, upgrades, auto-tappers, reactor state and this run's perks are wiped. You gain 1 isotope, taking all gains from +10% to +20%, and keep your achievements, records and perk codex."
+    "Your energy, upgrades, auto-tappers, reactor state and this run's perks are wiped. You gain 1 isotope, taking all gains from +10% to +20%, and keep your achievements, records and perk codex. Warm Start begins the new run with 500 energy and a Lab Assistant."
   );
   await page.click('#sc-prestige-confirm');
   await expect(page.locator('#sc-toast')).toHaveText(
@@ -165,7 +165,7 @@ test('resetting: the dialog, the toast and the shelf say what changed', async ({
   );
   await expect(page.locator('#sc-isotopes-held')).toHaveAttribute(
     'aria-label',
-    '2 isotopes, +20% to all gains, kept through every reset.'
+    '2 isotopes, +20% to all gains, kept through every reset. Next unlock at 3 isotopes: a choice of Sixth Slot or Prodigy.'
   );
   await expect(page.locator('#sc-isotope-next'), 'a new run has no reset open').toBeHidden();
 });

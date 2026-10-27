@@ -52,7 +52,7 @@ import {
   surgeDrop,
 } from './perks';
 import { nextRandom } from './rng';
-import { defaultSave, prestigeReset, type OwnedPerk, type PerkOffer, type SaveState } from './save';
+import { defaultSave, keepable, prestigeReset, type PerkOffer, type SaveState } from './save';
 import { activeRungs, type ForkPicks } from './track';
 
 export interface Player {
@@ -535,19 +535,10 @@ export interface CareerResult {
 
 /**
  * The perk a keeping rung carries through the reset: Cornerstone's keystone,
- * or Heirloom's best other perk, the rarest, then the highest level.
+ * or Heirloom's best other perk, as the reset dialog offers them first.
  */
 export function keepAtReset(state: SaveState): PerkId | undefined {
-  const rungs = activeRungs(state.isotopes, state.forks);
-  const kind = (o: OwnedPerk) => perk(o.id).rarity === 'keystone';
-  const pool = rungs.includes('cornerstone')
-    ? state.perks.owned.filter(kind)
-    : rungs.includes('heirloom')
-      ? state.perks.owned.filter((o) => !kind(o))
-      : [];
-  return [...pool].sort(
-    (a, b) => RANK[perk(b.id).rarity] - RANK[perk(a.id).rarity] || b.level - a.level
-  )[0]?.id;
+  return keepable(state.perks.owned, activeRungs(state.isotopes, state.forks))[0]?.id;
 }
 
 /**

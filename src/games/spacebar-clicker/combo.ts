@@ -21,6 +21,12 @@ export interface PressResult {
   kept: boolean;
   /** This press ended the previous combo (a pause past the grace window). */
   broke: boolean;
+  /**
+   * How far the interval sat from the rolling mean, as a share of it: 0.27 is
+   * 27% off the beat. Null when the window didn't judge the press: a free
+   * start, a rest, or the first press.
+   */
+  drift: number | null;
 }
 
 export class ComboTracker {
@@ -51,6 +57,7 @@ export class ComboTracker {
     this.lastPressAt = now;
 
     let kept: boolean;
+    let drift: number | null = null;
     // A rest (a perk allows them) neither keeps nor misses, and stays out of
     // the mean, so the beat picks up where it left off.
     let rest = false;
@@ -61,7 +68,8 @@ export class ComboTracker {
       rest = true;
     } else {
       const mean = this.intervals.reduce((a, b) => a + b, 0) / this.intervals.length;
-      kept = interval < rules.maxIntervalMs && Math.abs(interval - mean) <= rules.tolerance * mean;
+      drift = Math.abs(interval - mean) / mean;
+      kept = interval < rules.maxIntervalMs && drift <= rules.tolerance;
     }
 
     if (interval !== null && !rest) {
@@ -81,7 +89,7 @@ export class ComboTracker {
       }
     }
 
-    return { combo: this.combo, kept, broke };
+    return { combo: this.combo, kept, broke, drift };
   }
 
   /** Call every frame. Returns true on the frame the grace window expires. */

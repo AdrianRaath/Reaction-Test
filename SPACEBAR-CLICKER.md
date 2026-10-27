@@ -62,32 +62,32 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 
 ## 3. Code map
 
-| File                                                  | Responsibility                                                                                                                                                                                                                                                          |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, offline, achievements. Pure data.                                                                                                                                           |
-| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, the luck roll, reactor state and progress, prestige gain and where the next isotope comes, offline award, buying, shop reveals, shop-tab notices, and which one-off upgrades a perk switches off. |
-| `src/games/spacebar-clicker/mods.ts`                  | A run's modifiers: every rule a perk or a track rung can bend, in one object. `BASE_MODS` is the shipped game; `modsOf(state)` folds in the Stabiliser, Synchronisation, every owned perk at its level, then the track's rungs in force.                                |
-| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo. Takes timestamps from the caller, so it has no clock of its own, and reads the run's rules on every press.                                                                                                                            |
-| `src/games/spacebar-clicker/rng.ts`                   | A seeded random generator (mulberry32). Pure; for perk drops, so a reload can't reroll them.                                                                                                                                                                            |
-| `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together, without a surge's or Afterglow's boost. Perk prices and windows are set in it.                                                                                  |
-| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`, which starts the new run with the track's head starts and any kept perk.                                                                                                                                   |
-| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                                                                                                        |
-| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                                                  |
-| `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                                                               |
-| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks (67 as of 2026-10-26).                                                                                                                                                                                                            |
-| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12), and whole careers of runs and resets with the isotope track (§8.3.7).                                                                        |
-| `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                                                          |
-| `src/games/spacebar-clicker/career.test.ts`           | Holds careers to the isotope track's targets (§8.3.7): a first run unchanged, the two sides of each fork. About 20 s.                                                                                                                                                   |
-| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (61 as of 2026-10-23).                                                                                                                                                               |
-| `src/games/spacebar-clicker/track.ts`                 | The isotope track (§8.3): which rungs are in force for an isotope count and fork picks, what a reset reaches, which forks still need a pick, and the next steps to show. Pure.                                                                                          |
-| `src/games/spacebar-clicker/track.test.ts`            | Unit tests for the track: the table, every rung, both sides of every fork, the reset and the save (29 as of 2026-10-26).                                                                                                                                                |
-| `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, every reactor state, perks in play, and isotopes (§7).                                                                                                                                     |
-| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, perks in play, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine.                                                                                 |
-| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the isotope and perk shelves and their tooltips, the swap dialog, the Perks panel and the glyph template. The frontmatter computes the dial, bezel, mote and offer-ring geometry.                               |
-| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                                                                                                              |
-| `src/components/games/PerkIcon.astro`                 | The 25 perk glyphs, in ShopIcon's idiom. The page renders them all into a `<template>` for the script to clone.                                                                                                                                                         |
-| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`, every perk and the drop odds included.                                                                                                                                                           |
-| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                                                                                                     |
+| File                                                  | Responsibility                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, offline, achievements. Pure data.                                                                                                                                                               |
+| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, the luck roll, reactor state and progress, prestige gain and where the next isotope comes, offline award, buying, shop reveals, shop-tab notices, and which one-off upgrades a perk switches off.                     |
+| `src/games/spacebar-clicker/mods.ts`                  | A run's modifiers: every rule a perk or a track rung can bend, in one object. `BASE_MODS` is the shipped game; `modsOf(state)` folds in the Stabiliser, Synchronisation, every owned perk at its level, then the track's rungs in force.                                                    |
+| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo. Takes timestamps from the caller, so it has no clock of its own, and reads the run's rules on every press.                                                                                                                                                |
+| `src/games/spacebar-clicker/rng.ts`                   | A seeded random generator (mulberry32). Pure; for perk drops, so a reload can't reroll them.                                                                                                                                                                                                |
+| `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together, without a surge's or Afterglow's boost. Perk prices and windows are set in it.                                                                                                      |
+| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`, which starts the new run with the track's head starts and any kept perk.                                                                                                                                                       |
+| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                                                                                                                            |
+| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                                                                      |
+| `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                                                                                   |
+| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks (67 as of 2026-10-26).                                                                                                                                                                                                                                |
+| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12), and whole careers of runs and resets with the isotope track (§8.3.7).                                                                                            |
+| `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                                                                              |
+| `src/games/spacebar-clicker/career.test.ts`           | Holds careers to the isotope track's targets (§8.3.7): a first run unchanged, the two sides of each fork. About 20 s.                                                                                                                                                                       |
+| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (61 as of 2026-10-23).                                                                                                                                                                                   |
+| `src/games/spacebar-clicker/track.ts`                 | The isotope track (§8.3): which rungs are in force for an isotope count and fork picks, what a reset reaches, which forks still need a pick, and the next steps to show. Pure.                                                                                                              |
+| `src/games/spacebar-clicker/track.test.ts`            | Unit tests for the track: the table, every rung, both sides of every fork, the reset, the save, and the credits (37 as of 2026-10-27).                                                                                                                                                      |
+| `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, every reactor state, perks in play, isotopes, and the isotope track in play (§7).                                                                                                                              |
+| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, perks in play, the isotope track in play (tooltips, the Reset tab, the reset dialog, the unlock card, the reroll), saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine. |
+| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the isotope and perk shelves and their tooltips, the swap and reset dialogs, the isotope track, the unlock card, the Perks panel and the glyph template. The frontmatter computes the dial, bezel, mote and offer-ring geometry.    |
+| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                                                                                                                                  |
+| `src/components/games/PerkIcon.astro`                 | The 25 perk glyphs, in ShopIcon's idiom. The page renders them all into a `<template>` for the script to clone.                                                                                                                                                                             |
+| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`, every perk and the drop odds included.                                                                                                                                                                               |
+| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                                                                                                                         |
 
 ## 4. How the game works
 
@@ -137,6 +137,11 @@ Energy per second = sum of auto-tapper output x sync x milestone x isotope
 - One or two off-rhythm presses in a row add nothing. The third breaks the
   combo, and so does a pause past 800 ms.
 - With the Stabiliser, a break drops the combo by 10 instead of resetting it.
+- **Perfect Pitch** (§8.3) widens the 25% to 30%. A press it catches, kept
+  inside 30% but outside 25% with no perk's window wider, wears an isotope
+  bead on its peak on the rhythm scope, and "Perfect Pitch" drifts off the
+  core in the isotopes' blue, at most once every 30 s. The tracker reports
+  each press's `drift` from the beat for this.
 - The combo is not saved, so a reload starts at 0.
 
 | Combo | Multiplier | Label     |
@@ -173,6 +178,9 @@ minute. Pauses end most combos, which is intended.
   - Afterglow keeps presses at x3 for a while after the surge. The label
     under the core counts it down in gold ("Afterglow x3, 12 s") in place of
     the stage name, and gains float in gold.
+- **Capacitor** (§8.3) adds a second. The results card credits it with what
+  that last second brought in, "Capacitor +1 s: 8 presses, 441 energy", and
+  the "Surge over" announcement says the same.
 - Surge state is not saved, and neither is Afterglow. `bestSurgeCps` and
   `surges` are.
 
@@ -247,34 +255,62 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
 - It has its own tab and its own confirm dialog. Separately, the toolbar
   Reset, the site's shared modal, wipes everything including isotopes. Sound
   settings survive both.
-- **The isotope track** (§8.3, phase 2) starts each reset run with the rungs
-  the isotopes now held unlock: from one isotope, Warm Start's 500 energy and
-  a Lab Assistant. Its rules are in the game from step 1; the UI that explains
-  them comes in step 3.
+- **The isotope track** (§8.3, phase 2): each isotope held unlocks a rung,
+  and a reset starts the new run with the ones it now holds. From one isotope,
+  Warm Start's 500 energy and a Lab Assistant. Its picks and a kept perk are
+  made in the reset dialog.
 - **When a reset opens.** That is at 1M, which is also Unstable, so the stage
   toast carries it: "Reactor is now Unstable. You can reset the experiment."
   It is announced the same way, once a run.
 - **The isotope shelf**, over the face's top-left corner:
   - One bead per isotope, up to ten, then "+N". Hover, focus or a tap shows a
-    tooltip: "3 isotopes", "+30% to all gains", and that each adds 10% and
-    lasts through every reset.
+    tooltip: "3 isotopes", "+30% to all gains", that each adds 10% (13% with
+    Enrichment) and lasts through every reset, and the track's next unlock:
+    "Next at 4 isotopes: Night Lab." Past 12: "Every rung of the isotope track
+    is unlocked."
   - Once a reset is open, a ring follows the beads. It shows the isotopes a
     reset pays now ("+1") and fills toward the next one. When the count rises
     it pops, and the fill starts again from empty.
   - The ring's tooltip: "Reset now for 1 isotope", "+30% now, +40% after",
-    and where the next isotope comes. A click or tap opens the Reset the
-    experiment tab and scrolls it into view. From the keyboard, focus follows
-    to the tab.
+    then what the reset unlocks, "Unlocks Lucky Find and a choice of Reroll or
+    Patience.", then where the next isotope comes. A click or tap opens the
+    Reset the experiment tab and scrolls it into view. From the keyboard,
+    focus follows to the tab.
   - Like the perk shelf, it sits beside the face in the markup, so a click or
     tap on it is never a press.
 - **The Reset the experiment tab**, top to bottom: what a reset is; Wiped and
   Kept lists; the isotopes held and their bonus; when a reset unlocks, or what
   it gives now with the bonus before and after; a meter to the next isotope,
-  captioned "420K of 1.00M" or "Next isotope at 4.00M, 1.40M to go"; and the
-  button, once a reset is open.
-- **The dialog** names what's wiped, the isotopes gained, and the bonus before
-  and after. The toast after it: "Experiment reset. 1 isotope gained: +40% to
-  all gains." Stats shows isotopes with their bonus: "3, +30%".
+  captioned "420K of 1.00M" or "Next isotope at 4.00M, 1.40M to go"; the
+  button, once a reset is open; then the isotope track:
+  - "Isotope track, 7 of 12 unlocked".
+  - Twelve sockets on a rail, numbered, forks drawn larger in two halves.
+    Held sockets are lit like beads, a held fork with its picked half lit; the
+    next two wear a blue rim; the rest are dashed outlines.
+  - A card for each rung held: "At 3 isotopes · your pick", Prodigy, what it
+    does, and "Or Sixth Slot: switch at any reset." A fork reached with no
+    pick yet says to pick one at the next reset. Then the next two, dashed:
+    "Next at 8 isotopes", Hot Start; a fork names both options.
+- **The dialog** names what's wiped, the isotopes gained, the bonus before and
+  after, and any head start: "Warm Start begins the new run with 500 energy
+  and a Lab Assistant." Then the track's part:
+  - "This reset unlocks", the plain rungs the reset reaches, each with what
+    it does.
+  - Every fork the new count reaches, as two option cards with a radio's dot,
+    the last pick chosen. A fork reached for the first time has nothing
+    chosen, and Reset and collect waits for a pick, with an amber hint: "Pick
+    one at 3 isotopes to reset: Sixth Slot or Prodigy."
+  - With Heirloom or Cornerstone picked, the perks it may carry, best first
+    and chosen, then "Keep none". The list follows the fork-9 pick as it
+    changes.
+  - The bonus after follows the capstone pick: Enrichment counts 13% an
+    isotope.
+  - If the run earns another isotope while the dialog is open, Reset and
+    collect rebuilds it for the new count first.
+- **After the reset.** The toast: "Experiment reset. 1 isotope gained: +40% to
+  all gains." Once the beads land, the unlock card over the core names each
+  new rung, a fork as its pick, for 5 seconds. A kept perk is on the shelf at
+  level I. Stats shows isotopes with their bonus: "3, +30%".
 
 ### 4.8 Away progress
 
@@ -285,6 +321,9 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
   at 4 hours. It sits behind a "While you were away" dialog with a Collect
   button. With Night Shift it pays all of it, and the dialog says "full speed"
   instead of "half speed".
+- **Night Lab** (§8.3) pays 60% for up to 6 hours. Where its rate is the one
+  in force, the dialog says "60% speed with Night Lab"; past 4 hours away, it
+  adds "Night Lab kept them running past the usual 4 hours."
 - Energy credited for time away, by Collect or by the silent short gap, moves
   every perk offer's window past itself (`deferPerks`), so being away never
   runs an offer down.
@@ -447,25 +486,46 @@ the build plan are in §8.1.
   - Its glyph tile is lit in the family hue, affordable or not. The tile's
     border is a ring that drains as the window runs down, and it breathes in
     the last fifth. A rare's tile glows; a keystone's sits in a second ring.
-  - The name, with a level badge on an upgrade, then the effect with its
+  - The name, with a level badge past level I, then the effect with its
     number in the family hue. An upgrade strikes out the number held beside
-    the number it becomes.
+    the number it becomes. A perk not held is never an upgrade, even at level
+    II with Prodigy: its badge says II, with nothing struck out.
   - The price, and the rarity: "Common" in grey, "Rare" and "Keystone" in the
     family hue, "Upgrade" for an upgrade.
   - A note when buying costs more than energy: "All 5 slots are full: you'll
-    pick one to drop", or "Swaps out your keystone, Glass Rhythm II".
+    pick one to drop" (6 with Sixth Slot), "Both keystone slots are full:
+    you'll pick one to drop" with Twin Keystones, or "Swaps out your
+    keystone, Glass Rhythm II".
+  - **Credits.** What the isotope track did for the offer, a line each in the
+    isotopes' blue after a bead (`offerCredits`): "Prodigy: level II for the
+    level I price", "Lucky Find: a rare, not a common" (or Rich Find, "a
+    keystone, not a rare"), "Patience: still on offer" once it outlives the
+    window it would have had, and "Familiar: 25% off".
+  - **A drop a find rung raised.** Lucky Find and Rich Find mark an ordinary
+    drop `lifted` when the same roll at the usual 65/30/5 odds lands a tier
+    lower: from the roll alone, so the drop sequence never changes. It is
+    saved with the offer. The toast and the announcement end ", thanks to
+    Lucky Find". About 9 drops in 100 with Lucky Find, 20 with Rich Find. A
+    surge's drop has its own odds and is never marked.
+  - **Reroll.** With the Reroll rung, a small pill in the family hue sits
+    under the row while the run has its reroll. It swaps the offer for a
+    fresh drop on the run's odds, which slides in like a drop, and is gone
+    for the run. "Rerolled Momentum II." joins the drop's announcement.
 - **Buying.** An upgrade, or a new perk with a slot free, buys at once: the
   tile flares and the row folds away.
-  - With all five slots full, the swap dialog shows the offer and lists the
-    held perks as cards. Picking one drops it and buys.
-  - A keystone while another is held asks first: "Swap your keystone?"
+  - With every slot full, the swap dialog shows the offer and lists the held
+    perks as cards. Picking one drops it and buys.
+  - A keystone while another is held asks first: "Swap your keystone?" With
+    Twin Keystones, a third keystone opens the swap dialog instead, "Both
+    keystone slots are full", listing the two.
   - Cancel keeps the offer. Presses are ignored while the dialog is open, and
     it closes if the offer runs out meanwhile.
 - **Running out.** Once the run's energy passes the window, the row fades and
   folds away, silently, and "Overtone is no longer on offer." is announced.
 - **The shelf** sits over the face's top-right corner, mirroring the isotope
-  beads: five sockets, a chip in the family hue for each perk held, and three
-  pips under it for its level. Empty sockets show as dashed outlines.
+  beads: five sockets, six with Sixth Slot, a chip in the family hue for each
+  perk held, and three pips under it for its level. Empty sockets show as
+  dashed outlines.
   - A bought perk flies from its offer tile to its socket and lands with a
     pop; an upgrade flies to the chip it raises and fills a pip.
   - **Tooltips**: the perk's name and level, rarity and family in words
@@ -479,8 +539,8 @@ the build plan are in §8.1.
     buttons aren't nested in the face's `role="button"`. Tab goes from the
     reactor to the chips.
 - **The Perks panel**, a tab between Achievements and Reset the experiment:
-  - This run: "N of 5 slots", and a card per perk held with its rarity and
-    family, level and effect.
+  - This run: "N of 5 slots" (6 with Sixth Slot), and a card per perk held
+    with its rarity and family, level and effect.
   - The codex, "N of 25 found": a board with a socket per perk, one row per
     shop tab. Found perks are lit, dimmer if never held. Undiscovered ones are
     empty sockets with their rarity's shape (a keystone's has its inner ring)
@@ -546,8 +606,12 @@ the build plan are in §8.1.
 - **Reactor-Ramp.** The Cherenkov ramp in §4.6. It covers the core, bezel,
   motes, dial and lights, gains, the rhythm scope and the state name.
   Isotopes are blue-white on Cherenkov blue at every stage, on and off the
-  face: the beads, the ring for the next reset, the isotope tooltip, and the
-  meter in the Reset the experiment tab. The ramp's tokens live on
+  face: the beads, the ring for the next reset, the isotope tooltip, the
+  meter in the Reset the experiment tab, and the isotope track: its sockets
+  and cards in that tab, the picks in the reset dialog, the unlock card, and
+  the credits where a rung acts (an offer's lines, the surge card's line,
+  Perfect Pitch's float and its beads on the scope).
+  The ramp's tokens live on
   `.game-section` so they reach past the face. Stages fade into each
   other over 0.8 s through registered custom properties (`--stage`, `--halo`,
   `--core-heart`, `--core-alpha`, `--core-glow`, `--wash-r`) and
@@ -605,27 +669,33 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - **Isotopes (2026-10-26).** The ring grows in when a reset opens and pops
   each time its count rises; its fill starts again at once rather than winding
   back. The tab's meter glides.
+- **Isotope track (2026-10-27).** The unlock card rises in over the core like
+  the surge card, once the reset's beads have landed, and goes after 5 s. A
+  reroll's new offer slides in like a drop.
 - **Reduced motion.** Color changes and lights stay; all travel, spin, flight
   and implosion goes. Totals and collected energy apply at once, and the scope
   redraws only on presses. Perk rows appear and go at once, and the ring steps
   rather than glides and never breathes. A bought perk is simply on the shelf,
   and the shelf clears without fading. The isotope ring appears and counts
-  without growing or popping, and its fill and the meter step.
+  without growing or popping, and its fill and the meter step. The unlock card
+  appears as the reset does, without rising.
 
 ### 5.4 Accessibility
 
 - The face is `role="button"` with `tabindex="0"`.
 - A live region announces purchases, state changes, achievements, surges and
-  both resets.
+  both resets. Messages from one moment are read as one, so a reset's unlocks
+  and the achievement it earns are both heard.
 - Opening a dialog moves focus into it. Closing hands focus back to where it
   was, or to the reactor when nothing was focused, such as the away dialog on
   load. Shop buttons use `aria-disabled` so they stay focusable while
   unaffordable.
 - Tabs follow the ARIA tab pattern, with arrow keys.
 - The isotope shelf is two buttons. The beads are named like "3 isotopes,
-  +30% to all gains, kept through every reset." The ring is named like "Reset
-  the experiment now for 1 isotope, taking all gains to +40%. The next isotope
-  comes at 4.00M energy." Their tooltips are visual only, like the perk
+  +30% to all gains, kept through every reset. Next unlock at 4 isotopes:
+  Night Lab." The ring is named like "Reset the experiment now for 1 isotope,
+  taking all gains to +30% and unlocking a choice of Sixth Slot or Prodigy.
+  The next isotope comes at 4.00M energy." Their tooltips are visual only, like the perk
   shelf's. Tab goes from the reactor to the beads, the ring, then the perk
   chips. Opening the tab from the ring by keyboard moves focus to the tab.
 - A reset opening is announced with the stage change. A rise in what a reset
@@ -643,6 +713,19 @@ The visuals were built in three passes, all shipped 2026-10-22.
   stays while hovered, and Escape dismisses it.
 - The codex board's sockets are images with names such as "Overtone, held up
   to level 2" or "Undiscovered rare perk".
+- **The isotope track.** In the Reset tab the sockets are hidden from screen
+  readers; the cards under them carry the same facts as a list. In the reset
+  dialog each fork and the keeping rung's perks are a fieldset of radios with
+  a legend ("At 3 isotopes: pick one"), the inputs over their cards so focus
+  and arrow keys work, with a focus ring on the card. The pick hint is an
+  alert, and focus goes to the fork that needs a pick. The unlock card is
+  visual; the reset's announcement names each rung unlocked and any perk
+  kept: "Unlocked Prodigy: Perks you don't hold drop at level II, for their
+  level I price." The reroll pill is a button named "Reroll: swap this offer
+  for a fresh drop, once a run". An offer's credit lines are inside its
+  button, so they are read with it. Capacitor's line joins the "Surge over"
+  announcement and a raised drop's thanks joins its own. Perfect Pitch's
+  float and scope beads are visual only, like the combo row.
 
 ## 6. Content and SEO
 
@@ -686,12 +769,12 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ## 7. Testing
 
-- `npm test` runs Vitest: the 67 clicker tests, the 61 perk tests, the 29
+- `npm test` runs Vitest: the 67 clicker tests, the 61 perk tests, the 37
   track tests, the pacing bands and the career bands.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  40 as of 2026-10-26, in about six minutes.
+  55 as of 2026-10-27, in about seven minutes.
   - **Coverage:** the page shell, the perks section and FAQ rendering from
     the config, presses and the combo, buying, the shop tabs and "New" tag,
     save and reload, away progress, prestige, the full reset, the phone
@@ -713,6 +796,14 @@ The visuals were built in three passes, all shipped 2026-10-22.
     counting up; the tab locked and open, the dialog, the toast and plurals;
     a tap on the beads and on the ring; the ring, beads and perk shelf on a
     phone with 4, 9 and 12 isotopes.
+  - **The track** (`spacebar-clicker-track.e2e.ts`): the tooltips' unlock
+    lines; the track in the Reset tab; a new fork waiting for its pick, the
+    unlock card and the saved pick; Heirloom and Cornerstone carrying a perk;
+    a reroll, and none without the rung; Prodigy's level II offer; six sockets
+    and the Twin Keystones swap; the credits on an offer, and none without
+    the track; Night Lab in the away dialog; Perfect Pitch's float on a fake
+    clock; the unlock card under reduced motion; the dialog with every fork,
+    and six sockets with twelve beads, on a phone.
   - **Staging a save.** The perk and isotope checks write a whole save before
     the page loads (`seedSave` in `fixtures.ts`), with seed 7 when they need a
     known draw: its first draw is under one in eight, so the first surge drops
@@ -1319,8 +1410,11 @@ isotope. The pace change of 2026-10-23 turned it around. Content is step 6's.
 pairs, the build plan, the simulation targets and the rules in §8.3.6. Step 1
 of 4, the logic and the save, is done and signed off. Its rules act in the
 game already, with no UI to explain them until step 3. Step 2, the career
-simulation, is built: three targets are met and two are missed narrowly.
-Waiting on the maintainer's call on the two proposals in §8.3.7.
+simulation, is done: every target is met after the two changes the maintainer
+approved on 2026-10-27 (§8.3.7). Step 3, the track in play, is built, and
+the maintainer asked on 2026-10-27 for the credits idea at its end too
+(§8.3.9). Their calls in §8.3.8 and §8.3.9 await review. Then step 4,
+content.
 
 #### 8.3.1 The brief
 
@@ -1389,7 +1483,8 @@ proposed. Each pair sets two ways to play against each other:
   non-keystone perk through a reset, at level I. _Cornerstone_: keep your
   keystone through a reset, at level I.
 - **12, buildcraft or raw power.** _Twin Keystones_: hold two keystones at
-  once. _Enrichment_: each isotope adds 15% to all gains instead of 10%.
+  once. _Enrichment_: each isotope adds 13% to all gains instead of 10%.
+  Proposed at 15%, set to 13% from the career simulation (§8.3.7).
 
 **When rungs land**, as total play time for a steady player who buys perks,
 from the career simulation (§8.3.7): the median over 8 seeds and six sets of
@@ -1439,14 +1534,15 @@ phase 1.
      (`prestigeReset`): head starts, slots, odds, windows, prices, tolerance,
      the second keystone and Enrichment. Reroll in `perks.ts`.
    - Unit tests for every rung and both sides of every fork.
-2. **Career simulation.** _Built 2026-10-27; two targets wait on the
-   maintainer (§8.3.7)._ Extend the simulation to play run after run with
+2. **Career simulation.** _Done 2026-10-27, §8.3.7._ Extend the simulation to play run after run with
    resets, applying the track, for each fork pick and a few reset habits.
    Targets, approved 2026-10-26:
    - A player's first run is unchanged, at about 24 minutes.
-   - No run to a million drops under 8 minutes before the capstone.
+   - No run to a million drops under 8 minutes before the capstone. Changed
+     on 2026-10-27 to: none under 7, and at most one run in 100 under 8.
    - The two sides of each fork end within 15% of each other.
-3. **The track in play**: the tooltips, the track in the Reset tab, fork picks
+3. **The track in play.** _Built 2026-10-27; calls in §8.3.8 await review._
+   The tooltips, the track in the Reset tab, fork picks
    in the reset dialog, the unlock card, the reroll button, a sixth socket and
    two keystones on the shelf and in the swap dialog, and reduced motion.
 4. **Content, docs and verification**: the track on the page, an FAQ answer,
@@ -1509,30 +1605,30 @@ The rest of the setup:
 - every fork on its second side;
 - each fork flipped alone.
 
-**Against the targets:**
+**Against the targets**, with the two changes below in place:
 
-| Target                                                  | Result                                                                                                                                                                                                                                                                |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A first run is unchanged                                | Met. It is the same run, to the tenth of a second, with or without the track: 21.9 minutes for a steady player buying perks.                                                                                                                                          |
-| No run to a million under 8 minutes before the capstone | Missed narrowly. In the test's pick sets, one eager run in 576 took 7.8 minutes, at 10 isotopes with Prodigy and Cornerstone. Over all 16 pick sets, 4 runs in 256 at 10 and 11 isotopes took 7.6 to 7.9. The 10th percentile is 10.7 minutes or more on every habit. |
-| The two sides of each fork end within 15%               | Met at forks 3, 6 and 9, 1 to 7% apart. Missed at 12: Enrichment ends 17 to 20% ahead of Twin Keystones.                                                                                                                                                              |
+| Target                                                                                     | Result                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A first run is unchanged                                                                   | Met. It is the same run, to the tenth of a second, with or without the track: 21.9 minutes for a steady player buying perks.                                                                                                                              |
+| A million in 8 minutes or more before the capstone, all but 1 run in 100, and none under 7 | Met. In the test's pick sets, one eager run in 576 took 7.8 minutes, at 10 isotopes with Prodigy and Cornerstone. Over all 16 pick sets, 4 runs in 256 at 10 and 11 isotopes took 7.6 to 7.9. The 10th percentile is 10.7 minutes or more on every habit. |
+| The two sides of each fork end within 15%                                                  | Met: 1 to 7% apart at forks 3, 6 and 9, and 9 to 13% at the capstone.                                                                                                                                                                                     |
 
 The fork figures, as minutes from the reset that reaches the fork to 15
 isotopes, first side against second:
 
-| Fork                             | Eager           | Patient        | Saver          |
-| -------------------------------- | --------------- | -------------- | -------------- |
-| 3, Sixth Slot or Prodigy         | 150 vs 144 (4%) | 100 vs 94 (7%) | 85 vs 80 (5%)  |
-| 6, Reroll or Patience            | 103 vs 104 (1%) | 79 vs 78 (2%)  | 59 vs 60 (2%)  |
-| 9, Heirloom or Cornerstone       | 62 vs 63 (1%)   | 42 vs 45 (7%)  | 36 vs 37 (3%)  |
-| 12, Twin Keystones or Enrichment | 29 vs 23 (20%)  | 27 vs 22 (17%) | 17 vs 14 (17%) |
+| Fork                             | Eager           | Patient        | Saver         |
+| -------------------------------- | --------------- | -------------- | ------------- |
+| 3, Sixth Slot or Prodigy         | 150 vs 144 (4%) | 100 vs 94 (7%) | 85 vs 80 (5%) |
+| 6, Reroll or Patience            | 103 vs 104 (1%) | 79 vs 78 (2%)  | 59 vs 60 (2%) |
+| 9, Heirloom or Cornerstone       | 62 vs 63 (1%)   | 42 vs 45 (7%)  | 36 vs 37 (3%) |
+| 12, Twin Keystones or Enrichment | 29 vs 25 (13%)  | 27 vs 24 (11%) | 17 vs 15 (9%) |
 
 **What each rung is worth in time.** Measured by switching each rung off in
 turn, over the part of the career that follows it. With 8 seeds, anything
 within about 2% is noise.
 
 - **Measurable:**
-  - Enrichment, 17 to 20%.
+  - Enrichment, 9 to 13% at 13%. It was 17 to 20% at 15%.
   - Heirloom, about 7%.
   - Prodigy, 4 to 8%.
   - Capacitor, 2 to 6%.
@@ -1561,24 +1657,99 @@ A career's pace comes from the isotope bonus and a few rungs. The perk rungs
 change what a run feels like more than how long it takes, so step 3 has to
 make them felt.
 
-**Waiting on the maintainer.** Both tests are `it.todo` in `career.test.ts`
-until decided.
+**Decided 2026-10-27.** As first built, two targets missed. The maintainer
+approved both proposals:
 
-1. **The capstone. Proposed: Enrichment at 13% an isotope instead of 15%.**
-   - The fork then ends 9 to 13% apart. At 12% it is 6 to 9%; at 14% it misses
-     at 13 to 16%.
+1. **The capstone. Enrichment at 13% an isotope instead of 15%.** At 15%
+   Enrichment ended 17 to 20% ahead of Twin Keystones.
+   - The fork now ends 9 to 13% apart. At 12% it would be 6 to 9%; at 14% it
+     missed at 13 to 16%.
    - Enrichment's lead still grows slowly past 15 isotopes, since it scales
      with every isotope held.
-   - Twin Keystones would still rarely come into play, so the fork stays a
+   - Twin Keystones still rarely comes into play, so the fork stays a
      steady bonus against a build option.
-   - The alternative is to replace Twin Keystones with a capstone that pays in
-     time, a bigger design change.
-2. **The 8-minute floor. Proposed: hold it on nearly every run.** No run
-   under 7 minutes, and at most one in 100 under 8.
+   - The alternative was to replace Twin Keystones with a capstone that pays
+     in time, a bigger design change.
+2. **The 8-minute floor, held on nearly every run.** No run under 7 minutes,
+   and at most one in 100 under 8. Holding every run missed by a little.
    - The misses are lucky runs, with rare drops landing early, which the drop
      feel promises.
    - Holding every run over 8 minutes would mean slowing late runs for
      everyone.
+
+#### 8.3.8 Step 3: calls for the maintainer to review, 2026-10-27
+
+Made while building the track's UI (§4.7, §4.13 and §5 have it in full). Each
+is small to change.
+
+1. **The ring's tooltip leads with what the reset unlocks**, before where the
+   next isotope comes, since it is the hook. The beads' tooltip ends with the
+   next unlock.
+2. **The track sits under the Reset button** in its tab, so what a reset does
+   stays first. Every rung held gets a card, so with all twelve the list runs
+   long, about two screens on a phone.
+3. **A new fork has nothing chosen**, and the reset waits for a pick with an
+   amber hint (Caution Amber, the soft warning DESIGN.md allows). Forks picked
+   before come chosen, and every one reached shows at each reset, as approved.
+4. **Heirloom and Cornerstone come with the best perk chosen**, the rarest
+   then the highest level, as the career simulation keeps it, with "Keep
+   none" last.
+5. **The unlock card** stays 5 seconds, a second longer than the surge card,
+   since it has more to read. A fork reached shows as its pick.
+6. **The reroll is a pill under the offer row**, in the perk's hue, since a
+   button can't sit inside the row's own button. It hides once used. No
+   toast, since the row itself changes.
+7. **Prodigy's offers no longer read as upgrades.** Step 1 let a level II
+   drop of a perk not held show "Upgrade", a struck-out level I and "Upgrade
+   drop". A perk not held now shows its level badge alone, and its rarity.
+8. **The announcer joins messages from one moment.** A first reset used to
+   have its announcement replaced by Fresh Start's; now both are read.
+9. **The reset dialog names the head start**, which closes the gap of it
+   saying energy goes to zero.
+
+**Not built: making the perk rungs felt.** Step 2 found Sixth Slot, Lucky
+Find, Familiar, Patience and the rest worth about nothing in time (§8.3.7).
+Step 3 shows them on the track and the unlock card, and Reroll, Sixth Slot,
+Twin Keystones and Prodigy now show where they act. Others still act
+silently: Familiar's lower price, Lucky and Rich Find's odds, Patience's
+longer window, Capacitor's longer surge, Perfect Pitch's wider window. A small
+credit on the moment each acts, such as "Familiar: 25% off" on an offer, would
+make them felt. The maintainer asked for it on 2026-10-27: §8.3.9.
+
+#### 8.3.9 Credits where a rung acts: calls for review, 2026-10-27
+
+Built at the maintainer's request after step 3. Each quiet rung is now named
+at the moment it acts, in the isotopes' blue (§4.3, §4.4, §4.8, §4.13):
+
+| Rung              | Where it is credited                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| Prodigy           | The offer: "Prodigy: level II for the level I price"                                                       |
+| Lucky / Rich Find | The offer, "Lucky Find: a rare, not a common"; the drop's toast and announcement, ", thanks to Lucky Find" |
+| Patience          | The offer, once it outlives its usual window: "Patience: still on offer"                                   |
+| Familiar          | The offer: "Familiar: 25% off"                                                                             |
+| Capacitor         | The surge card: "Capacitor +1 s: 8 presses, 441 energy"                                                    |
+| Perfect Pitch     | A bead on the scope for each press it catches, and its name off the core at most every 30 s                |
+| Night Lab         | The away dialog: "60% speed with Night Lab", and past 4 hours, that it kept them running                   |
+
+Calls, each small to change:
+
+1. **A find rung is credited only for drops it truly raised**: the same roll
+   at the usual odds would have been a tier lower. Most rares under Lucky
+   Find would have been rares anyway, so most get no credit. The mark is
+   saved with the offer, and a reroll can carry one.
+2. **Patience waits for its moment.** The credit shows only once the offer
+   has outlived the window it would have had, not on every offer.
+3. **Familiar shows on upgrades too**, since a perk held this run counts as
+   held before (§8.3.6), so most upgrade offers wear it.
+4. **Perfect Pitch's float is limited to once every 30 s.** A sloppy tapper
+   gets several catches a minute; the scope's beads mark every one.
+5. **No credit for Warm Start, Hot Start, Sixth Slot, Twin Keystones or
+   Reroll.** The reset dialog names the head starts; the others show
+   themselves.
+6. **Two lost spaces fixed on the way**: the away dialog read "at60% speed"
+   and "made31,752", and the surge card "Perk drop:Ghost Presses". Astro drops
+   the space before an element on the next line; the markup now keeps it with
+   `{' '}`.
 
 ### 8.4 Unassigned ideas
 
@@ -1592,10 +1763,7 @@ the maintainer asks.
 
 ### 8.5 Known gaps
 
-- The isotope track's rules act on `dev` from phase 2 step 1, but nothing
-  explains them until step 3: a reset run starts Warming with 500 energy and
-  a Lab Assistant, and the reset dialog still says energy goes to zero. Fork
-  rungs stay off until a pick exists, which needs step 3's dialog.
+- The page content doesn't describe the isotope track yet. That is step 4.
 - Not playtested, and not checked on real touch devices, Firefox or Safari.
 - Not yet merged to `main`.
 
@@ -1699,3 +1867,18 @@ the maintainer asks.
   first run unchanged and forks 3, 6 and 9 within 15%. The capstone and the
   8-minute floor miss narrowly, with proposals in §8.3.7. The rung timings in
   §8.3.3 are now measured.
+- **2026-10-27.** The maintainer approved both step 2 proposals: Enrichment
+  at 13% an isotope, and the 8-minute floor held on all but one run in 100,
+  with none under 7. Every career target now passes.
+- **2026-10-27.** Isotope track step 3, the track in play. The tooltips name
+  the next unlock and what a reset unlocks; the Reset tab draws the track; the
+  reset dialog takes fork picks, waits for a new fork's, and offers
+  Heirloom's or Cornerstone's perk; an unlock card names new rungs; a reroll
+  pill; a sixth socket; Twin Keystones in the swap dialog. Prodigy's offers no
+  longer read as upgrades, and the announcer joins messages from one moment.
+  `spacebar-clicker-track.e2e.ts`, 11 checks. Calls for review in §8.3.8.
+- **2026-10-27.** Credits where a rung acts, asked for after step 3: an
+  offer's lines for Prodigy, a raised drop, Patience and Familiar; Capacitor
+  on the surge card; Perfect Pitch on the scope and off the core; Night Lab in
+  the away dialog. Lucky and Rich Find mark only drops they truly raised. Two
+  lost spaces fixed. 6 unit tests and 4 browser checks. Calls in §8.3.9.
