@@ -75,8 +75,9 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 | `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                                                  |
 | `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                                                               |
 | `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks (67 as of 2026-10-26).                                                                                                                                                                                                            |
-| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12).                                                                                                                                              |
+| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12), and whole careers of runs and resets with the isotope track (§8.3.7).                                                                        |
 | `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                                                          |
+| `src/games/spacebar-clicker/career.test.ts`           | Holds careers to the isotope track's targets (§8.3.7): a first run unchanged, the two sides of each fork. About 20 s.                                                                                                                                                   |
 | `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (61 as of 2026-10-23).                                                                                                                                                               |
 | `src/games/spacebar-clicker/track.ts`                 | The isotope track (§8.3): which rungs are in force for an isotope count and fork picks, what a reset reaches, which forks still need a pick, and the next steps to show. Pure.                                                                                          |
 | `src/games/spacebar-clicker/track.test.ts`            | Unit tests for the track: the table, every rung, both sides of every fork, the reset and the save (29 as of 2026-10-26).                                                                                                                                                |
@@ -369,7 +370,8 @@ rules: economy, combo tracker, surges and perks. Its players:
 | Perfect bot | 5 presses/s | 10% jitter | shops every half second without missing a beat                                           |
 
 Every player buys the shop item that adds the most income per energy spent.
-`pacing.test.ts` holds the results in bands (§7).
+`pacing.test.ts` holds the results in bands (§7). The simulator also plays
+careers, run after run with resets and the isotope track (§8.3.7).
 
 **First prestige without perks**, median over 8 runs:
 
@@ -685,7 +687,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
 ## 7. Testing
 
 - `npm test` runs Vitest: the 67 clicker tests, the 61 perk tests, the 29
-  track tests and the pacing bands.
+  track tests, the pacing bands and the career bands.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
@@ -732,6 +734,8 @@ The visuals were built in three passes, all shipped 2026-10-22.
   table to a file: `PACING_REPORT=pacing.txt npx vitest run pacing` in Git
   Bash, or `$env:PACING_REPORT="pacing.txt"; npx vitest run pacing` in
   PowerShell.
+- `career.test.ts` runs with `npm test` too, about 20 s, alongside the pacing
+  tests. Its table: `CAREER_REPORT=career.txt npx vitest run career`.
 - Run every check at the end of each step.
 - **Never verified**: a real touch device, Firefox and Safari, long-session
   feel, and a human playtest of the balance.
@@ -1311,11 +1315,12 @@ isotope. The pace change of 2026-10-23 turned it around. Content is step 6's.
 
 ### 8.3 Isotope track: phase 2 in progress
 
-**Status (2026-10-26).** Designed with the maintainer and approved: the fork
+**Status (2026-10-27).** Designed with the maintainer and approved: the fork
 pairs, the build plan, the simulation targets and the rules in §8.3.6. Step 1
-of 4, the logic and the save, is done. Its rules act in the game already, with
-no UI to explain them until step 3. Waiting on the maintainer's review of
-step 1 before step 2, the career simulation.
+of 4, the logic and the save, is done and signed off. Its rules act in the
+game already, with no UI to explain them until step 3. Step 2, the career
+simulation, is built: three targets are met and two are missed narrowly.
+Waiting on the maintainer's call on the two proposals in §8.3.7.
 
 #### 8.3.1 The brief
 
@@ -1387,19 +1392,19 @@ proposed. Each pair sets two ways to play against each other:
   once. _Enrichment_: each isotope adds 15% to all gains instead of 10%.
 
 **When rungs land**, as total play time for a steady player who buys perks,
-from the simulation with today's rules. Waiting longer before a reset lands
-several rungs at once.
+from the career simulation (§8.3.7): the median over 8 seeds and six sets of
+fork picks. Waiting longer before a reset lands several rungs at once.
 
 | Isotopes | Reset at 1M | Reset at 4M | Reset at 9M |
 | -------- | ----------- | ----------- | ----------- |
-| 1        | 22 minutes  | 30 minutes  | 38 minutes  |
-| 3        | 60 minutes  | 55 minutes  | 38 minutes  |
-| 6        | 110 minutes | 77 minutes  | 67 minutes  |
-| 9        | 152 minutes | 115 minutes | 89 minutes  |
-| 12       | 190 minutes | 131 minutes | 112 minutes |
+| 1        | 22 minutes  | 29 minutes  | 35 minutes  |
+| 3        | 57 minutes  | 52 minutes  | 35 minutes  |
+| 6        | 104 minutes | 73 minutes  | 61 minutes  |
+| 9        | 145 minutes | 109 minutes | 83 minutes  |
+| 12       | 177 minutes | 124 minutes | 104 minutes |
 
-The rungs themselves will speed later runs, so these are the slow end. Step 2
-of the build plan measures the real figures.
+These include the rungs' own effect. They come in up to 9% sooner than the
+estimates made before the track existed.
 
 #### 8.3.4 How it shows
 
@@ -1434,7 +1439,8 @@ phase 1.
      (`prestigeReset`): head starts, slots, odds, windows, prices, tolerance,
      the second keystone and Enrichment. Reroll in `perks.ts`.
    - Unit tests for every rung and both sides of every fork.
-2. **Career simulation.** Extend the simulation to play run after run with
+2. **Career simulation.** _Built 2026-10-27; two targets wait on the
+   maintainer (§8.3.7)._ Extend the simulation to play run after run with
    resets, applying the track, for each fork pick and a few reset habits.
    Targets, approved 2026-10-26:
    - A player's first run is unchanged, at about 24 minutes.
@@ -1458,7 +1464,7 @@ The maintainer approved these as proposed:
 - **Twin Keystones**: a third keystone asks which of the two to replace.
 - **Picks never change mid-run.** A fork pick applies from the next run.
 
-Settled while building step 1, for the maintainer's review:
+Settled while building step 1, approved with it on 2026-10-27:
 
 - **A rung a reset unlocks acts on the run that reset starts.** So the first
   reset gives the second run Warm Start, and a reset that reaches 9 isotopes
@@ -1475,6 +1481,104 @@ Settled while building step 1, for the maintainer's review:
 - **The save follows the rungs.** A sixth perk, a second keystone or a Prodigy
   offer loads only with the rung that allows it.
 - **Heirloom and Cornerstone carry the perk at level I**, even with Prodigy.
+
+#### 8.3.7 Step 2: the career simulation, 2026-10-27
+
+**What it plays.** `simulateCareer` in `sim.ts` plays run after run from a new
+save, resetting through the real `prestigeReset`. The player is the steady
+tapper, buying perks as in the pacing tests. There are three reset habits:
+
+- **Eager** resets at 1M, for one isotope.
+- **Patient** waits for 4M, for two.
+- **Saver** waits for 9M, for three.
+
+The rest of the setup:
+
+- **How long.** Careers run to 15 isotopes, three past the capstone, so its
+  two sides have runs to differ on.
+- **Fork picks** are made when each fork is reached.
+- **Keeping a perk.** Heirloom keeps the rarest other perk, highest level
+  first. Cornerstone keeps the keystone.
+- **Rerolls.** The player rerolls an offer they wouldn't buy.
+- **Not simulated.** Time away isn't played, so Night Lab measures nothing,
+  as Night Shift doesn't in the pacing tests.
+
+`career.test.ts` plays 8 seeds of each habit with six sets of picks:
+
+- every fork on its first side;
+- every fork on its second side;
+- each fork flipped alone.
+
+**Against the targets:**
+
+| Target                                                  | Result                                                                                                                                                                                                                                                                |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A first run is unchanged                                | Met. It is the same run, to the tenth of a second, with or without the track: 21.9 minutes for a steady player buying perks.                                                                                                                                          |
+| No run to a million under 8 minutes before the capstone | Missed narrowly. In the test's pick sets, one eager run in 576 took 7.8 minutes, at 10 isotopes with Prodigy and Cornerstone. Over all 16 pick sets, 4 runs in 256 at 10 and 11 isotopes took 7.6 to 7.9. The 10th percentile is 10.7 minutes or more on every habit. |
+| The two sides of each fork end within 15%               | Met at forks 3, 6 and 9, 1 to 7% apart. Missed at 12: Enrichment ends 17 to 20% ahead of Twin Keystones.                                                                                                                                                              |
+
+The fork figures, as minutes from the reset that reaches the fork to 15
+isotopes, first side against second:
+
+| Fork                             | Eager           | Patient        | Saver          |
+| -------------------------------- | --------------- | -------------- | -------------- |
+| 3, Sixth Slot or Prodigy         | 150 vs 144 (4%) | 100 vs 94 (7%) | 85 vs 80 (5%)  |
+| 6, Reroll or Patience            | 103 vs 104 (1%) | 79 vs 78 (2%)  | 59 vs 60 (2%)  |
+| 9, Heirloom or Cornerstone       | 62 vs 63 (1%)   | 42 vs 45 (7%)  | 36 vs 37 (3%)  |
+| 12, Twin Keystones or Enrichment | 29 vs 23 (20%)  | 27 vs 22 (17%) | 17 vs 14 (17%) |
+
+**What each rung is worth in time.** Measured by switching each rung off in
+turn, over the part of the career that follows it. With 8 seeds, anything
+within about 2% is noise.
+
+- **Measurable:**
+  - Enrichment, 17 to 20%.
+  - Heirloom, about 7%.
+  - Prodigy, 4 to 8%.
+  - Capacitor, 2 to 6%.
+  - Cornerstone, 1 to 6%.
+  - Warm Start, 1 to 2%.
+- **Within the noise:** Sixth Slot, Reroll, Patience, Lucky Find, Familiar,
+  Hot Start, Rich Find, Perfect Pitch and Twin Keystones.
+
+**Why the perk rungs barely move the time.** Later runs last 8 to 11 minutes
+and see one to three drops:
+
+- A sixth socket rarely fills.
+- In 48 runs past the capstone with Cornerstone and Twin Keystones, the
+  player held both of their keystones only twice.
+- The simulated player checks the shop every 10 seconds and never misses an
+  offer it wants, so Patience is worth more to a real player than it measures
+  here.
+
+Two changes were tried, and neither helps:
+
+- Keystones at 20% or 35% of drops with Twin Keystones gain 0 to 5%.
+- Drops twice as often by 12 isotopes make careers 2 to 4% faster, and Twin
+  Keystones still gains about nothing.
+
+A career's pace comes from the isotope bonus and a few rungs. The perk rungs
+change what a run feels like more than how long it takes, so step 3 has to
+make them felt.
+
+**Waiting on the maintainer.** Both tests are `it.todo` in `career.test.ts`
+until decided.
+
+1. **The capstone. Proposed: Enrichment at 13% an isotope instead of 15%.**
+   - The fork then ends 9 to 13% apart. At 12% it is 6 to 9%; at 14% it misses
+     at 13 to 16%.
+   - Enrichment's lead still grows slowly past 15 isotopes, since it scales
+     with every isotope held.
+   - Twin Keystones would still rarely come into play, so the fork stays a
+     steady bonus against a build option.
+   - The alternative is to replace Twin Keystones with a capstone that pays in
+     time, a bigger design change.
+2. **The 8-minute floor. Proposed: hold it on nearly every run.** No run
+   under 7 minutes, and at most one in 100 under 8.
+   - The misses are lucky runs, with rare drops landing early, which the drop
+     feel promises.
+   - Holding every run over 8 minutes would mean slowing late runs for
+     everyone.
 
 ### 8.4 Unassigned ideas
 
@@ -1590,3 +1694,8 @@ the maintainer asks.
   Familiar's discount, Patience's windows, the reroll, six slots and two
   keystones in the perk rules; fork picks and rerolls in the save. 29 unit
   tests. The rules act in the game now; their UI comes in step 3.
+- **2026-10-27.** Isotope track step 2, the career simulation. `sim.ts` plays
+  run after run with resets, rerolls and kept perks; `career.test.ts` holds a
+  first run unchanged and forks 3, 6 and 9 within 15%. The capstone and the
+  8-minute floor miss narrowly, with proposals in §8.3.7. The rung timings in
+  §8.3.3 are now measured.

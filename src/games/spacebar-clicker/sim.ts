@@ -1,11 +1,13 @@
 /**
- * Spacebar Clicker — the pacing simulation (SPACEBAR-CLICKER.md §4.12, §8.1).
+ * Spacebar Clicker — the pacing simulation (SPACEBAR-CLICKER.md §4.12, §8.1,
+ * §8.3).
  *
- * Plays a first run headless against the real rules: the economy, the combo
- * tracker, the perk drops and buying all come from the pure modules. Only the
- * game loop is restated here, as the script runs it: press timing, surges and
- * their afterglow, Self-Replicator's clock, and the income meter that prices
- * perks. pacing.test.ts holds the results inside agreed bands.
+ * Plays runs headless against the real rules: the economy, the combo tracker,
+ * the perk drops and buying, the reset and the isotope track all come from the
+ * pure modules. Only the game loop is restated here, as the script runs it:
+ * press timing, surges and their afterglow, Self-Replicator's clock, and the
+ * income meter that prices perks. pacing.test.ts holds a first run inside
+ * agreed bands; career.test.ts does the same for run after run with resets.
  *
  * A run is a player (a press rhythm) and a perk policy. Every player buys
  * from the shop the way an optimal player would: the item that adds the most
@@ -32,15 +34,26 @@ import {
   luckyMultiplier,
   offerOn,
   perk,
+  prestigeGain,
   tapperCost,
   updateReveals,
   upgradeCost,
 } from './economy';
 import { IncomeMeter } from './income';
 import { modsOf, type Mods } from './mods';
-import { buyPerk, perkLevel, perkTick, placeOffer, replicate, surgeDrop } from './perks';
+import {
+  buyPerk,
+  perkLevel,
+  perkTick,
+  placeOffer,
+  replicate,
+  rerollOffer,
+  rerollsLeft,
+  surgeDrop,
+} from './perks';
 import { nextRandom } from './rng';
-import { defaultSave, type PerkOffer, type SaveState } from './save';
+import { defaultSave, prestigeReset, type OwnedPerk, type PerkOffer, type SaveState } from './save';
+import { activeRungs, type ForkPicks } from './track';
 
 export interface Player {
   name: string;
@@ -126,8 +139,10 @@ export const BUILDS = {
 } as const satisfies Record<string, { player: keyof typeof PLAYERS; perks: readonly PerkId[] }>;
 
 export interface RunResult {
-  /** Seconds to 1M energy this run, or null if it never got there. */
+  /** Seconds to the run's goal (1M energy, the first prestige, by default), or null if it never got there. */
   firstPrestigeS: number | null;
+  /** Seconds to 1M energy this run, or null if it never got there. */
+  millionS: number | null;
   drops: number;
   perksBought: number;
   /** Perks held at the end, with levels. */
@@ -138,6 +153,8 @@ export interface RunResult {
   earned: { presses: number; surges: number; tappers: number };
   /** The same, minute by minute. */
   byMinute: { presses: number; surges: number; tappers: number }[];
+  /** The save as the run ended, to reset from. */
+  state: SaveState;
 }
 
 const TABS: readonly ShopTab[] = ['press', 'auto'];
@@ -168,16 +185,21 @@ function expectedLuck(state: SaveState, mods: Mods): number {
 
 /**
  * Play one run until it has earned `goal` this run (first prestige by
- * default), or `maxS` seconds pass.
+ * default), or `maxS` seconds pass. A first run starts from a new save; pass
+ * `from`, a save just reset, to play a later one.
  */
 export function simulateRun(
   player: Player,
   policy: PerkPolicy,
   seed: number,
-  { maxS = 3 * 3600, goal = PRESTIGE_UNLOCK } = {}
+  {
+    maxS = 3 * 3600,
+    goal = PRESTIGE_UNLOCK,
+    from,
+  }: { maxS?: number; goal?: number; from?: SaveState } = {}
 ): RunResult {
-  const state = defaultSave(0);
-  state.perks.rng = seed >>> 0;
+  const state = from ?? defaultSave(0);
+  if (!from) state.perks.rng = seed >>> 0;
   const hands = new Hands((seed ^ 0x9e3779b9) >>> 0);
   const usesPerks = policy.kind === 'any' || policy.kind === 'build';
   if (policy.kind === 'holding') {
@@ -201,6 +223,7 @@ export function simulateRun(
   let nextShop = 0;
   let drops = 0;
   let perksBought = 0;
+  let millionS: number | null = null;
   const firstBought: Partial<Record<string, number>> = {};
   const earned = { presses: 0, surges: 0, tappers: 0 };
   const byMinute: RunResult['byMinute'] = [];
@@ -278,6 +301,13 @@ export function simulateRun(
     return perk(offer.id).rarity !== 'keystone' || policy.keystones.includes(offer.id);
   }
 
+  /** True when the player would buy this offer, given the energy: wanted, with a slot for it. */
+  function takes(offer: PerkOffer): boolean {
+    if (!wants(offer)) return false;
+    if (perkLevel(state, offer.id) > 0 || perk(offer.id).rarity === 'keystone') return true;
+    return state.perks.owned.length < mods.perkSlots || slotFor(offer) !== undefined;
+  }
+
   /** For `any`: the slot a new perk takes when all are full, the least rare one, if rarer. */
   function slotFor(offer: PerkOffer): PerkId | undefined {
     const weakest = [...state.perks.owned].sort(
@@ -293,7 +323,12 @@ export function simulateRun(
     let any = false;
     let saving = false;
     for (const tab of TABS) {
-      const offer = offerOn(state, tab);
+      let offer = offerOn(state, tab);
+      // The Reroll rung: swap an offer the player won't buy for a fresh one.
+      if (offer && !takes(offer) && rerollsLeft(state) > 0) {
+        if (rerollOffer(state, tab, income.rate(t * 1000))) drops++;
+        offer = offerOn(state, tab);
+      }
       if (!offer || !wants(offer)) continue;
       if (state.energy >= offer.price) {
         const result = buyPerk(state, tab, slotFor(offer));
@@ -410,16 +445,19 @@ export function simulateRun(
     updateReveals(state);
 
     t = end;
+    if (millionS === null && state.runLifetime >= PRESTIGE_UNLOCK) millionS = t;
     if (state.runLifetime >= goal) {
       const firstPrestigeS = t;
       return {
         firstPrestigeS,
+        millionS,
         drops,
         perksBought,
         held: heldList(state),
         firstBought,
         earned,
         byMinute,
+        state,
       };
     }
     if (t >= nextShop) {
@@ -430,12 +468,14 @@ export function simulateRun(
   }
   return {
     firstPrestigeS: null,
+    millionS,
     drops,
     perksBought,
     held: heldList(state),
     firstBought,
     earned,
     byMinute,
+    state,
   };
 }
 
@@ -466,4 +506,88 @@ export function summarize(player: Player, policy: PerkPolicy, seeds: readonly nu
     drops: mean((r) => r.drops),
     bought: mean((r) => r.perksBought),
   };
+}
+
+// --- Careers (the isotope track, §8.3) ----------------------------------------------
+
+/**
+ * When a player resets: as soon as a reset pays `isotopes`. One resets at a
+ * million; two waits for 4M; three waits for 9M.
+ */
+export const HABITS = { eager: 1, patient: 2, saver: 3 } as const;
+export type Habit = keyof typeof HABITS;
+
+export interface CareerRun {
+  /** Isotopes held through the run. */
+  isotopes: number;
+  /** Minutes to the reset, and to the run's first million. */
+  minutes: number;
+  millionMinutes: number;
+}
+
+export interface CareerResult {
+  runs: CareerRun[];
+  /** Total minutes of play when the career first held each isotope count. */
+  reachedAt: Partial<Record<number, number>>;
+  /** False if a run never reached its reset. */
+  finished: boolean;
+}
+
+/**
+ * The perk a keeping rung carries through the reset: Cornerstone's keystone,
+ * or Heirloom's best other perk, the rarest, then the highest level.
+ */
+export function keepAtReset(state: SaveState): PerkId | undefined {
+  const rungs = activeRungs(state.isotopes, state.forks);
+  const kind = (o: OwnedPerk) => perk(o.id).rarity === 'keystone';
+  const pool = rungs.includes('cornerstone')
+    ? state.perks.owned.filter(kind)
+    : rungs.includes('heirloom')
+      ? state.perks.owned.filter((o) => !kind(o))
+      : [];
+  return [...pool].sort(
+    (a, b) => RANK[perk(b.id).rarity] - RANK[perk(a.id).rarity] || b.level - a.level
+  )[0]?.id;
+}
+
+/**
+ * Play run after run from a new save, resetting on `habit` with these fork
+ * picks, until the career holds `until` isotopes. The picks are made at the
+ * first reset that reaches each fork, as the reset dialog asks for them, and
+ * the keeping rung carries a perk from the run being reset.
+ */
+export function simulateCareer(
+  player: Player,
+  policy: PerkPolicy,
+  seed: number,
+  habit: Habit,
+  picks: ForkPicks,
+  until = 15
+): CareerResult {
+  const runs: CareerRun[] = [];
+  const reachedAt: Partial<Record<number, number>> = {};
+  const goal = PRESTIGE_UNLOCK * HABITS[habit] ** 2;
+  let from: SaveState | undefined;
+  let totalS = 0;
+  while (!from || from.isotopes < until) {
+    const isotopes = from?.isotopes ?? 0;
+    const r = simulateRun(player, policy, seed + runs.length * 7919, { goal, from });
+    if (r.firstPrestigeS === null) return { runs, reachedAt, finished: false };
+    totalS += r.firstPrestigeS;
+    runs.push({ isotopes, minutes: r.firstPrestigeS / 60, millionMinutes: r.millionS! / 60 });
+
+    const gain = prestigeGain(r.state.runLifetime);
+    // Keeping reads the rungs the reset reaches, so it uses the picks too.
+    const reached = {
+      ...r.state,
+      isotopes: isotopes + gain,
+      forks: { ...r.state.forks, ...picks },
+    };
+    from = prestigeReset(r.state, gain, totalS * 1000, {
+      forks: picks,
+      keep: keepAtReset(reached),
+    });
+    for (let i = isotopes + 1; i <= from.isotopes; i++) reachedAt[i] = totalS / 60;
+  }
+  return { runs, reachedAt, finished: true };
 }
