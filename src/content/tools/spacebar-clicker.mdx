@@ -17,12 +17,15 @@ faq:
   - question: 'What does holding a rhythm do?'
     answer: 'Each press that lands within 25% of your recent average interval adds one to your combo. At 10 combo every press is worth 1.5 times as much, at 25 it is doubled, at 50 it is 2.5 times and at 100 it is tripled. Pause for more than 0.8 seconds, or miss the beat three times in a row, and the combo breaks.'
   - question: 'How do perks work?'
-    answer: 'Perks are random drops that change the rules for one run. One appears at the top of the Upgrades or Auto-tappers tab while you play, and leaves once you have earned past its window, so buy the ones you want before the ring around it runs out. About two drops in three are commons that boost a number, three in ten are rares that change a rule, and one in twenty is a keystone that breaks a rule at a cost. You hold up to five, one keystone at a time, and they all clear when you reset the experiment.'
+    answer: 'Perks are random drops that change the rules for one run. One appears at the top of the Upgrades or Auto-tappers tab while you play, and leaves once you have earned past its window, so buy the ones you want before the ring around it runs out. About two drops in three are commons that boost a number, three in ten are rares that change a rule, and one in twenty is a keystone that breaks a rule at a cost. You hold up to five, one keystone at a time, and they clear when you reset the experiment. The isotope track can raise both limits and carry one perk through a reset.'
+  - question: 'What does the isotope track unlock?'
+    answer: 'Every isotope you hold unlocks one rung of the track, for good, without spending anything. The first starts each run with 500 energy and a Lab Assistant. Later rungs lengthen surges and improve perk drops and away progress, and every third rung is a choice of two, such as a sixth perk slot or perks that drop at level II. You pick in the reset dialog and can switch at any reset. The track has twelve rungs, and the Reset the experiment tab shows the ones you hold and the next two.'
 ---
 
 import {
   AUTO_TAPPERS,
   COMBO_TIERS,
+  ISOTOPE_TRACK,
   PERK_DROPS,
   PERK_FAMILY_NAMES,
   PERK_RARITY_NAMES,
@@ -31,6 +34,7 @@ import {
   PERKS,
   PRESS_UPGRADES,
   REACTOR_STATES,
+  TRACK_EFFECT,
 } from '../../games/spacebar-clicker/config';
 import { perkDetailAllLevels } from '../../games/spacebar-clicker/perks';
 
@@ -45,6 +49,9 @@ export const TIER_TEXT = {
 };
 export const scaling = (s) => (s === 1 ? 'one-off' : `x${s} per level`);
 export const tiers = [...COMBO_TIERS].reverse();
+export const forkName = (step) => step.rungs.map((r) => r.name).join(' or ');
+export const forkDetail = (step) =>
+  `Pick one, and change it at any reset. ${step.rungs.map((r) => `${r.name}: ${r.detail}.`).join(' ')}`;
 export const tierRange = (i) =>
   i === tiers.length - 1 ? `${tiers[i].min}+` : `${tiers[i].min} to ${tiers[i + 1].min - 1}`;
 
@@ -55,8 +62,8 @@ export const tierRange = (i) =>
       Spacebar Clicker is an idle game played on one key. Every press of the spacebar feeds energy
       into a lab reactor. You spend that energy on upgrades that make each press worth more, and on
       auto-tappers that press for you while you do something else. The reactor changes state as
-      you earn, and once a run has produced a million energy you can reset the experiment for a
-      permanent bonus.
+      you earn, and once a run has produced a million energy you can reset the experiment for
+      isotopes: a permanent bonus, and new rules that unlock one at a time.
 
       The difference from other spacebar clicker games is the combo. Most clickers reward mashing.
       This one tracks the gap between your presses and pays up to three times more energy when you
@@ -122,10 +129,11 @@ export const tierRange = (i) =>
         <strong>Reset the experiment</strong>
 
           Once a run has earned a million energy you can reset it for isotopes. Each isotope adds
-          10% to every gain for good. Your energy, shop, reactor state and perks go back to zero;
-          your isotopes, achievements, records and perk codex stay. Isotopes sit as beads in the
-          reactor's top-left corner: point at them or tap them for their bonus. Once a reset is
-          open, a ring beside them shows what it would pay.
+          10% to every gain for good, and unlocks a rung of the isotope track: a head start, a
+          longer surge, a sixth perk slot and more. Your energy, shop, reactor state and perks
+          start over; your isotopes, achievements, records and perk codex stay. Isotopes sit as
+          beads in the reactor's top-left corner: point at them or tap them for their bonus and
+          the next unlock. Once a reset is open, a ring beside them shows what it would pay.
 
       </li>
     </ol>
@@ -263,13 +271,17 @@ export const tierRange = (i) =>
 
       The game sets each price and window in your income at the moment the perk drops, so a perk
       costs the same share of your earnings early in a run as late. Energy you collect for time
-      away doesn't count against a window.
+      away doesn't count against a window. Later, the <a href="#isotope-track">isotope track</a>
+      can lean ordinary drops rarer, take a quarter off perks you have held before, keep offers
+      up twice as long, or let you reroll one.
 
-      You can hold {PERK_SLOTS} perks, and one keystone at a time. A perk you already hold can
+      You can hold {PERK_SLOTS} perks, and one keystone at a time; the isotope track can add a
+      sixth slot or a second keystone. A perk you already hold can
       drop again as an upgrade, to level II and then III, at {PERK_UPGRADE_SCALE} times the price
       for each level you hold. With every slot full, the game asks which perk to let go before you
       buy a new one, and a new keystone replaces the old. Perks last until you reset the
-      experiment. The Perks tab holds a codex of every perk you have found, across all your runs.
+      experiment, though the isotope track can carry one across. The Perks tab holds a codex of
+      every perk you have found, across all your runs.
 
     <h3>Upgrade perks</h3>
     <div class="spec-table">
@@ -344,14 +356,45 @@ export const tierRange = (i) =>
       exchange for starting over. Isotopes gained equal the square root of your run's energy in
       millions, rounded down: one million gives 1, four million gives 2, twenty-five million gives
       5, a hundred million gives 10. Each isotope adds 10% to every gain, presses and auto-tappers
-      alike, on every run from then on. Your perks go with the reset, but the codex of perks you
-      have found stays.
+      alike, on every run from then on. Your perks go with the reset, unless the isotope track
+      lets you keep one, and the codex of perks you have found stays.
 
       The thresholds climb, but a run keeps speeding up as it goes, so each isotope after the first
       arrives sooner than the one before. In the game's simulation, a steady player with no perks
       earns the first isotope at about 24 minutes and the second about 12 minutes later. The
       isotope beads and the Reset the experiment tab show what a reset gives now and how far off
       the next isotope is, so when to reset is your call, and the game asks you to confirm.
+
+    <h3 id="isotope-track">The isotope track</h3>
+
+      Each isotope you hold also unlocks a rung of the isotope track, for good. Nothing is spent:
+      holding the isotopes is enough, and a reset that pays several unlocks several at once. Most
+      rungs are small, like a head start on every run or a longer surge. Every third rung is a
+      choice of two, which you make in the reset dialog and can change at any reset. The Reset the
+      experiment tab shows the rungs you hold and the next two, and the game names a rung when it
+      shapes an offer, a surge or your time away.
+
+    <div class="spec-table spec-table-3 section-content">
+      <div class="spec-row spec-head">
+        <span class="spec-name">Rung</span>
+        <span class="spec-num">Isotopes</span>
+        <span class="spec-desc">What it does</span>
+      </div>
+      {ISOTOPE_TRACK.map((step) => (
+        <div class="spec-row">
+          <span class="spec-name">{forkName(step)}</span>
+          <span class="spec-num" data-label="At">{step.isotopes}</span>
+          <span class="spec-desc">
+            {step.rungs.length > 1 ? forkDetail(step) : `${step.rungs[0].detail}.`}
+          </span>
+        </div>
+      ))}
+    </div>
+
+      In the game's simulation, a steady player who buys perks holds all twelve rungs after 100 to
+      180 minutes of play, depending on how often they reset. The track stops at twelve for now.
+      Isotopes past it still add 10% to every gain, or
+      {Math.round(TRACK_EFFECT.enrichmentRate * 100)}% with Enrichment.
 
   </div>
 </section>
@@ -508,8 +551,21 @@ export const tierRange = (i) =>
           window, so buy the ones you want before the ring around it runs out. About two drops in
           three are commons that boost a number, three in ten are rares that change a rule, and one
           in twenty is a keystone that breaks a rule at a cost. You hold up to five, one keystone at
-          a time, and they all clear when you reset the experiment. The <a href="#perks">perks
-          section</a> above lists every one.
+          a time, and they clear when you reset the experiment. The isotope track can raise both
+          limits and carry one perk through a reset. The <a href="#perks">perks section</a> above
+          lists every one.
+
+      </details>
+      <details class="faq-item">
+        <summary>What does the isotope track unlock?</summary>
+
+          Every isotope you hold unlocks one rung of the track, for good, without spending
+          anything. The first starts each run with {whole(TRACK_EFFECT.warmStartEnergy)} energy and
+          a Lab Assistant. Later rungs lengthen surges and improve perk drops and away progress,
+          and every third rung is a choice of two, such as a sixth perk slot or perks that drop at
+          level II. You pick in the reset dialog and can switch at any reset. The track has twelve
+          rungs, and the Reset the experiment tab shows the ones you hold and the next two. The <a
+          href="#isotope-track">isotope track table</a> lists them all.
 
       </details>
     </div>

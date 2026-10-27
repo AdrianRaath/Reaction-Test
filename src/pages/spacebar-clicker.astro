@@ -3909,6 +3909,14 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     color: var(--ink-secondary);
   }
 
+  /* --- Page content ------------------------------------------------------------------ */
+
+  /* The content's one subheading over prose, the isotope track: air above and
+     a little below. Its others sit over tables, which bring their own. */
+  :global(.info-section h3#isotope-track) {
+    margin-block: var(--space-lg) var(--space-sm);
+  }
+
   /* --- Responsive ------------------------------------------------------------------- */
 
   @media (max-width: 900px) {

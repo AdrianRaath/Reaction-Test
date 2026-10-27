@@ -4,7 +4,7 @@
  * prestige, the full reset, and the phone layout.
  */
 
-import { PERKS } from '../../src/games/spacebar-clicker/config';
+import { ISOTOPE_TRACK, PERKS } from '../../src/games/spacebar-clicker/config';
 import { editSave, energy, expect, openGame, pressSteady, test } from './fixtures';
 
 test('page shell: title, heading, no top-bar telemetry', async ({ page }) => {
@@ -35,7 +35,20 @@ test('the page lists every perk and the drop odds, straight from the config', as
       nodes.map((n) => n.textContent ?? '').find((t) => t.includes('FAQPage'))
     );
   expect(faq).toContain('How do perks work?');
-  await expect(page.locator('#faq summary').last()).toHaveText('How do perks work?');
+  expect(faq).toContain('What does the isotope track unlock?');
+  await expect(page.locator('#faq summary').last()).toHaveText(
+    'What does the isotope track unlock?'
+  );
+});
+
+test('the page lists the isotope track, straight from the config', async ({ page }) => {
+  await page.goto('/spacebar-clicker');
+  const rows = page.locator('#isotope-track ~ .spec-table .spec-row:not(.spec-head)');
+  await expect(rows).toHaveCount(ISOTOPE_TRACK.length);
+  await expect(rows.first()).toContainText('Warm Start');
+  await expect(rows.nth(2)).toContainText('Sixth Slot or Prodigy');
+  await expect(rows.nth(2)).toContainText('Pick one, and change it at any reset.');
+  await expect(rows.last()).toContainText('Enrichment: Each isotope adds 13% to all gains');
 });
 
 test('the spacebar speed test keeps its telemetry and its retitle', async ({ page }) => {

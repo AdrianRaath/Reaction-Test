@@ -30,9 +30,10 @@ only in chat.
 - **Our edge over the SERP.** The rhythm combo, which no competitor has. The
   full shop and reactor tables published on the page. No ads, and honest copy:
   the "unblocked" query gets one plain FAQ answer, no proxy or VPN advice.
-- **Status (2026-10-26).** Built on `dev` with perk phase 1 and the isotope UX
-  pass, not yet merged to `main`. Unit-tested and browser-checked, but not
-  playtested: the balance comes from a simulation.
+- **Status (2026-10-27).** Built on `dev` with perk phase 1, the isotope UX
+  pass and phase 2, the isotope track, not yet merged to `main`. Unit-tested
+  and browser-checked, but not playtested: the balance comes from a
+  simulation.
 
 ## 2. Working rules
 
@@ -731,23 +732,25 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 - **Title**: "Spacebar Clicker - Free Online Idle Spacebar Game", with an
   authored description and FAQ JSON-LD.
-- About 2,900 words below the game, tables and FAQ answers included. The H2s
-  are:
+- About 3,500 words below the game, tables and FAQ answers included,
+  measured 2026-10-27. The H2s are:
   - What is Spacebar Clicker?
   - How to play Spacebar Clicker
   - The combo: steady beats fast
   - Every upgrade and what it costs
   - Perks: random drops that bend the rules
   - Reactor states
-  - Reset the experiment
+  - Reset the experiment, with an H3, "The isotope track" (`#isotope-track`)
   - How to reach a million energy
-  - Spacebar Clicker FAQ, with 9 questions
+  - Spacebar Clicker FAQ, with 10 questions
 - The tables render from `config.ts`, so changing a number changes the page.
   That includes the perks section: the drop odds by rarity, with each tier's
   price and window, and a table per shop tab of all 25 perks with their
   rarity, family and every level's effect (`perkDetailAllLevels`). The rarity
   and family names come from `PERK_RARITY_NAMES` and `PERK_FAMILY_NAMES`,
-  which the game uses too.
+  which the game uses too. The isotope track's table renders from
+  `ISOTOPE_TRACK`: each rung, the isotopes it takes, and what it does, a fork
+  as "Sixth Slot or Prodigy" with both effects.
 - **Claims from the simulation**, each said to be from it on the page, and to
   recheck when the pace or the perks change (§4.12):
   - Four to eight drops in a steady first run to a million (10th to 90th
@@ -759,9 +762,21 @@ The visuals were built in three passes, all shipped 2026-10-22.
     second isotope was slower than resetting and earning a million again; the
     pace change of 2026-10-23 had made that false.
   - "Around 20 to 25 minutes" to the first reset, in the FAQ.
+  - A steady player who buys perks holds all twelve rungs after 100 to 180
+    minutes of play, depending on how often they reset (§8.3.3: 104, 124 and
+    177 minutes resetting at 9M, 4M and 1M). The page gives the range only,
+    not which habit is quicker, so it reads as a fact and not a nudge to
+    wait (§8.2).
 - **Kept off the page on purpose:** the 10-minute ceiling on the wait for a
   drop. Published, it would be the visible pity the maintainer ruled out
   (§8.1.2).
+- **The isotope track on the page** (2026-10-27): "How to play" and "What is"
+  mention it; the perks section names what it changes there (a sixth slot, a
+  second keystone, rarer drops, a kept perk); the Reset section has the
+  table; the perks FAQ answer gives both limits; a tenth FAQ asks what the
+  track unlocks. The page lists all twelve rungs although the game reveals
+  only the next two, as it lists all 25 perks while the codex hides the
+  undiscovered.
 - On a phone the spec tables stack, and a cell with a `data-label` names
   itself (`content.css`). The odds table uses it, so its two percentages
   don't lose their headings.
@@ -774,9 +789,10 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  55 as of 2026-10-27, in about seven minutes.
-  - **Coverage:** the page shell, the perks section and FAQ rendering from
-    the config, presses and the combo, buying, the shop tabs and "New" tag,
+  56 as of 2026-10-27, in about seven minutes.
+  - **Coverage:** the page shell, the perks section, the isotope track table
+    and FAQ rendering from the config, presses and the combo, buying, the
+    shop tabs and "New" tag,
     save and reload, away progress, prestige, the full reset, the phone
     layout, a whole surge on a fake clock with and without reduced motion,
     every reactor state, and a live stage change.
@@ -1404,17 +1420,17 @@ again. By the simulation it is the reverse now: about 12 minutes to wait for
 the second isotope, against about 23 to reach a million again with one
 isotope. The pace change of 2026-10-23 turned it around. Content is step 6's.
 
-### 8.3 Isotope track: phase 2 in progress
+### 8.3 Isotope track: phase 2, done
 
 **Status (2026-10-27).** Designed with the maintainer and approved: the fork
 pairs, the build plan, the simulation targets and the rules in §8.3.6. Step 1
 of 4, the logic and the save, is done and signed off. Its rules act in the
 game already, with no UI to explain them until step 3. Step 2, the career
 simulation, is done: every target is met after the two changes the maintainer
-approved on 2026-10-27 (§8.3.7). Step 3, the track in play, is built, and
-the maintainer asked on 2026-10-27 for the credits idea at its end too
-(§8.3.9). Their calls in §8.3.8 and §8.3.9 await review. Then step 4,
-content.
+approved on 2026-10-27 (§8.3.7). Step 3, the track in play, and the credits
+pass after it (§8.3.9) are done; the maintainer signed off their calls on
+2026-10-27. Step 4, the content, is done. Phase 2 is complete, pending a
+playtest and the merge to `main`.
 
 #### 8.3.1 The brief
 
@@ -1541,12 +1557,12 @@ phase 1.
    - No run to a million drops under 8 minutes before the capstone. Changed
      on 2026-10-27 to: none under 7, and at most one run in 100 under 8.
    - The two sides of each fork end within 15% of each other.
-3. **The track in play.** _Built 2026-10-27; calls in §8.3.8 await review._
+3. **The track in play.** _Done 2026-10-27; calls in §8.3.8 signed off._
    The tooltips, the track in the Reset tab, fork picks
    in the reset dialog, the unlock card, the reroll button, a sixth socket and
    two keystones on the shelf and in the swap dialog, and reduced motion.
 4. **Content, docs and verification**: the track on the page, an FAQ answer,
-   this doc, and checks at 1440 and 390 wide.
+   this doc, and checks at 1440 and 390 wide. _Done 2026-10-27 (§6)._
 
 #### 8.3.6 Rules, approved 2026-10-26
 
@@ -1677,10 +1693,10 @@ approved both proposals:
    - Holding every run over 8 minutes would mean slowing late runs for
      everyone.
 
-#### 8.3.8 Step 3: calls for the maintainer to review, 2026-10-27
+#### 8.3.8 Step 3: calls the maintainer signed off, 2026-10-27
 
-Made while building the track's UI (§4.7, §4.13 and §5 have it in full). Each
-is small to change.
+Made while building the track's UI (§4.7, §4.13 and §5 have it in full), and
+approved with it.
 
 1. **The ring's tooltip leads with what the reset unlocks**, before where the
    next isotope comes, since it is the hook. The beads' tooltip ends with the
@@ -1716,7 +1732,7 @@ longer window, Capacitor's longer surge, Perfect Pitch's wider window. A small
 credit on the moment each acts, such as "Familiar: 25% off" on an offer, would
 make them felt. The maintainer asked for it on 2026-10-27: §8.3.9.
 
-#### 8.3.9 Credits where a rung acts: calls for review, 2026-10-27
+#### 8.3.9 Credits where a rung acts: calls signed off, 2026-10-27
 
 Built at the maintainer's request after step 3. Each quiet rung is now named
 at the moment it acts, in the isotopes' blue (§4.3, §4.4, §4.8, §4.13):
@@ -1731,7 +1747,7 @@ at the moment it acts, in the isotopes' blue (§4.3, §4.4, §4.8, §4.13):
 | Perfect Pitch     | A bead on the scope for each press it catches, and its name off the core at most every 30 s                |
 | Night Lab         | The away dialog: "60% speed with Night Lab", and past 4 hours, that it kept them running                   |
 
-Calls, each small to change:
+Calls, approved with it:
 
 1. **A find rung is credited only for drops it truly raised**: the same roll
    at the usual odds would have been a tier lower. Most rares under Lucky
@@ -1763,7 +1779,6 @@ the maintainer asks.
 
 ### 8.5 Known gaps
 
-- The page content doesn't describe the isotope track yet. That is step 4.
 - Not playtested, and not checked on real touch devices, Firefox or Safari.
 - Not yet merged to `main`.
 
@@ -1882,3 +1897,9 @@ the maintainer asks.
   on the surge card; Perfect Pitch on the scope and off the core; Night Lab in
   the away dialog. Lucky and Rich Find mark only drops they truly raised. Two
   lost spaces fixed. 6 unit tests and 4 browser checks. Calls in §8.3.9.
+- **2026-10-27.** Isotope track step 4, the content; phase 2 done. The track
+  on the page: a table from the config under Reset the experiment, mentions
+  in What is, How to play and the perks section, the perks FAQ answer
+  updated, and a tenth FAQ on what the track unlocks. A browser check for the
+  table. Checked at 1440 and 390 wide. The step 3 and credits calls (§8.3.8,
+  §8.3.9) signed off.
