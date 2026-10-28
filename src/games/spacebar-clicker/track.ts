@@ -86,7 +86,7 @@ export function unpickedForks(isotopes: number, forks: ForkPicks): TrackStep[] {
   );
 }
 
-/** Steps past `isotopes` the player can see: the next two, as the Reset tab shows them. */
+/** Steps past `isotopes` the player can see: the next two, as the Isotopes tab shows them. */
 export function nextSteps(isotopes: number, count = 2): TrackStep[] {
   return ISOTOPE_TRACK.filter((step) => step.isotopes > isotopes).slice(0, count);
 }

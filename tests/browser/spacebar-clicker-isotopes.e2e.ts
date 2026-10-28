@@ -1,7 +1,7 @@
 /**
  * Spacebar Clicker: isotopes. The shelf and its tooltips, the ring for the
- * next reset and the notice when one opens, the Reset the experiment tab and
- * its dialog, and the two shelves sharing a narrow face.
+ * next reset and the notice when one opens, the Isotopes tab and
+ * the reset dialog, and the two shelves sharing a narrow face.
  */
 
 import { energy, expect, openGame, seedSave, test } from './fixtures';
@@ -114,13 +114,17 @@ test('the ring counts up as the run passes the next isotope', async ({ page }) =
   expect(offset, 'a fresh count starts the ring near empty').toBeGreaterThan(95);
 });
 
-test('the Reset the experiment tab before a reset opens: the cost, the pay, the way there', async ({
+test('the Isotopes tab before a reset opens: the cost, the pay, the way there', async ({
   page,
 }) => {
   await seedSave(page, { energy: 50, runLifetime: 420_000, isotopes: 1, perks: noDrops });
   await openGame(page);
   await page.click('[data-tab="prestige"]');
 
+  await expect(page.getByRole('tab', { name: 'Isotopes' })).toHaveAttribute(
+    'aria-selected',
+    'true'
+  );
   await expect(page.locator('#sc-prestige-held')).toHaveText('1');
   await expect(page.locator('#sc-prestige-bonus')).toHaveText('+10% to all gains');
   await expect(page.locator('#sc-prestige-next')).toHaveText('Reset opens at 1.00M');

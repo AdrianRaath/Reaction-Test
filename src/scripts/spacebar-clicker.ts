@@ -365,7 +365,7 @@ const trackNextGroup = el('sc-track-next-group');
 const trackNext = el('sc-track-next');
 const trackHeldGroup = el('sc-track-held-group');
 const trackHeld = el('sc-track-held');
-/** The track's sockets in the Reset tab, a fork's two halves in each of those. */
+/** The track's sockets in the Isotopes tab, a fork's two halves in each of those. */
 const trackSockets = Array.from(document.querySelectorAll<HTMLElement>('.track-socket')).map(
   (li) => ({
     li,
@@ -1144,7 +1144,7 @@ function renderIsotopeTip(target: 'held' | 'next' | null): void {
   } else {
     isotopeTipName.textContent = `Reset now for ${isotopeCount(gain)}`;
     isotopeTipKind.textContent = `${bonusText(held)} now, ${bonusText(held + gain)} after`;
-    isotopeTipDetail.textContent = `The next isotope comes at ${formatEnergy(nextIsotopeAt(state.runLifetime))} energy this run. Click to open the Reset the experiment tab.`;
+    isotopeTipDetail.textContent = `The next isotope comes at ${formatEnergy(nextIsotopeAt(state.runLifetime))} energy this run. Click to open the Isotopes tab.`;
     const steps = stepsReached(held, held + gain);
     if (steps.length > 0) unlock = [text('Unlocks '), ...unlockNodes(steps), text('.')];
   }
@@ -1232,7 +1232,7 @@ document.addEventListener('pointerdown', (e) => {
 });
 
 /**
- * The ring's way in: select the Reset the experiment tab and bring it into
+ * The ring's way in: select the Isotopes tab and bring it into
  * view. From the keyboard, focus follows to the tab; from a pointer it lets
  * go, so Space keeps pressing the reactor.
  */
@@ -1395,7 +1395,7 @@ function renderAchievements(): void {
   achCount.textContent = `${unlocked.size} of ${ACHIEVEMENTS.length}`;
 }
 
-// --- Isotopes: the Reset the experiment tab and the shelf ---------------------------
+// --- Isotopes: the Isotopes tab and the shelf ---------------------------
 
 function isotopeNoun(n: number): string {
   return n === 1 ? 'isotope' : 'isotopes';
@@ -1479,7 +1479,7 @@ function setSentence(target: HTMLElement, ...parts: SentencePart[]): void {
 }
 
 /**
- * The Reset tab's tiles: the isotopes held, what a reset pays, and the way to
+ * The Isotopes tab's tiles: the isotopes held, what a reset pays, and the way to
  * the next isotope; then the button and what the reset unlocks. Until a
  * reset opens, the meter tracks the way to the first isotope it pays.
  */
@@ -1533,7 +1533,7 @@ function renderResetUnlocks(steps: readonly TrackStep[]): void {
 let trackShown = '';
 
 /**
- * The isotope track in the Reset tab: the sockets lit to the isotopes held,
+ * The isotope track in the Isotopes tab: the sockets lit to the isotopes held,
  * each fork's picked half, a rim on the next two; then a row for each of the
  * next two, and one for each rung held. A group with no rows hides.
  */

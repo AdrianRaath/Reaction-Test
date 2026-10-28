@@ -1,6 +1,6 @@
 /**
  * Spacebar Clicker: the isotope track in play (SPACEBAR-CLICKER.md §8.3). The
- * tooltips naming unlocks, the track in the Reset tab, fork picks and a kept
+ * tooltips naming unlocks, the track in the Isotopes tab, fork picks and a kept
  * perk in the reset dialog, the unlock card, the reroll, Prodigy's offers,
  * six sockets and two keystones, reduced motion, and the phone layout.
  */
@@ -50,7 +50,7 @@ test('the tooltips name the next unlock, and what a reset unlocks', async ({ pag
   expect(order).toBeTruthy();
 });
 
-test('the Reset tab draws the track: held, picked, and the next two', async ({ page }) => {
+test('the Isotopes tab draws the track: held, picked, and the next two', async ({ page }) => {
   await seedSave(page, {
     energy: 50,
     runLifetime: 5000,
@@ -87,7 +87,7 @@ test('the Reset tab draws the track: held, picked, and the next two', async ({ p
   await expect(page.locator('#sc-track-next-group')).toBeVisible();
 });
 
-test('with every rung held, the Reset tab has no next rungs and no unlock line', async ({
+test('with every rung held, the Isotopes tab has no next rungs and no unlock line', async ({
   page,
 }) => {
   await seedSave(page, {

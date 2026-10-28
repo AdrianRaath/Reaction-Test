@@ -1,8 +1,10 @@
 /**
  * Spacebar Clicker: the main flows in a real browser. Input, the combo,
  * buying, the shop tabs and their "New" tag, saving, away progress,
- * prestige, the full reset, and the phone layout.
+ * prestige, the full reset, the panel tabs, and the phone layout.
  */
+
+import type { Page } from '@playwright/test';
 
 import { ISOTOPE_TRACK, PERKS } from '../../src/games/spacebar-clicker/config';
 import { editSave, energy, expect, openGame, pressSteady, test } from './fixtures';
@@ -254,6 +256,24 @@ test('an item turning affordable tags its closed tab, once', async ({ page }) =>
   await expect(page.locator('#sc-new-auto'), 'it stays cleared').toBeHidden();
 });
 
+/** The panel tabs' rows (by top edge) and widths, rounded to the pixel. */
+function panelTabs(page: Page): Promise<{ rows: number; widths: number[] }> {
+  return page.evaluate(() => {
+    const boxes = [...document.querySelectorAll('.tabs .tab')].map((t) =>
+      t.getBoundingClientRect()
+    );
+    return {
+      rows: new Set(boxes.map((b) => Math.round(b.top))).size,
+      widths: boxes.map((b) => Math.round(b.width)),
+    };
+  });
+}
+
+test('the panel tabs sit in one row', async ({ page }) => {
+  await page.goto('/spacebar-clicker', { waitUntil: 'networkidle' });
+  expect((await panelTabs(page)).rows).toBe(1);
+});
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -263,5 +283,12 @@ test.describe('on a phone', () => {
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)
     ).toBe(true);
     await expect(page.locator('#sc-reactor')).toBeVisible();
+  });
+
+  test('the panel tabs sit two by two, at equal widths', async ({ page }) => {
+    await page.goto('/spacebar-clicker', { waitUntil: 'networkidle' });
+    const { rows, widths } = await panelTabs(page);
+    expect(rows, 'two rows, not three tabs and one left over').toBe(2);
+    expect(new Set(widths).size, `widths ${widths.join(', ')}`).toBe(1);
   });
 });

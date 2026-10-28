@@ -268,7 +268,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
              ten shown), kept across every reset of the experiment. Once a
              reset is open, a ring follows the beads: the isotopes a reset
              would pay now, filling toward the next one, and a way into the
-             Reset the experiment tab. It sits beside the face like the perk
+             Isotopes tab. It sits beside the face like the perk
              shelf, so hover, focus and a tap reach it and never press. -->
           <div class="isotope-shelf" id="sc-shelf" hidden>
             <button type="button" class="isotope-held" id="sc-isotopes-held" hidden>
@@ -568,7 +568,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
             data-tab="prestige"
             aria-selected="false"
             aria-controls="sc-panel-prestige"
-            tabindex="-1">Reset the experiment</button
+            tabindex="-1">Isotopes</button
           >
         </div>
 
@@ -942,7 +942,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   .game-section {
     /* The Reactor-Ramp (DESIGN.md), here rather than on the face because
        isotopes wear Blue-White on Cherenkov Blue off the face too: the
-       shelf beside it and the Reset the experiment tab. */
+       shelf beside it and the Isotopes tab. */
     --ramp-green: #22c55e;
     --ramp-teal: #2dd4bf;
     --ramp-cyan: #22d3ee;
@@ -1639,7 +1639,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   /* The next reset: a ring after the beads with the isotopes a reset pays
      now, filling toward the next one. It glows because it reports a state:
-     a reset is open. A click opens the Reset the experiment tab. */
+     a reset is open. A click opens the Isotopes tab. */
   .isotope-next {
     position: relative;
     display: grid;
@@ -3153,6 +3153,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   /* The isotope ring scrolls the panels into view; the margin keeps the Reset
      button off the window's edge. */
   .panels {
+    container: panels / inline-size;
     padding-block-start: var(--space-lg);
     border-block-start: 1px solid var(--line-subtle);
     scroll-margin-block: var(--space-xl);
@@ -3163,6 +3164,16 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     flex-wrap: wrap;
     gap: var(--space-sm);
     margin-block-end: var(--space-lg);
+  }
+
+  /* Too narrow for one row (the four need about 370px), the tabs sit two by
+     two at equal widths rather than leave one wrapped alone. The margin
+     covers wider system fonts. */
+  @container panels (max-width: 440px) {
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   .tab {
@@ -3380,7 +3391,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     }
   }
 
-  /* The Reset the experiment tab, in three sections on the Perks tab's
+  /* The Isotopes tab, in three sections on the Perks tab's
      pattern: where the run stands, as tiles like the Stats tab's, with the
      button; the isotope track; then what a reset does. The panel is a
      container so its layout follows its own width, beside the sidebar or not. */
