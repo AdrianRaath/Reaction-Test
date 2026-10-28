@@ -17,6 +17,7 @@ import {
   REACTOR_STATES,
   TRACK_EFFECT,
 } from '../games/spacebar-clicker/config';
+import { formatEnergy } from '../games/spacebar-clicker/format';
 import '../styles/content.css';
 import '../styles/instrument.css';
 
@@ -666,80 +667,125 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
           aria-labelledby="sc-tab-prestige"
           hidden
         >
-          <!-- What a reset costs and pays, then where this run stands: the
-               isotopes held, what a reset gives now, and a meter to the next
-               isotope. The script writes the sentences with numbers in them. -->
-          <div class="prestige">
-            <p class="prestige-copy">
-              Resetting the experiment starts the run over. Isotopes carry across: each one adds 10%
-              to every gain, on every run after, and unlocks the next rung of the isotope track.
-            </p>
-            <dl class="prestige-terms">
-              <div>
-                <dt>Wiped</dt>
+          <!-- Action first, reference last (SPACEBAR-CLICKER.md §4.7): where
+               this run stands and the button, then the isotope track, then
+               what a reset wipes and keeps. The script writes the numbers. -->
+          <section class="perks-section" aria-labelledby="sc-reset-title">
+            <h3 class="perks-title" id="sc-reset-title">Next reset</h3>
+            <!-- Tiles as on the Stats tab. Until a reset opens, the middle one
+                 is hidden and the meter tracks the way to the first isotope. -->
+            <dl class="reset-tiles" id="sc-reset-tiles">
+              <div class="reset-tile">
+                <dt>Isotopes held</dt>
                 <dd>
-                  Energy, upgrades, auto-tappers, the reactor's state, and this run's perks and
-                  offers.
+                  <span class="readout reset-tile-value" id="sc-prestige-held">0</span>
+                  <span class="reset-tile-sub" id="sc-prestige-bonus"></span>
                 </dd>
               </div>
-              <div>
-                <dt>Kept</dt>
+              <div class="reset-tile" id="sc-prestige-pays" hidden>
+                <dt>A reset pays</dt>
                 <dd>
-                  Isotopes and the track's unlocks, achievements, records and all-time stats, the
-                  perk codex, and every auto-tapper the shop has shown you.
+                  <span class="readout reset-tile-value" id="sc-prestige-gain"></span>
+                  <span class="reset-tile-sub" id="sc-prestige-after"></span>
+                </dd>
+              </div>
+              <div class="reset-tile reset-tile-meter">
+                <dt id="sc-prestige-next">Reset opens at {formatEnergy(PRESTIGE_UNLOCK)}</dt>
+                <dd>
+                  <div class="reset-tile-bar" aria-hidden="true">
+                    <div class="isotope-meter-track">
+                      <div class="isotope-meter-fill" id="sc-isotope-meter"></div>
+                    </div>
+                  </div>
+                  <span class="reset-tile-sub" id="sc-prestige-progress"></span>
                 </dd>
               </div>
             </dl>
-            <div class="prestige-status">
-              <p class="prestige-held" id="sc-prestige-held">No isotopes yet.</p>
-              <p class="prestige-now" id="sc-prestige-now">
-                Resetting unlocks at {whole(PRESTIGE_UNLOCK)} energy earned this run.
-              </p>
-              <div class="isotope-meter">
-                <div class="isotope-meter-track" aria-hidden="true">
-                  <div class="isotope-meter-fill" id="sc-isotope-meter"></div>
-                </div>
-                <p class="isotope-meter-label" id="sc-prestige-progress"></p>
-              </div>
-              <button type="button" class="btn btn-primary" id="sc-prestige-btn" hidden
+            <div class="reset-action" id="sc-reset-action" hidden>
+              <button type="button" class="btn btn-primary" id="sc-prestige-btn"
                 >Reset the experiment</button
               >
+              <p class="reset-unlocks" id="sc-reset-unlocks" hidden></p>
             </div>
+          </section>
 
-            <!-- The isotope track (SPACEBAR-CLICKER.md §8.3): a socket per
-                 isotope, forks drawn larger in two halves. Sockets light as
-                 isotopes are held; the list under them names the rungs held
-                 and the next two. The sockets are a picture of the list. -->
-            <section class="track" aria-labelledby="sc-track-title">
-              <h3 class="perks-title" id="sc-track-title">
-                Isotope track <span class="perks-count"
-                  ><span class="readout" id="sc-track-count">0 of {ISOTOPE_TRACK.length}</span> unlocked</span
-                >
-              </h3>
-              <ol class="track-sockets" id="sc-track-sockets" aria-hidden="true">
-                {
-                  ISOTOPE_TRACK.map((step) => (
-                    <li
-                      class="track-socket"
-                      data-isotopes={step.isotopes}
-                      data-fork={step.rungs.length > 1 ? '' : undefined}
-                    >
-                      <span class="track-gem">
-                        {step.rungs.length > 1 && (
-                          <Fragment>
-                            <span class="track-half" data-rung={step.rungs[0].id} />
-                            <span class="track-half" data-rung={step.rungs[1]!.id} />
-                          </Fragment>
-                        )}
-                      </span>
-                      <span class="track-num">{step.isotopes}</span>
-                    </li>
-                  ))
-                }
-              </ol>
-              <ul class="track-list" id="sc-track-list"></ul>
-            </section>
-          </div>
+          <!-- The isotope track (SPACEBAR-CLICKER.md §8.3): a socket per
+               isotope, forks drawn larger in two halves. Sockets light as
+               isotopes are held; the rows under them name the next two rungs,
+               then the rungs held, each with the socket and number it has on
+               the rail. The sockets are a picture of the rows. -->
+          <section class="perks-section track" aria-labelledby="sc-track-title">
+            <h3 class="perks-title" id="sc-track-title">
+              Isotope track <span class="perks-count"
+                ><span class="readout" id="sc-track-count">0 of {ISOTOPE_TRACK.length}</span> unlocked</span
+              >
+            </h3>
+            <p class="panel-intro">
+              Each isotope you hold unlocks a rung for good. A fork is a choice of two: you pick
+              when a reset first reaches it, and can switch at any reset after.
+            </p>
+            <ol class="track-sockets" id="sc-track-sockets" aria-hidden="true">
+              {
+                ISOTOPE_TRACK.map((step) => (
+                  <li
+                    class="track-socket"
+                    data-isotopes={step.isotopes}
+                    data-fork={step.rungs.length > 1 ? '' : undefined}
+                  >
+                    <span class="track-gem">
+                      {step.rungs.length > 1 && (
+                        <Fragment>
+                          <span class="track-half" data-rung={step.rungs[0].id} />
+                          <span class="track-half" data-rung={step.rungs[1]!.id} />
+                        </Fragment>
+                      )}
+                    </span>
+                    <span class="track-num">{step.isotopes}</span>
+                  </li>
+                ))
+              }
+            </ol>
+            <!-- The next two first, since they are what a player works toward;
+                 then the rungs held, in order. A group with no rungs hides. -->
+            <div class="track-group" id="sc-track-next-group">
+              <p class="track-label" id="sc-track-next-label">Next</p>
+              <ul class="track-rows" id="sc-track-next" aria-labelledby="sc-track-next-label"></ul>
+            </div>
+            <div class="track-group" id="sc-track-held-group" hidden>
+              <p class="track-label" id="sc-track-held-label">Unlocked</p>
+              <ul class="track-rows" id="sc-track-held" aria-labelledby="sc-track-held-label"></ul>
+            </div>
+          </section>
+
+          <!-- The reference: the same every visit, so it comes last. The reset
+               dialog names what is wiped again before anything happens. -->
+          <section class="perks-section" aria-labelledby="sc-reset-about-title">
+            <h3 class="perks-title" id="sc-reset-about-title">What a reset does</h3>
+            <p class="panel-intro reset-about">
+              Resetting the experiment starts the run over. Isotopes carry across: each one adds 10%
+              to every gain, on every run after, and unlocks the next rung of the isotope track.
+            </p>
+            <div class="prestige-terms">
+              <div>
+                <p class="prestige-terms-label" id="sc-reset-wiped-label">Wiped</p>
+                <ul aria-labelledby="sc-reset-wiped-label">
+                  <li>Energy</li>
+                  <li>Upgrades and auto-tappers</li>
+                  <li>The reactor's state</li>
+                  <li>This run's perks and offers</li>
+                </ul>
+              </div>
+              <div>
+                <p class="prestige-terms-label" id="sc-reset-kept-label">Kept</p>
+                <ul aria-labelledby="sc-reset-kept-label">
+                  <li>Isotopes and the track's unlocks</li>
+                  <li>Achievements, records and all-time stats</li>
+                  <li>The perk codex</li>
+                  <li>Every auto-tapper the shop has shown you</li>
+                </ul>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -2949,7 +2995,8 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   /* The bead sits on the first line's middle, however the line wraps. */
   .perk-credit :global(.credit)::before,
-  .surge-credit::before {
+  .surge-credit::before,
+  .reset-unlocks::before {
     content: '';
     flex-shrink: 0;
     width: 6px;
@@ -3333,69 +3380,81 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     }
   }
 
-  .prestige {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-    max-width: 60ch;
+  /* The Reset the experiment tab, in three sections on the Perks tab's
+     pattern: where the run stands, as tiles like the Stats tab's, with the
+     button; the isotope track; then what a reset does. The panel is a
+     container so its layout follows its own width, beside the sidebar or not. */
+  #sc-panel-prestige {
+    container: reset-panel / inline-size;
   }
 
-  .prestige-copy,
-  .prestige-terms,
-  .prestige-held {
-    font-size: var(--text-label-size);
-    line-height: 1.7;
-    color: var(--ink-secondary);
-  }
-
-  .prestige-terms {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: var(--space-xs) var(--space-md);
-  }
-
-  .prestige-terms > div {
-    display: contents;
-  }
-
-  .prestige-terms dt {
-    font-weight: 600;
-    color: var(--ink-primary);
-  }
-
-  .prestige-status {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-sm);
-    padding-block-start: var(--space-md);
-    border-block-start: 1px solid var(--line);
-  }
-
-  .prestige-now {
-    color: var(--ink-secondary);
-  }
-
-  /* The script writes these sentences, so their numbers are global. */
-  .prestige :global(.readout),
+  /* The script writes these numbers, so they are global. */
+  .reset-tiles :global(.readout),
   .modal-message :global(.readout) {
     color: var(--ink-primary);
   }
 
-  .prestige :global(.prestige-gain) {
+  /* Held, what a reset pays, and the meter. Until a reset opens the middle
+     tile is hidden and the meter takes its space, so the first keeps its width. */
+  .reset-tiles {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+    gap: var(--space-sm);
+    margin: 0;
+  }
+
+  .reset-tiles.is-open {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  }
+
+  .reset-tile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+  }
+
+  .reset-tile dt {
+    font-size: var(--text-label-size);
+    color: var(--ink-secondary);
+  }
+
+  /* Every tile has the same rows: the label, the value (in the meter's tile,
+     the bar, centred in the value's line), then a line under it. So the
+     three line up at any width, held at each tile's foot. */
+  .reset-tile dd {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: auto 0 0;
+  }
+
+  .reset-tile-value,
+  .reset-tile-bar {
+    height: calc(var(--text-headline-size) * 1.2);
     font-size: var(--text-headline-size);
     font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .reset-tile-bar {
+    display: flex;
+    align-items: center;
+  }
+
+  .reset-tile-bar > .isotope-meter-track {
+    flex: 1;
+  }
+
+  .reset-tile-sub {
+    font-size: var(--text-label-size);
+    color: var(--ink-secondary);
   }
 
   /* Run energy toward the next isotope, in the isotopes' Cherenkov blue
      (DESIGN.md, Reactor-Ramp Exception). */
-  .isotope-meter {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-    width: min(100%, 360px);
-  }
-
   .isotope-meter-track {
     height: 4px;
     border-radius: var(--radius-full);
@@ -3412,38 +3471,59 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     transition: transform 500ms linear;
   }
 
-  .isotope-meter-label {
-    font-size: 0.75rem;
-    color: var(--ink-muted);
+  /* The button, and beside it what the reset unlocks: the ring tooltip's
+     hook, after an isotope bead, its rungs named in the isotopes' blue. */
+  .reset-action {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm) var(--space-md);
+    margin-block-start: var(--space-md);
   }
 
-  .prestige-status .btn {
-    margin-block-start: var(--space-xs);
+  .reset-unlocks {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    font-size: var(--text-label-size);
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
+  .reset-unlocks::before {
+    margin-block-start: calc((1.5em - 6px) / 2);
+  }
+
+  .reset-unlocks :global(.rung-name) {
+    font-weight: 600;
+    color: var(--ramp-blue);
+  }
+
+  @container reset-panel (max-width: 560px) {
+    .reset-tiles,
+    .reset-tiles.is-open {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .reset-tile-meter,
+    .reset-tiles:not(.is-open) .reset-tile {
+      grid-column: 1 / -1;
+    }
   }
 
   /* The isotope track: twelve sockets on a rail, forks drawn larger in two
-     halves, then the rungs held and the next two as cards. Held sockets are
-     lit like the beads, in the isotopes' blue (DESIGN.md, Reactor-Ramp
-     Exception); the next two wear a blue rim; the rest are dashed outlines,
-     like the codex's undiscovered perks. */
-  .track {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-    padding-block-start: var(--space-md);
-    border-block-start: 1px solid var(--line);
-  }
-
-  .track .perks-title {
-    margin-block-end: 0;
-  }
-
+     halves, then a row per rung, the next two first, each with the socket and
+     number it has on the rail. Held sockets are lit like the beads, in the
+     isotopes' blue (DESIGN.md, Reactor-Ramp Exception); the next two wear a
+     blue rim; the rest are dashed outlines, like the codex's undiscovered
+     perks. The script builds the rows, so the socket rules are global under
+     the section and serve both. */
   .track-sockets {
     position: relative;
     display: flex;
     justify-content: space-between;
     max-width: 420px;
-    margin: 0;
+    margin: 0 0 var(--space-lg);
     padding: 0;
     list-style: none;
   }
@@ -3466,7 +3546,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     gap: 4px;
   }
 
-  .track-gem {
+  .track :global(.track-gem) {
     display: flex;
     width: 12px;
     height: 12px;
@@ -3476,28 +3556,28 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     overflow: hidden;
   }
 
-  .track-socket[data-fork] .track-gem {
+  .track :global([data-fork] .track-gem) {
     width: 22px;
     height: 22px;
   }
 
-  .track-half {
+  .track :global(.track-half) {
     flex: 1;
   }
 
-  .track-half + .track-half {
+  .track :global(.track-half + .track-half) {
     border-inline-start: 1px dashed var(--line);
   }
 
   .track-num {
-    font-size: 0.625rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: var(--ink-muted);
+    color: var(--ink-secondary);
   }
 
   /* Held: lit like a bead. A fork held lights its rim and the half picked. */
-  .track-socket.is-lit .track-gem,
-  .track-half.is-picked {
+  .track :global(.is-lit .track-gem),
+  .track :global(.track-half.is-picked) {
     background: radial-gradient(
       circle at 35% 35%,
       #fff 0,
@@ -3506,88 +3586,151 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     );
   }
 
-  .track-socket.is-lit .track-gem {
+  .track :global(.is-lit .track-gem) {
     border: 0;
     box-shadow: 0 0 6px color-mix(in srgb, var(--ramp-blue) 70%, transparent);
   }
 
-  .track-socket.is-lit[data-fork] .track-gem {
+  .track :global(.is-lit[data-fork] .track-gem) {
     border: 1px solid var(--ramp-blue);
     background: var(--panel-02);
   }
 
-  .track-socket.is-lit[data-fork] .track-half + .track-half {
+  .track :global(.is-lit[data-fork] .track-half + .track-half) {
     border-inline-start: 1px solid color-mix(in srgb, var(--ramp-blue) 60%, transparent);
   }
 
   .track-socket.is-lit .track-num {
-    color: var(--ink-secondary);
+    color: var(--ink-primary);
   }
 
   /* The next two: a solid rim in the isotopes' blue, still empty. */
-  .track-socket.is-next .track-gem {
+  .track :global(.is-next .track-gem) {
     border-style: solid;
     border-color: color-mix(in srgb, var(--ramp-blue) 55%, var(--line));
   }
 
-  .track-socket.is-next .track-half + .track-half {
+  .track :global(.is-next .track-half + .track-half) {
     border-inline-start-style: solid;
     border-inline-start-color: color-mix(in srgb, var(--ramp-blue) 40%, var(--line));
   }
 
-  .track-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: var(--space-xs) var(--space-sm);
+  /* "Next", then "Unlocked": labelled like the codex's rows. */
+  .track-group:not([hidden]) ~ .track-group {
+    margin-block-start: var(--space-lg);
+  }
+
+  .track-label {
+    margin-block-end: var(--space-xs);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-secondary);
+  }
+
+  .track-rows {
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  .track-list :global(.track-rung) {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--line-subtle);
-    border-radius: var(--radius-md);
-    background-color: var(--panel-03);
+  /* A row: socket, number, name, what it does, on shared baselines, with a
+     hairline between rows. The socket's cell is as tall as the name's line. */
+  .track-rows :global(.track-row) {
+    position: relative;
+    display: grid;
+    grid-template-columns: 22px 1.25rem minmax(0, 11rem) minmax(0, 1fr);
+    align-items: baseline;
+    gap: 2px var(--space-sm);
+    padding-block: var(--space-sm);
   }
 
-  .track-list :global(.track-rung.is-next) {
-    border-style: dashed;
-    border-color: var(--line);
-    background-color: transparent;
+  .track-rows :global(.track-row + .track-row) {
+    border-block-start: 1px solid var(--line-subtle);
   }
 
-  .track-list :global(.track-rung-at) {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ramp-blue);
+  .track-rows :global(.track-row-mark) {
+    display: grid;
+    place-items: center;
+    align-self: start;
+    height: 20px;
   }
 
-  .track-list :global(.track-rung.is-next .track-rung-at) {
-    color: var(--ink-muted);
+  .track-rows :global(.track-row-num) {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-secondary);
   }
 
-  .track-list :global(.track-rung-name) {
+  .track-rows :global(.track-row-name) {
     font-size: var(--text-label-size);
     font-weight: 600;
+    line-height: 20px;
     color: var(--ink-primary);
   }
 
-  .track-list :global(.track-rung-detail) {
+  /* A fork's other option, after the pick. */
+  .track-rows :global(.track-row-alt) {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--ink-secondary);
+  }
+
+  .track-rows :global(.track-row-detail) {
+    display: flex;
+    flex-direction: column;
     font-size: 0.75rem;
     line-height: 1.5;
     color: var(--ink-secondary);
   }
 
-  .track-list :global(.track-rung-other) {
-    font-size: 0.75rem;
-    line-height: 1.5;
+  @container reset-panel (max-width: 560px) {
+    .track-rows :global(.track-row) {
+      grid-template-columns: 22px 1.25rem minmax(0, 1fr);
+    }
+
+    .track-rows :global(.track-row-detail) {
+      grid-column: 3;
+    }
+  }
+
+  /* What a reset does: the reference, last. Wiped and Kept side by side.
+     Its prose and the track's keep to the prose cap. */
+  .track .panel-intro,
+  .reset-about {
+    max-width: var(--content-max);
+  }
+
+  .prestige-terms {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-md) var(--space-lg);
+    max-width: var(--content-max);
+  }
+
+  .prestige-terms-label {
+    margin-block-end: var(--space-xs);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  .prestige-terms ul {
+    margin: 0;
+    padding-inline-start: 1.1em;
+    font-size: var(--text-label-size);
+    line-height: 1.7;
+    color: var(--ink-secondary);
+    list-style: disc;
+  }
+
+  .prestige-terms li::marker {
     color: var(--ink-muted);
+  }
+
+  @container reset-panel (max-width: 560px) {
+    .prestige-terms {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   /* --- Buttons and dialogs ---------------------------------------------------------- */

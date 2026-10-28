@@ -121,16 +121,14 @@ test('the Reset the experiment tab before a reset opens: the cost, the pay, the 
   await openGame(page);
   await page.click('[data-tab="prestige"]');
 
-  await expect(page.locator('#sc-prestige-held')).toHaveText(
-    'You hold 1 isotope, +10% to all gains.'
-  );
-  await expect(page.locator('#sc-prestige-now')).toHaveText(
-    'Resetting unlocks at 1,000,000 energy earned this run.'
-  );
-  await expect(page.locator('#sc-prestige-progress')).toHaveText('420K of 1.00M');
+  await expect(page.locator('#sc-prestige-held')).toHaveText('1');
+  await expect(page.locator('#sc-prestige-bonus')).toHaveText('+10% to all gains');
+  await expect(page.locator('#sc-prestige-next')).toHaveText('Reset opens at 1.00M');
+  await expect(page.locator('#sc-prestige-progress')).toHaveText('580K to go');
+  await expect(page.locator('#sc-prestige-pays'), 'nothing to pay yet').toBeHidden();
   await expect(page.locator('#sc-prestige-btn')).toBeHidden();
-  await expect(page.locator('.prestige-terms')).toContainText("this run's perks and offers");
-  await expect(page.locator('.prestige-terms')).toContainText('the perk codex');
+  await expect(page.locator('.prestige-terms')).toContainText("This run's perks and offers");
+  await expect(page.locator('.prestige-terms')).toContainText('The perk codex');
 });
 
 test('resetting: the dialog, the toast and the shelf say what changed', async ({ page }) => {
@@ -144,11 +142,12 @@ test('resetting: the dialog, the toast and the shelf say what changed', async ({
   await openGame(page);
   await page.click('[data-tab="prestige"]');
 
-  await expect(page.locator('#sc-prestige-now')).toHaveText(
-    'Resetting now gives 1 isotope: +10% now, +20% after.'
-  );
-  await expect(page.locator('#sc-prestige-progress')).toHaveText(
-    'Next isotope at 4.00M, 1.40M to go'
+  await expect(page.locator('#sc-prestige-gain')).toHaveText('+1');
+  await expect(page.locator('#sc-prestige-after')).toHaveText('+20% after');
+  await expect(page.locator('#sc-prestige-next')).toHaveText('Next isotope at 4.00M');
+  await expect(page.locator('#sc-prestige-progress')).toHaveText('1.40M to go');
+  await expect(page.locator('#sc-reset-unlocks'), 'the hook, beside the button').toHaveText(
+    'Unlocks Capacitor.'
   );
   const meter = await page.evaluate(
     () => document.getElementById('sc-isotope-meter')!.style.transform

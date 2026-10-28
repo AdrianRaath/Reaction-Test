@@ -279,19 +279,28 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
     focus follows to the tab.
   - Like the perk shelf, it sits beside the face in the markup, so a click or
     tap on it is never a press.
-- **The Reset the experiment tab**, top to bottom: what a reset is; Wiped and
-  Kept lists; the isotopes held and their bonus; when a reset unlocks, or what
-  it gives now with the bonus before and after; a meter to the next isotope,
-  captioned "420K of 1.00M" or "Next isotope at 4.00M, 1.40M to go"; the
-  button, once a reset is open; then the isotope track:
-  - "Isotope track, 7 of 12 unlocked".
-  - Twelve sockets on a rail, numbered, forks drawn larger in two halves.
-    Held sockets are lit like beads, a held fork with its picked half lit; the
-    next two wear a blue rim; the rest are dashed outlines.
-  - A card for each rung held: "At 3 isotopes · your pick", Prodigy, what it
-    does, and "Or Sixth Slot: switch at any reset." A fork reached with no
-    pick yet says to pick one at the next reset. Then the next two, dashed:
-    "Next at 8 isotopes", Hot Start; a fork names both options.
+- **The Reset the experiment tab**: three titled sections, the action first
+  and the reference last (redesigned 2026-10-28, §8.4). The content spans the
+  panel; only its prose keeps to the 72ch cap.
+  - **Next reset.** Tiles like the Stats tab's, each with the same three
+    rows so they line up at any width: "Isotopes held", 4, "+40% to all
+    gains" ("each adds 10%" with none held); "A reset pays", +1, "+50%
+    after"; and "Next isotope at 4.00M", the meter, "1.50M to go". Until a
+    reset opens, the middle tile is hidden and the third reads "Reset opens
+    at 1.00M", "580K to go". Then the button, and beside it after a bead
+    what the reset unlocks, the rungs in the isotopes' blue: "Unlocks Lucky
+    Find." Past twelve isotopes there is no unlock line.
+  - **Isotope track, 7 of 12 unlocked.** One line says each isotope unlocks
+    a rung for good and that forks can be switched at any reset. Twelve
+    sockets on a rail, numbered, forks drawn larger in two halves: held ones
+    lit like beads, a held fork with its picked half lit, the next two with
+    a blue rim, the rest dashed. Then rows, "Next" first and "Unlocked"
+    after, each with the socket and number it has on the rail, the name and
+    what it does. A held fork reads "Prodigy or Sixth Slot"; a fork to come
+    names both options and what each does; a fork reached with no pick says
+    to pick one at the next reset. A group with no rows hides.
+  - **What a reset does.** The paragraph, then Wiped and Kept as two short
+    lists side by side, stacked on a phone.
 - **The dialog** names what's wiped, the isotopes gained, the bonus before and
   after, and any head start: "Warm Start begins the new run with 500 energy
   and a Lab Assistant." Then the track's part:
@@ -609,9 +618,10 @@ the build plan are in §8.1.
   Isotopes are blue-white on Cherenkov blue at every stage, on and off the
   face: the beads, the ring for the next reset, the isotope tooltip, the
   meter in the Reset the experiment tab, and the isotope track: its sockets
-  and cards in that tab, the picks in the reset dialog, the unlock card, and
-  the credits where a rung acts (an offer's lines, the surge card's line,
-  Perfect Pitch's float and its beads on the scope).
+  and rows in that tab, the line by the reset button naming what a reset
+  unlocks, the picks in the reset dialog, the unlock card, and the credits
+  where a rung acts (an offer's lines, the surge card's line, Perfect Pitch's
+  float and its beads on the scope).
   The ramp's tokens live on
   `.game-section` so they reach past the face. Stages fade into each
   other over 0.8 s through registered custom properties (`--stage`, `--halo`,
@@ -719,8 +729,13 @@ The visuals were built in three passes, all shipped 2026-10-22.
   stays while hovered, and Escape dismisses it.
 - The codex board's sockets are images with names such as "Overtone, held up
   to level 2" or "Undiscovered rare perk".
+- **The Reset tab** has three sections, each a heading. Its tiles are a
+  description list, like Stats.
 - **The isotope track.** In the Reset tab the sockets are hidden from screen
-  readers; the cards under them carry the same facts as a list. In the reset
+  readers; the rows under them carry the same facts, as two lists labelled
+  "Next" and "Unlocked". Each row's socket and number are hidden too, and it
+  starts with hidden words saying where it sits: "At 3 isotopes: Prodigy or
+  Sixth Slot". In the reset
   dialog each fork and the keeping rung's perks are a fieldset of radios with
   a legend ("At 3 isotopes: pick one"), the inputs over their cards so focus
   and arrow keys work, with a focus ring on the card. The pick hint is an
@@ -794,7 +809,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  57 as of 2026-10-28, in about seven minutes.
+  58 as of 2026-10-28, in about seven minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag,
@@ -819,7 +834,8 @@ The visuals were built in three passes, all shipped 2026-10-22.
     a tap on the beads and on the ring; the ring, beads and perk shelf on a
     phone with 4, 9 and 12 isotopes.
   - **The track** (`spacebar-clicker-track.e2e.ts`): the tooltips' unlock
-    lines; the track in the Reset tab; a new fork waiting for its pick, the
+    lines; the track in the Reset tab, its rows and the unlock line, and the
+    tab with every rung held; a new fork waiting for its pick, the
     unlock card and the saved pick; Heirloom and Cornerstone carrying a perk;
     a reroll, and none without the rung; Prodigy's level II offer; six sockets
     and the Twin Keystones swap; the credits on an offer, and none without
@@ -1709,7 +1725,8 @@ approved with it.
    next unlock.
 2. **The track sits under the Reset button** in its tab, so what a reset does
    stays first. Every rung held gets a card, so with all twelve the list runs
-   long, about two screens on a phone.
+   long, about two screens on a phone. Cards became rows in the 2026-10-28
+   redesign (§8.4).
 3. **A new fork has nothing chosen**, and the reset waits for a pick with an
    amber hint (Caution Amber, the soft warning DESIGN.md allows). Forks picked
    before come chosen, and every one reached shows at each reset, as approved.
@@ -1773,7 +1790,48 @@ Calls, approved with it:
    the space before an element on the next line; the markup now keeps it with
    `{' '}`.
 
-### 8.4 Unassigned ideas
+### 8.4 Reset tab redesign: done 2026-10-28
+
+The maintainer found the Reset the experiment tab cluttered and
+unstructured, and asked for a design review. It found:
+
+- The reference text came first, with the button 335 px down on desktop.
+- The numbers sat in sentences: the bonus twice, "+0% now", "1,000,000"
+  beside "1.00M".
+- There were no section headings, six text sizes, and 43% of the desktop
+  panel was left empty.
+- The track's cards led with a blue all-caps "AT 3 ISOTOPES".
+- What a reset unlocks was missing beside the button.
+- Small copy was in Ink Muted.
+
+The maintainer approved every recommendation; §4.7 has the result.
+
+1. **Action first, reference last.** Next reset, then Isotope track, then
+   What a reset does, each a heading as on the Perks tab.
+2. **The explanation stays visible** at the bottom, not collapsible.
+3. **The track as compact rows**, the next two first, each with the socket
+   and number it has on the rail. "Switch at any reset" is said once.
+4. **Tiles for the numbers**, as on the Stats tab, and the reset's unlocks
+   beside the button, as the ring's tooltip leads with them (§8.3.8, call 1).
+5. **Smaller fixes:** one number format, no "+0% now", Ink Secondary for
+   small copy, and three text sizes (12, 14 and 16 px) plus the monospace
+   numbers.
+
+Settled while building:
+
+- **Each tile has the same three rows**, so they line up at every width. At
+  1024 wide an inline value and its line wrapped in one tile and not the
+  next.
+- **The meter's tile takes the middle tile's space** until a reset opens, so
+  the first tile keeps its width.
+- **The panel is a container** (`reset-panel`), so the tiles, rows and lists
+  follow its own width, beside the sidebar or on a phone.
+
+Not done: renaming the tab "Isotopes", which would keep the phone's tab row
+on one line. It was offered as an option, not recommended, and would change
+copy that names the tab. On a phone the tab still wraps onto its own row.
+
+### 8.5 Unassigned ideas
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
 the maintainer asks.
@@ -1783,7 +1841,7 @@ the maintainer asks.
 - On a combo break, the combo row desaturates and shakes. This shakes the row
   only, never the screen.
 
-### 8.5 Known gaps
+### 8.6 Known gaps
 
 - Not playtested, and not checked on real touch devices, Firefox or Safari.
 - Not yet merged to `main`.
@@ -1914,3 +1972,10 @@ the maintainer asks.
   and the snap's outranked the press's. Taking both off once played also
   brings back the core's breathing between presses, which had stopped at a
   page's first press. 1 browser check.
+- **2026-10-28.** The Reset the experiment tab redesigned after a design
+  review (§8.4). Next reset comes first, as tiles with the button and what
+  the reset unlocks; then the isotope track as rows, the next two first;
+  then what a reset does, with Wiped and Kept side by side. Only the prose
+  keeps to the 72ch cap. The browser checks follow the new markup, plus 1
+  for the tab with every rung held. DESIGN.md's Reactor-Ramp Exception names
+  the rows and the unlock line.

@@ -348,13 +348,23 @@ const statEls = {
 
 const achCount = el('sc-ach-count');
 const prestigeTab = el('sc-tab-prestige');
+const prestigeTiles = el('sc-reset-tiles');
 const prestigeHeld = el('sc-prestige-held');
-const prestigeNow = el('sc-prestige-now');
+const prestigeBonus = el('sc-prestige-bonus');
+const prestigePays = el('sc-prestige-pays');
+const prestigeGainValue = el('sc-prestige-gain');
+const prestigeAfter = el('sc-prestige-after');
+const prestigeNext = el('sc-prestige-next');
 const isotopeMeter = el('sc-isotope-meter');
 const prestigeProgress = el('sc-prestige-progress');
+const prestigeAction = el('sc-reset-action');
+const prestigeUnlocks = el('sc-reset-unlocks');
 const prestigeBtn = el<HTMLButtonElement>('sc-prestige-btn');
 const trackCount = el('sc-track-count');
-const trackList = el('sc-track-list');
+const trackNextGroup = el('sc-track-next-group');
+const trackNext = el('sc-track-next');
+const trackHeldGroup = el('sc-track-held-group');
+const trackHeld = el('sc-track-held');
 /** The track's sockets in the Reset tab, a fork's two halves in each of those. */
 const trackSockets = Array.from(document.querySelectorAll<HTMLElement>('.track-socket')).map(
   (li) => ({
@@ -1468,57 +1478,55 @@ function setSentence(target: HTMLElement, ...parts: SentencePart[]): void {
   );
 }
 
-/** The isotopes held, what a reset gives now, and the run's way to the next isotope. */
+/**
+ * The Reset tab's tiles: the isotopes held, what a reset pays, and the way to
+ * the next isotope; then the button and what the reset unlocks. Until a
+ * reset opens, the meter tracks the way to the first isotope it pays.
+ */
 function renderPrestige(): void {
   const held = state.isotopes;
   const gain = prestigeGain(state.runLifetime);
   const ready = prestigeUnlocked(state);
-  if (held) {
-    setSentence(
-      prestigeHeld,
-      'You hold ',
-      [String(held)],
-      ` ${isotopeNoun(held)}, `,
-      [bonusText(held)],
-      ' to all gains.'
-    );
-  } else {
-    setSentence(prestigeHeld, 'No isotopes yet.');
-  }
-  if (ready) {
-    setSentence(
-      prestigeNow,
-      'Resetting now gives ',
-      [String(gain), 'prestige-gain'],
-      ` ${isotopeNoun(gain)}: `,
-      [bonusText(held)],
-      ' now, ',
-      [bonusText(held + gain)],
-      ' after.'
-    );
-    const next = nextIsotopeAt(state.runLifetime);
-    setSentence(
-      prestigeProgress,
-      'Next isotope at ',
-      [formatEnergy(next)],
-      ', ',
-      [formatEnergy(next - state.runLifetime)],
-      ' to go'
-    );
-  } else {
-    setSentence(
-      prestigeNow,
-      'Resetting unlocks at ',
-      [PRESTIGE_UNLOCK.toLocaleString('en-US')],
-      ' energy earned this run.'
-    );
-    setSentence(prestigeProgress, [formatEnergy(state.runLifetime)], ' of ', [
-      formatEnergy(PRESTIGE_UNLOCK),
+  setText(prestigeHeld, String(held));
+  // With none held, what one is worth, rather than "+0%".
+  if (held) setSentence(prestigeBonus, [bonusText(held)], ' to all gains');
+  else
+    setSentence(prestigeBonus, 'each adds ', [
+      `${Math.round(isotopeRate(held, state.forks) * 100)}%`,
     ]);
+
+  prestigeTiles.classList.toggle('is-open', ready);
+  prestigePays.hidden = !ready;
+  prestigeAction.hidden = !ready;
+  if (ready) {
+    const next = nextIsotopeAt(state.runLifetime);
+    setText(prestigeGainValue, `+${gain}`);
+    setSentence(prestigeAfter, [bonusText(held + gain)], ' after');
+    setSentence(prestigeNext, 'Next isotope at ', [formatEnergy(next)]);
+    setSentence(prestigeProgress, [formatEnergy(next - state.runLifetime)], ' to go');
+  } else {
+    setSentence(prestigeNext, 'Reset opens at ', [formatEnergy(PRESTIGE_UNLOCK)]);
+    setSentence(prestigeProgress, [formatEnergy(PRESTIGE_UNLOCK - state.runLifetime)], ' to go');
   }
+  renderResetUnlocks(ready ? stepsReached(held, held + gain) : []);
   isotopeMeter.style.transform = `scaleX(${isotopeProgress(state.runLifetime)})`;
-  prestigeBtn.hidden = !ready;
   renderTrack();
+}
+
+/** The steps the unlock line names, so it is rebuilt only when they change. */
+let unlocksShown = '';
+
+/** Beside the button, what resetting now unlocks: the ring tooltip's hook. */
+function renderResetUnlocks(steps: readonly TrackStep[]): void {
+  const key = steps.map((s) => s.isotopes).join();
+  if (key === unlocksShown) return;
+  unlocksShown = key;
+  prestigeUnlocks.hidden = steps.length === 0;
+  prestigeUnlocks.replaceChildren(
+    ...(steps.length > 0
+      ? [cardLine('reset-unlocks-text', [text('Unlocks '), ...unlockNodes(steps), text('.')])]
+      : [])
+  );
 }
 
 /** What the track shows, as the isotopes held and the picks. */
@@ -1526,8 +1534,8 @@ let trackShown = '';
 
 /**
  * The isotope track in the Reset tab: the sockets lit to the isotopes held,
- * each fork's picked half, a rim on the next two; then a card for each rung
- * held and the next two.
+ * each fork's picked half, a rim on the next two; then a row for each of the
+ * next two, and one for each rung held. A group with no rows hides.
  */
 function renderTrack(): void {
   const held = state.isotopes;
@@ -1549,44 +1557,63 @@ function renderTrack(): void {
       half.classList.toggle('is-picked', lit && half.dataset.rung === state.forks[socket.isotopes]);
     }
   }
-  trackList.replaceChildren(
-    ...reached.map((s) => trackCard(s, false)),
-    ...next.map((s) => trackCard(s, true))
-  );
+  trackNext.replaceChildren(...next.map((s) => trackRow(s, true)));
+  trackHeld.replaceChildren(...reached.map((s) => trackRow(s, false)));
+  trackNextGroup.hidden = next.length === 0;
+  trackHeldGroup.hidden = reached.length === 0;
 }
 
-/** A rung on the track as a card: where it sits, its name, what it does. */
-function trackCard(step: TrackStep, upcoming: boolean): HTMLLIElement {
+/**
+ * A rung on the track as a row: the socket and number it has on the rail,
+ * its name, what it does. A fork held names its pick, then the other option.
+ * Screen readers hear where it sits first: "At 3 isotopes: Prodigy, or …".
+ */
+function trackRow(step: TrackStep, upcoming: boolean): HTMLLIElement {
   const item = document.createElement('li');
-  item.className = upcoming ? 'track-rung is-next' : 'track-rung';
-  const at = `${upcoming ? 'Next at' : 'At'} ${isotopeCount(step.isotopes)}`;
+  item.className = upcoming ? 'track-row is-next' : 'track-row is-lit';
   const pick = state.forks[step.isotopes];
+  const picked = !upcoming && pick && isPickFor(step.isotopes, pick) ? pick : undefined;
+  const halves = isFork(step)
+    ? step.rungs.map((r) => {
+        const half = cardLine('track-half', '');
+        half.classList.toggle('is-picked', r.id === picked);
+        return half;
+      })
+    : [];
+  if (halves.length > 0) item.dataset.fork = '';
+  const mark = cardLine('track-row-mark', [cardLine('track-gem', halves)]);
+  const num = cardLine('track-row-num', String(step.isotopes));
+  mark.setAttribute('aria-hidden', 'true');
+  num.setAttribute('aria-hidden', 'true');
+  item.append(cardLine('visually-hidden', `At ${isotopeCount(step.isotopes)}: `), mark, num);
+
   if (!isFork(step)) {
     const r = step.rungs[0];
     item.append(
-      cardLine('track-rung-at', at),
-      cardLine('track-rung-name', r.name),
-      cardLine('track-rung-detail', rungSentence(r.id))
+      cardLine('track-row-name', r.name),
+      cardLine('track-row-detail', rungSentence(r.id))
     );
   } else if (upcoming) {
     item.append(
-      cardLine('track-rung-at', `${at} · a choice`),
-      cardLine('track-rung-name', stepName(step)),
-      ...step.rungs.map((r) => cardLine('track-rung-detail', `${r.name}: ${rungSentence(r.id)}`))
+      cardLine('track-row-name', stepName(step)),
+      cardLine(
+        'track-row-detail',
+        step.rungs.map((r) => cardLine('track-row-option', `${r.name}: ${rungSentence(r.id)}`))
+      )
     );
-  } else if (pick && isPickFor(step.isotopes, pick)) {
-    const other = step.rungs.find((r) => r.id !== pick)!;
+  } else if (picked) {
+    const other = step.rungs.find((r) => r.id !== picked)!;
     item.append(
-      cardLine('track-rung-at', `${at} · your pick`),
-      cardLine('track-rung-name', rung(pick).name),
-      cardLine('track-rung-detail', rungSentence(pick)),
-      cardLine('track-rung-other', `Or ${other.name}: switch at any reset.`)
+      cardLine('track-row-name', [
+        text(`${rung(picked).name} `),
+        cardLine('track-row-alt', `or ${other.name}`),
+      ]),
+      cardLine('track-row-detail', rungSentence(picked))
     );
   } else {
     item.append(
-      cardLine('track-rung-at', `${at} · a choice`),
-      cardLine('track-rung-name', stepName(step)),
-      cardLine('track-rung-detail', 'Pick one when you next reset the experiment.')
+      cardLine('track-row-name', stepName(step)),
+      cardLine('track-row-detail', 'Pick one when you next reset the experiment.')
     );
   }
   return item;

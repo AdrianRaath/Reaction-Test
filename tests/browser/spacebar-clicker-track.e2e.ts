@@ -63,18 +63,51 @@ test('the Reset tab draws the track: held, picked, and the next two', async ({ p
 
   await expect(page.locator('#sc-track-count')).toHaveText('7 of 12');
   await expect(page.locator('.track-socket.is-lit')).toHaveCount(7);
-  await expect(page.locator('.track-half.is-picked')).toHaveCount(2);
+  await expect(page.locator('#sc-track-sockets .track-half.is-picked')).toHaveCount(2);
   await expect(page.locator('.track-half[data-rung="prodigy"]')).toHaveClass(/is-picked/);
   await expect(page.locator('.track-socket.is-next')).toHaveCount(2);
+  await expect(page.locator('.track .panel-intro'), 'said once, not per fork').toContainText(
+    'can switch at any reset after'
+  );
 
-  const cards = page.locator('#sc-track-list .track-rung');
-  await expect(cards).toHaveCount(9);
-  await expect(cards.nth(2)).toContainText('At 3 isotopes · your pick');
-  await expect(cards.nth(2)).toContainText('Prodigy');
-  await expect(cards.nth(2)).toContainText('Or Sixth Slot: switch at any reset.');
-  await expect(cards.nth(7)).toContainText('Next at 8 isotopes');
-  await expect(cards.nth(8)).toContainText('Heirloom or Cornerstone');
-  await expect(page.locator('#sc-track-list .track-rung.is-next')).toHaveCount(2);
+  // The next two first, then the rungs held, each with its socket and number.
+  const next = page.locator('#sc-track-next .track-row');
+  await expect(next).toHaveCount(2);
+  await expect(next.nth(0)).toContainText('At 8 isotopes');
+  await expect(next.nth(0).locator('.track-row-name')).toHaveText('Hot Start');
+  await expect(next.nth(1).locator('.track-row-name')).toHaveText('Heirloom or Cornerstone');
+  await expect(next.nth(1).locator('.track-half.is-picked')).toHaveCount(0);
+
+  const held = page.locator('#sc-track-held .track-row');
+  await expect(held).toHaveCount(7);
+  await expect(held.nth(2)).toContainText('At 3 isotopes');
+  await expect(held.nth(2).locator('.track-row-name')).toHaveText('Prodigy or Sixth Slot');
+  await expect(held.nth(2).locator('.track-row-num')).toHaveText('3');
+  await expect(held.nth(2).locator('.track-half.is-picked')).toHaveCount(1);
+  await expect(page.locator('#sc-track-next-group')).toBeVisible();
+});
+
+test('with every rung held, the Reset tab has no next rungs and no unlock line', async ({
+  page,
+}) => {
+  await seedSave(page, {
+    energy: 50,
+    runLifetime: 5_000_000,
+    isotopes: 12,
+    forks: { 3: 'sixth-slot', 6: 'reroll', 9: 'heirloom', 12: 'enrichment' },
+    perks: noDrops,
+  });
+  await openGame(page);
+  await page.click('[data-tab="prestige"]');
+
+  await expect(page.locator('#sc-prestige-btn')).toBeVisible();
+  await expect(page.locator('#sc-prestige-gain')).toHaveText('+2');
+  await expect(page.locator('#sc-reset-unlocks')).toBeHidden();
+  await expect(page.locator('#sc-track-next-group')).toBeHidden();
+  await expect(page.locator('#sc-track-held .track-row')).toHaveCount(12);
+  await expect(page.locator('#sc-prestige-bonus'), 'at Enrichment’s 13%').toHaveText(
+    '+156% to all gains'
+  );
 });
 
 test('a new fork waits for a pick, and the reset unlocks it with a card', async ({ page }) => {
