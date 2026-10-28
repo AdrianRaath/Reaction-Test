@@ -643,6 +643,11 @@ The visuals were built in three passes, all shipped 2026-10-22.
     height, and mashing crowds into a scribble.
 - **Pass 3, small delights.**
   - The keycap bottoms out on every press.
+  - The core snaps on every press and breathes at its stage's pace between
+    presses. A stage change's larger snap plays out in full first. Both
+    classes come off the core once played; until 2026-10-28 they stayed on,
+    so a page's first stage change silenced the press pulse and its first
+    press stopped the breathing, until a reload.
   - Lucky presses float in gold.
   - Each shop glyph plays its own motion when bought: press, pop, emerge,
     compress, phase, nod, stroke, swing, ghost or spin.
@@ -789,13 +794,14 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  56 as of 2026-10-27, in about seven minutes.
+  57 as of 2026-10-28, in about seven minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag,
     save and reload, away progress, prestige, the full reset, the phone
     layout, a whole surge on a fake clock with and without reduced motion,
-    every reactor state, and a live stage change.
+    every reactor state, a live stage change, and the press pulse and
+    breathing after one.
   - **Perks** (`spacebar-clicker-perks.e2e.ts`): a live drop, its row, toast
     and tag; buying and an upgrade; the swap dialog and the keystone swap;
     switched-off upgrades and Brute Force's combo row; a window running out,
@@ -1903,3 +1909,8 @@ the maintainer asks.
   updated, and a tenth FAQ on what the track unlocks. A browser check for the
   table. Checked at 1440 and 390 wide. The step 3 and credits calls (§8.3.8,
   §8.3.9) signed off.
+- **2026-10-28.** Fixed the core's press pulse dying after a stage change
+  until a reload. The press and stage-snap classes never came off the core,
+  and the snap's outranked the press's. Taking both off once played also
+  brings back the core's breathing between presses, which had stopped at a
+  page's first press. 1 browser check.

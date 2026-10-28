@@ -2027,6 +2027,13 @@ function press(e?: Event): void {
   }
 }
 
+// A press pulse or stage snap comes off the core once it has played. Left on,
+// the stage snap outranks every later press, and either one stops the core
+// breathing. The countdown inside the core ends animations of its own.
+coreEl.addEventListener('animationend', (e) => {
+  if (e.target === coreEl) coreEl.classList.remove('is-pressed', 'is-stepped');
+});
+
 /** Perfect Pitch's credit floats off the core at most this often; the scope marks every press it catches. */
 const PITCH_CREDIT_MS = 30_000;
 let pitchCreditAt = -Infinity;

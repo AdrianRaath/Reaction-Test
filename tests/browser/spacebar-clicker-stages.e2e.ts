@@ -1,7 +1,7 @@
 /**
  * Spacebar Clicker: every reactor state at rest, then a live stage change.
  * The Cherenkov ramp (DESIGN.md, Reactor-Ramp Exception), the dial lights,
- * and the one-shot stage-change sequence.
+ * the one-shot stage-change sequence, and the core's press pulse after it.
  */
 
 import type { Page } from '@playwright/test';
@@ -29,6 +29,17 @@ async function setRun(page: Page, lifetime: number): Promise<void> {
     Storage.prototype.setItem = () => {};
   }, lifetime);
   await page.reload({ waitUntil: 'networkidle' });
+}
+
+/** The animations running on the core itself, by name. */
+function coreAnimations(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    document
+      .getElementById('sc-core')!
+      .getAnimations()
+      .filter((a) => a.playState === 'running')
+      .map((a) => (a as CSSAnimation).animationName)
+  );
 }
 
 test('every reactor state wears its color and its dial lights', async ({ page }) => {
@@ -79,4 +90,35 @@ test('crossing into Stable plays the stage-change sequence', async ({ page }) =>
     }),
     'the dial sweeps back after its hold'
   ).toBe(true);
+});
+
+// The press pulse and stage snap used to stay on the core once played, so the
+// snap masked every later press and the core stopped breathing until a reload.
+test('a press still pulses after a stage change, and the core breathes between presses', async ({
+  page,
+}) => {
+  await page.goto('/spacebar-clicker', { waitUntil: 'networkidle' });
+  await setRun(page, 9_990);
+  await page.focus('#sc-reactor');
+  expect(await coreAnimations(page), 'Warming breathes at rest').toEqual(['core-breathe']);
+
+  let crossed = false;
+  for (let i = 0; i < 40 && !crossed; i++) {
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(160);
+    crossed = (await page.getAttribute('#sc-reactor', 'data-state')) === 'stable';
+  }
+  expect(crossed, 'pressing across 10,000 reaches Stable').toBe(true);
+  expect(await coreAnimations(page), 'the stage snap').toEqual(['core-step']);
+
+  await page.waitForTimeout(600);
+  expect(await coreAnimations(page), 'Stable breathes once the snap has played').toEqual([
+    'core-breathe',
+  ]);
+  await page.keyboard.press('Space');
+  expect(await coreAnimations(page), 'a press after the stage change').toEqual(['core-press']);
+  await page.waitForTimeout(400);
+  expect(await coreAnimations(page), 'the core breathes again after the press').toEqual([
+    'core-breathe',
+  ]);
 });
