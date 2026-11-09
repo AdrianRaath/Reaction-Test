@@ -1923,8 +1923,8 @@ system fonts. Only the panel tabs change; the shop's two keep their row.
 (§8.5.3, §8.5.4). Step 1, the logic and the save, is built and signed off
 (§8.5.6). Step 2, the simulation and tuning, is done: the maintainer
 approved its proposals and every check passes (§8.5.7). Step 3, the run-down
-in play, is built; its calls await review (§8.5.8). Step 4, the page copy,
-is next.
+in play, is built (§8.5.8). Step 4, the page copy, is deferred to a full
+copy audit just before the merge (§8.5.9).
 
 #### 8.5.1 The review
 
@@ -2089,9 +2089,11 @@ phases 1 and 2.
    - The unlock card's cap.
    - Browser checks on a fake clock: a return to a run-down and to a fault,
      the restart and a stumble, the Stabiliser, and a big landing on a phone.
-4. **Content and docs.** The page copy: the idle-game line, the away
-   paragraphs, the FAQ and the reset section's examples. This doc's §4.
-   Checks at 1440 and 390 wide.
+4. **Content and docs.** _Deferred 2026-11-09: the maintainer will run a
+   full copy audit and refresh just before the merge, and this goes into it
+   (§8.5.9)._ The page copy: the idle-game line, the away paragraphs, the
+   FAQ and the reset section's examples. This doc's §4. Checks at 1440 and
+   390 wide.
 
 #### 8.5.5 Not yet discussed
 
@@ -2225,7 +2227,7 @@ takes a median.
    depending on how often you reset. The FAQ's "20 to 25 minutes" still
    holds.
 
-#### 8.5.8 Step 3: calls for review, 2026-11-09
+#### 8.5.8 Step 3: calls, 2026-11-09
 
 Built: the run-down in play, as §4.8 describes, and the legacy away code
 removed: `OFFLINE`, `offlineAward`, `mods.offline`, the away dialog and its
@@ -2270,6 +2272,36 @@ the three away checks rewritten.
     rising run lower than a stage change's.
 11. **The page copy** still describes half-speed away progress. Step 4
     rewrites it, with the payout.
+
+#### 8.5.9 For the copy audit before the merge
+
+Decided 2026-11-09: no copy changes until a full audit and refresh just
+before the merge. What the launch review left stale in
+`src/content/tools/spacebar-clicker.mdx`, as of step 3 (line numbers will
+drift):
+
+- **Time away.** "Offline progress at half speed" in the FAQ (frontmatter and
+  visible, about lines 16 and 534); "even while you are away" (108); "earn at
+  half speed while you are away, for up to four hours" (443); "away progress"
+  as a rung's effect in the track FAQ (22, 564). The run-down, the fault and
+  the restart aren't described anywhere.
+- **"An idle game"** (14, 62, 521): still true of progress carrying over,
+  though time away now runs down. Worth a look with the title, "Free Online
+  Idle Spacebar Game".
+- **The payout.** "Isotopes gained equal the square root of your run's
+  energy" and its examples, "a hundred million gives 10" (356 to 358): now 1M
+  pays 1, 3M pays 2, 9M pays 3, 27M pays 4.
+- **Simulation claims** (§6), with the numbers from §8.5.7:
+  - "Four to eight drops" on a first run (249): now 4 to 7.
+  - "About three minutes sooner" with perks (455): about 22 minutes
+    against 25, so still about three.
+  - The first isotope "at about 24 minutes and the second about 12 minutes
+    later" (364): now about 25, and the second about 10 later.
+  - All twelve rungs "after 100 to 180 minutes": now 110 to 180.
+  - The FAQ's "20 to 25 minutes" to a first reset still holds.
+- **The Stabiliser** reads from the config ("drops one tier") in the shop
+  table, but any prose about it is worth a check.
+- **This doc's §6**, once the page changes.
 
 ### 8.6 Unassigned ideas
 
