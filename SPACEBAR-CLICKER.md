@@ -1841,7 +1841,184 @@ renaming Achievements to Badges. Under 440px of panels the tabs form a 2x2
 grid at equal widths; the four need about 370px, and the margin covers wider
 system fonts. Only the panel tabs change; the shop's two keep their row.
 
-### 8.5 Unassigned ideas
+### 8.5 Launch review: planning, 2026-11-09
+
+**Status.** Decided: the Stabiliser, the run-down and the tripling payout
+(§8.5.2). The run-down's details and a four-step build plan await approval
+(§8.5.3, §8.5.4). Nothing is built yet.
+
+#### 8.5.1 The review
+
+After a playtest that went well, the maintainer asked for a review of the
+mechanics and progression before launch. It ran the simulation past where the
+tests stop, with purchase and income logging, and one browser check. Its
+findings, most serious first:
+
+1. **Waiting always pays more.** A run's income grows faster than time, and
+   the squares payout rewards holding the run, so isotopes per minute keep
+   rising until 400 to 625M in a first run. Resetting at 1M is the slowest
+   path, 12 isotopes in 180 minutes. One first run held to 144M gets all 12 in
+   one reset, at 86 minutes. The ring never slows: each isotope comes in 5 to
+   8 minutes, and faster in later runs.
+2. **Time away could skip the track.** A night away with Night Lab took a
+   reset from 3 isotopes to 13. Night Shift III's 24 hours was worth about 34.
+3. **The unlock card overflows** when many rungs land at once. With all
+   twelve it is 727 px tall on a 602 px face at 1440 wide, and 835 px on 542
+   at 390 wide. It runs under the reset toast and over the core's labels.
+4. **The Stabiliser takes the stakes out of the rhythm.** A pause costs 10
+   points once, however long it lasts, so a combo of 1,000 survives about 90
+   breaks. An idle player keeps Harmonic and Synchronisation's x2 while the
+   tab is open.
+5. **Presses and surges fade mid-run.** In a first run, press income stays at
+   about 285/s from minute 11 to 26 while auto-tappers go from 144/s to
+   6,660/s. Nothing shows that the rhythm still doubles auto-tappers through
+   Synchronisation.
+6. **Runs after an early reset are short for perks:** about 11 minutes, 2.6
+   drops and 3 perks held at the reset.
+7. **Every run opens the same way.** About 40% of an early-reset run is the 0
+   to 100K opening.
+8. **Nothing to chase after the capstone.** Players who reset by 9M never see
+   Critical or Supercritical.
+
+#### 8.5.2 Decisions, 2026-11-09
+
+1. **The Stabiliser.** A break drops the combo to the start of the tier below
+   (Harmonic to 50, Resonance to 25, Locked in to 10, Steady to 0) instead of
+   by 10. Simulated minutes to 1M without perks:
+
+   | Player | Now  | One tier |
+   | ------ | ---- | -------- |
+   | Steady | 24.6 | 26.2     |
+   | Sloppy | 26.5 | 30.5     |
+   | Masher | 38.4 | 38.7     |
+   | Idler  | 43.2 | 46.3     |
+
+   Added the same day: **a pause past 10 seconds ends the combo**, even with
+   the Stabiliser. Shorter pauses, such as a visit to the shop, drop one
+   tier. Without this, a pause breaks the combo once and an idle player keeps
+   the tier below for as long as the tab stays open. Ten seconds is also when
+   Idle Hands takes over.
+
+2. **Away progress becomes a run-down.** It replaces the half-speed away pay,
+   the away dialog and its Collect button.
+   - The clock is the time since the player last tended the reactor, with a
+     press or a purchase. It runs the same whether the tab is in view, hidden
+     or closed, so a closed tab earns on the same curve, worked out on return.
+   - Untended, the reactor gives full output for 30 minutes, then falls in a
+     straight line to nothing over 90, then faults at 2 hours. Any absence
+     pays at most 75 minutes of output.
+   - Energy earned untended goes straight into the totals.
+   - A reactor that has partly run down recovers on the next press. A faulted
+     one needs a restart: 10 presses on a beat. Nothing earns until then.
+   - The run-down only slows earning. Energy, auto-tappers, perks and offers
+     are never touched.
+   - Night Lab and Night Shift stay, with new jobs on the run-down.
+
+   The numbers were chosen for feel: someone who checks in every hour never
+   sees a fault, and a long meeting does. The simulation found the size
+   barely moves pacing. Players in 45-minute evenings finish the track in the
+   same number of evenings with a 75-minute cap, a 30-minute one or none.
+   Hourly check-ins at work take 9 sittings to 12 isotopes with it and 17
+   without.
+
+3. **The tripling payout.** Each isotope takes three times the run energy of
+   the last: 1M pays 1, 3M pays 2, 9M pays 3, 27M pays 4. It replaces
+   squares. The candidates, from the simulation with the steady player buying
+   perks, median of 5 seeds:
+
+   | Payout                | Best reset   | 12 isotopes | At 1M   | Ring in a first run, minutes between isotopes |
+   | --------------------- | ------------ | ----------- | ------- | --------------------------------------------- |
+   | Squares (1M, 4M, 9M)  | hold to 144M | 86 min      | 180 min | 7.7, 5.8, 6.5, 5.3, 4.6: never slows          |
+   | Doubling (1M, 2M, 4M) | 4M to 32M    | 78–96 min   | 180 min | 3.5, 4.2, 4.7, 7.7, 8.2, 11.9, 19.5           |
+   | Tripling (1M, 3M, 9M) | 9M to 27M    | 105–107 min | 180 min | 5.8, 7.7, 12.9, 19.1, 42.8                    |
+
+   Why tripling:
+   - The ring slows after the third isotope, so it shows when to reset
+     without a nudge.
+   - The track keeps its approved length, 105 minutes at the best reset, as
+     a reset at 9M takes today. Doubling cut it by about a fifth.
+   - A reset at 9M pays 3 each time, so each reset reaches one fork, the
+     first at about 35 minutes.
+   - Critical, at 10M, falls inside the best range. Supercritical stays a
+     stretch.
+   - A full run-down on top of a run at 27M with 6 isotopes adds 1 isotope,
+     against 2 with doubling and 6 with squares.
+
+   The cost: isotopes come more slowly after the capstone, the career targets
+   need rerunning, and the page copy changes. A reset at 1M takes 180 minutes
+   on every payout; that is the cost of starting runs over (finding 7).
+
+#### 8.5.3 Proposed details, awaiting approval
+
+1. **Night Lab** (rung 4): full output holds 60 minutes instead of 30. An
+   absence pays up to 105 minutes of output, with a fault at 2.5 hours.
+2. **Night Shift** (rare perk): the fall takes 3, 4.5 or 6 hours instead of
+   1.5, by level. An absence pays up to 120, 165 or 210 minutes, with faults
+   at 3.5, 5 and 6.5 hours. Night Lab and Night Shift add up.
+3. **Idle Hands** counts toward untended output, so a tab in view, hidden or
+   closed earns the same.
+4. **The restart** counts presses on the beat, by the run's rhythm rules, so
+   Metronome and Perfect Pitch widen it. The first two presses set the beat.
+   A press off the beat, or a pause past 0.8 s, starts the count over.
+   Restart presses earn nothing and don't build the combo.
+5. **The look, with no new color.**
+   - As output falls, the core dims and loses its color in step, building on
+     the away dialog's asleep look. The label under the core reads "Running
+     down, 64%" in place of the stage name.
+   - A fault is a grey, still core with the dial stopped, and the label
+     "Fault: 10 presses on a beat to restart", counting down.
+   - Ten marks around the core light in the reactor's color, one for each
+     press on the beat. A stumble clears them. The tenth plays the
+     stage-change ring and a chord, and the color comes back.
+   - No sound at the fault itself. Reduced motion shows each state without
+     the transitions.
+6. **Coming back.** No dialog. What came in rolls into the readout, and a
+   toast and the announcer say it: "Untended 1 h 40 min: +3.2M energy." Time
+   away still never runs a perk offer down. The 60-second rule goes, since
+   the first 30 minutes pay in full.
+7. **The unlock card** (finding 3) lists up to four rungs, then "+N more in
+   the Isotopes tab". Tripling makes big landings rare, but a run held long
+   enough can still land six or more.
+
+#### 8.5.4 Build plan, awaiting approval
+
+Four steps, each ending with every check passing and a check-in, as in
+phases 1 and 2.
+
+1. **Logic and save, pure, no UI.**
+   - Tripling in `prestigeGain`, `nextIsotopeAt` and `isotopeProgress`,
+     counted in whole steps so 3M is exactly 2 isotopes.
+   - The Stabiliser's tier drop and the 10-second pause in `combo.ts`, and
+     its shop line.
+   - The run-down in the config, with pure functions for the output share at
+     an untended time, the energy over a stretch of it, and the fault.
+   - A restart tracker, `tendedAt` in the save, and Night Lab and Night Shift
+     in `mods.ts`. The half-speed away rules go.
+   - Unit tests for each.
+2. **Simulation and tuning.** The simulation plays the new Stabiliser, the
+   tripling payout, and sittings with absences. The pacing and career tests
+   rerun, with new bands proposed. The calls to make:
+   - The Stabiliser slows a steady first run by about 1.6 minutes, 24.6 to
+     26.2, against the 24-minute target.
+   - The capstone fork's balance moves with fewer isotopes.
+3. **In play.**
+   - The frame loop runs the run-down, and a return from a hidden or closed
+     tab credits it. The away dialog goes.
+   - The running-down and fault looks, the restart, toasts, announcements and
+     reduced motion.
+   - The ring, its tooltips and the Isotopes tab read the new thresholds.
+   - The unlock card's cap.
+   - Browser checks on a fake clock: a return to a run-down and to a fault,
+     the restart and a stumble, the Stabiliser, and a big landing on a phone.
+4. **Content and docs.** The page copy: the idle-game line, the away
+   paragraphs, the FAQ and the reset section's examples. This doc's §4.
+   Checks at 1440 and 390 wide.
+
+#### 8.5.5 Not yet discussed
+
+Findings 5 to 8.
+
+### 8.6 Unassigned ideas
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
 the maintainer asks.
@@ -1851,7 +2028,7 @@ the maintainer asks.
 - On a combo break, the combo row desaturates and shakes. This shakes the row
   only, never the screen.
 
-### 8.6 Known gaps
+### 8.7 Known gaps
 
 - Not playtested, and not checked on real touch devices, Firefox or Safari.
 - Not yet merged to `main`.
@@ -1996,3 +2173,8 @@ the maintainer asks.
 - **2026-10-28.** On a phone the panel tabs sit two by two at equal widths,
   instead of three in a row and Isotopes alone under them (§5.1, §8.4). 2
   browser checks: one row on a desktop, two even rows on a phone.
+- **2026-11-09.** Launch review after the playtest (§8.5). Decided: the
+  Stabiliser drops a broken combo one tier, and a pause past 10 seconds ends
+  it; away progress becomes a run-down with a fault and a restart; isotopes
+  pay on a tripling scale (1M, 3M, 9M). The details and a build plan await
+  approval.
