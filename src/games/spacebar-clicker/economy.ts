@@ -17,6 +17,7 @@ import {
   AUTO_TAPPERS,
   COMBO_TIERS,
   ISOTOPE_BONUS,
+  ISOTOPE_SCALE,
   MILESTONE_BONUS,
   PERK_EFFECT,
   PERKS,
@@ -225,26 +226,40 @@ export function energyPerSecond(
   );
 }
 
-/** Spec §9: floor(sqrt(run lifetime / 1M)); zero below the unlock. */
+/**
+ * Isotopes a reset pays (SPACEBAR-CLICKER.md §8.5): one at a million, and one
+ * more each time the run's energy triples, so 1M pays 1, 3M pays 2, 9M pays 3.
+ * Counted in whole steps rather than by logarithm, so 3M is exactly 2.
+ */
 export function prestigeGain(runLifetime: number): number {
-  if (runLifetime < PRESTIGE_UNLOCK) return 0;
-  return Math.floor(Math.sqrt(runLifetime / PRESTIGE_UNLOCK));
+  let gain = 0;
+  // Thresholds run out at the largest number, so even Infinity stops.
+  for (let next = isotopeThreshold(1); Number.isFinite(next) && runLifetime >= next;) {
+    gain++;
+    next = isotopeThreshold(gain + 1);
+  }
+  return gain;
+}
+
+/** Run energy at which a reset first pays `gain` isotopes: 1M, 3M, 9M, and so on; 0 for none. */
+export function isotopeThreshold(gain: number): number {
+  return gain <= 0 ? 0 : PRESTIGE_UNLOCK * ISOTOPE_SCALE ** (gain - 1);
 }
 
 export function prestigeUnlocked(state: SaveState): boolean {
   return state.runLifetime >= PRESTIGE_UNLOCK;
 }
 
-/** Run energy at which a reset pays one more isotope: 1M, 4M, 9M, and so on. */
+/** Run energy at which a reset pays one more isotope. */
 export function nextIsotopeAt(runLifetime: number): number {
-  return PRESTIGE_UNLOCK * (prestigeGain(runLifetime) + 1) ** 2;
+  return isotopeThreshold(prestigeGain(runLifetime) + 1);
 }
 
 /** How far the run has come from the last isotope's threshold to the next, 0 to 1. */
 export function isotopeProgress(runLifetime: number): number {
   const gain = prestigeGain(runLifetime);
-  const from = PRESTIGE_UNLOCK * gain ** 2;
-  const to = nextIsotopeAt(runLifetime);
+  const from = isotopeThreshold(gain);
+  const to = isotopeThreshold(gain + 1);
   return Math.min(1, Math.max(0, (runLifetime - from) / (to - from)));
 }
 
@@ -255,9 +270,10 @@ export interface OfflineAward {
 }
 
 /**
- * Spec §7: half EPS for the time away, capped at four hours, only with at
- * least one auto-tapper and more than a minute away. Null means nothing to
- * show.
+ * Legacy away progress, until the script moves to the run-down (rundown.ts,
+ * SPACEBAR-CLICKER.md §8.5.4 step 3). Spec §7: half EPS for the time away,
+ * capped at four hours, only with at least one auto-tapper and more than a
+ * minute away. Null means nothing to show.
  */
 export function offlineAward(
   state: SaveState,

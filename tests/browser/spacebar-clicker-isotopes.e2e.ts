@@ -72,7 +72,7 @@ test('a reset opening: one notice, the ring, and its way into the tab', async ({
   await expect(page.locator('#sc-isotope-next-count')).toHaveText('+1');
   await expect(ring).toHaveAttribute(
     'aria-label',
-    'Reset the experiment now for 1 isotope, taking all gains to +30% and unlocking a choice of Sixth Slot or Prodigy. The next isotope comes at 4.00M energy.'
+    'Reset the experiment now for 1 isotope, taking all gains to +30% and unlocking a choice of Sixth Slot or Prodigy. The next isotope comes at 3.00M energy.'
   );
 
   await ring.hover();
@@ -100,8 +100,8 @@ test('a reset opening: one notice, the ring, and its way into the tab', async ({
 
 test('the ring counts up as the run passes the next isotope', async ({ page }) => {
   await seedSave(page, {
-    runLifetime: 3_998_000,
-    totalLifetime: 3_998_000,
+    runLifetime: 2_998_000,
+    totalLifetime: 2_998_000,
     tappers: { collider: 10 },
     perks: noDrops,
   });
@@ -148,15 +148,15 @@ test('resetting: the dialog, the toast and the shelf say what changed', async ({
 
   await expect(page.locator('#sc-prestige-gain')).toHaveText('+1');
   await expect(page.locator('#sc-prestige-after')).toHaveText('+20% after');
-  await expect(page.locator('#sc-prestige-next')).toHaveText('Next isotope at 4.00M');
-  await expect(page.locator('#sc-prestige-progress')).toHaveText('1.40M to go');
+  await expect(page.locator('#sc-prestige-next')).toHaveText('Next isotope at 3.00M');
+  await expect(page.locator('#sc-prestige-progress')).toHaveText('400K to go');
   await expect(page.locator('#sc-reset-unlocks'), 'the hook, beside the button').toHaveText(
     'Unlocks Capacitor.'
   );
   const meter = await page.evaluate(
     () => document.getElementById('sc-isotope-meter')!.style.transform
   );
-  expect(meter, 'from 1M to 4M, the run is halfway').toMatch(/^scaleX\(0\.53/);
+  expect(meter, 'from 1M to 3M, the run is four fifths along').toMatch(/^scaleX\(0\.8/);
 
   await page.click('#sc-prestige-btn');
   await expect(page.locator('#sc-prestige-modal-message')).toHaveText(

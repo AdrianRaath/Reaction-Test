@@ -131,8 +131,11 @@ export interface ComboRules {
   freeStarts: number;
   /** Consecutive off-rhythm presses that break the combo. */
   missesToBreak: number;
-  /** Combo lost on a break with the Stabiliser owned. */
-  stabiliserDrop: number;
+  /**
+   * A pause longer than this ends the combo outright, even with the
+   * Stabiliser, which otherwise drops a broken combo one tier.
+   */
+  pauseEndsMs: number;
   /**
    * A gap longer than this, but inside the grace, is a rest: it neither keeps
    * nor misses, and stays out of the rolling mean, so the beat picks up where
@@ -153,7 +156,19 @@ export interface SurgeRules {
   idleAfterS: number;
 }
 
-/** Away progress (spec §7). Perks may bend a run's copy. */
+/**
+ * The run-down (SPACEBAR-CLICKER.md §8.5): a reactor left alone keeps full
+ * output for a while, then falls in a straight line to nothing, and faults as
+ * it gets there. Night Lab and Night Shift bend a run's copy.
+ */
+export interface RundownRules {
+  /** Seconds after the last press or purchase at full output. */
+  fullS: number;
+  /** Seconds the output then takes to fall to nothing. */
+  fallS: number;
+}
+
+/** Legacy away progress (spec §7), until the script moves to the run-down. */
 export interface OfflineRules {
   capS: number;
   rate: number;
@@ -209,7 +224,7 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
   {
     id: 'stabiliser',
     name: 'Stabiliser',
-    detail: 'A broken combo drops by 10 instead of resetting',
+    detail: 'A broken combo drops one tier instead of resetting',
     baseCost: 20_000,
     scale: 1,
     max: 1,
@@ -282,6 +297,11 @@ export const COMBO_TIERS: readonly ComboTierDef[] = [
  * whose intervals vary by 10% (steady) never breaks on rhythm, one at 20%
  * (sloppy) breaks about three times a minute, and a 20% tolerance would have
  * punished ordinary players. Pauses, not jitter, are what end most combos.
+ *
+ * The Stabiliser drops a broken combo to the start of the tier below, and a
+ * pause past ten seconds ends it even so (SPACEBAR-CLICKER.md §8.5), so a
+ * player who walks away keeps no tier. Ten seconds is also when Idle Hands
+ * takes over.
  */
 export const COMBO: Readonly<ComboRules> = {
   tolerance: 0.25,
@@ -290,7 +310,7 @@ export const COMBO: Readonly<ComboRules> = {
   graceMs: 800,
   freeStarts: 5,
   missesToBreak: 3,
-  stabiliserDrop: 10,
+  pauseEndsMs: 10_000,
   restMs: Infinity,
 };
 
@@ -319,11 +339,32 @@ export const MILESTONE_BONUS = 0.05;
 /** Spec §6a: Synchronisation gives auto-tappers this share of the combo bonus. */
 export const SYNC_SHARE = 0.5;
 
-/** Spec §9. */
+/**
+ * Spec §9, with the payout from the launch review (SPACEBAR-CLICKER.md §8.5):
+ * a reset opens at a million, and each isotope after the first takes three
+ * times the run energy of the last, so 1M pays 1, 3M pays 2, 9M pays 3. The
+ * spec's squares rewarded holding a run for ever; on this scale each isotope
+ * takes longer than the last, so a run has a best moment to reset.
+ */
 export const PRESTIGE_UNLOCK = 1_000_000;
+export const ISOTOPE_SCALE = 3;
 export const ISOTOPE_BONUS = 0.1;
 
-/** Spec §7. */
+/**
+ * The run-down (SPACEBAR-CLICKER.md §8.5). Full output for 30 minutes after
+ * the last press or purchase, then a fall to nothing over 90, so any absence
+ * pays at most 75 minutes of output, and a fault at two hours. Chosen for
+ * feel: someone who checks in every hour never sees a fault.
+ */
+export const RUNDOWN: Readonly<RundownRules> = {
+  fullS: 30 * 60,
+  fallS: 90 * 60,
+};
+
+/** Presses on a steady beat that restart a faulted reactor. */
+export const RESTART_PRESSES = 10;
+
+/** Legacy away progress (spec §7), until the script moves to the run-down. */
 export const OFFLINE: Readonly<OfflineRules> = {
   capS: 4 * 3600,
   rate: 0.5,
@@ -567,8 +608,8 @@ export const PERKS: readonly PerkDef[] = [
     tab: 'auto',
     family: 'machines',
     rarity: 'rare',
-    values: [8, 12, 24],
-    detail: 'Away progress pays 100% instead of 50%, capped at {v} instead of 4 h',
+    values: [3, 4.5, 6],
+    detail: 'Left alone, the reactor takes {v} to run down instead of 1.5 h',
     unit: 'hours',
   },
   {
@@ -634,7 +675,7 @@ export const PERK_EFFECT = {
   afterglowMult: 3,
   /** Idle Hands' seconds without a press. */
   idleAfterS: 10,
-  /** Night Shift's away rate. */
+  /** Night Shift's rate for the legacy away progress, until the script moves to the run-down. */
   nightShiftRate: 1,
   /** Overtone's tier. */
   overtoneMin: 200,
@@ -752,7 +793,7 @@ export const ISOTOPE_TRACK: readonly TrackStep[] = [
       {
         id: 'night-lab',
         name: 'Night Lab',
-        detail: 'Away progress pays 60% instead of 50%, for up to 6 hours instead of 4',
+        detail: 'Left alone, the reactor holds full output for an hour instead of 30 minutes',
       },
     ],
   },
@@ -839,6 +880,9 @@ export const TRACK_EFFECT = {
   hotStartFinger: 3,
   /** Capacitor: seconds added to a surge, after any perk sets its length. */
   capacitorS: 1,
+  /** Night Lab: seconds a reactor left alone holds full output. */
+  nightLabFullS: 60 * 60,
+  /** Night Lab's legacy away rate and cap, until the script moves to the run-down. */
   nightLabRate: 0.6,
   nightLabCapS: 6 * 3600,
   luckyFindOdds: { common: 0.58, rare: 0.35, keystone: 0.07 } as Readonly<

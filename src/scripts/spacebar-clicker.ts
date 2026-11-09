@@ -509,7 +509,8 @@ function setText(node: HTMLElement, text: string): void {
 // The tracker reads the run's rules on every press, so a perk applies at once.
 const combo = new ComboTracker(
   () => modsOf(state).stabiliser,
-  () => modsOf(state).combo
+  () => modsOf(state).combo,
+  () => modsOf(state).tiers
 );
 /** Energy per second actually being earned; perk prices are set in it. */
 const income = new IncomeMeter();

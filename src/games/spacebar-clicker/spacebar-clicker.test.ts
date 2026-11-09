@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { checkAchievements } from './achievements';
-import { ComboTracker } from './combo';
+import { ComboTracker, RestartTracker } from './combo';
 import {
   AUTO_TAPPERS,
   COMBO,
@@ -9,6 +9,8 @@ import {
   OFFLINE,
   PRESS_UPGRADES,
   REACTOR_STATES,
+  RESTART_PRESSES,
+  RUNDOWN,
   SURGE,
   type ComboTierDef,
 } from './config';
@@ -21,6 +23,7 @@ import {
   energyPerPress,
   energyPerSecond,
   isotopeProgress,
+  isotopeThreshold,
   markShopTabSeen,
   milestoneBonus,
   nextComboTier,
@@ -38,6 +41,17 @@ import { formatDuration, formatEnergy, formatMultiplier, formatRate } from './fo
 import { IncomeMeter } from './income';
 import { BASE_MODS, modsOf, type Mods } from './mods';
 import { newSeed, nextRandom } from './rng';
+import {
+  faultAtS,
+  fullOutputSeconds,
+  isFaulted,
+  outputShare,
+  restartReactor,
+  tend,
+  untendedAward,
+  untendedRate,
+  untendedS,
+} from './rundown';
 import { defaultSave, parseSave, prestigeReset, serializeSave } from './save';
 
 const NOW = 1_700_000_000_000;
@@ -225,26 +239,40 @@ describe('reactor', () => {
 });
 
 describe('prestige', () => {
-  it('reproduces the spec examples', () => {
+  it('pays one isotope at a million, and one more each time the run triples', () => {
     expect(prestigeGain(999_999)).toBe(0);
     expect(prestigeGain(1e6)).toBe(1);
-    expect(prestigeGain(4e6)).toBe(2);
-    expect(prestigeGain(25e6)).toBe(5);
-    expect(prestigeGain(100e6)).toBe(10);
+    expect(prestigeGain(2_999_999)).toBe(1);
+    expect(prestigeGain(3e6)).toBe(2);
+    expect(prestigeGain(9e6)).toBe(3);
+    expect(prestigeGain(27e6)).toBe(4);
+    expect(prestigeGain(80_999_999)).toBe(4);
+    expect(prestigeGain(81e6)).toBe(5);
+    expect(prestigeGain(3 ** 11 * 1e6)).toBe(12);
+  });
+
+  it('stops counting past the largest number', () => {
+    expect(Number.isFinite(prestigeGain(Infinity))).toBe(true);
+    expect(prestigeGain(Number.NaN)).toBe(0);
   });
 
   it('knows where the next isotope comes, and how far along the run is', () => {
+    expect(isotopeThreshold(0)).toBe(0);
+    expect(isotopeThreshold(1)).toBe(1e6);
+    expect(isotopeThreshold(4)).toBe(27e6);
     expect(nextIsotopeAt(0)).toBe(1e6);
     expect(nextIsotopeAt(999_999)).toBe(1e6);
-    expect(nextIsotopeAt(1e6)).toBe(4e6);
-    expect(nextIsotopeAt(3_999_999)).toBe(4e6);
-    expect(nextIsotopeAt(4e6)).toBe(9e6);
+    expect(nextIsotopeAt(1e6)).toBe(3e6);
+    expect(nextIsotopeAt(2_999_999)).toBe(3e6);
+    expect(nextIsotopeAt(3e6)).toBe(9e6);
+    expect(nextIsotopeAt(9e6)).toBe(27e6);
     expect(isotopeProgress(0)).toBe(0);
     expect(isotopeProgress(250_000)).toBe(0.25);
     expect(isotopeProgress(1e6)).toBe(0);
-    expect(isotopeProgress(2.5e6)).toBe(0.5);
-    expect(isotopeProgress(4e6)).toBe(0);
-    expect(isotopeProgress(8e6)).toBe(0.8);
+    expect(isotopeProgress(2e6)).toBe(0.5);
+    expect(isotopeProgress(3e6)).toBe(0);
+    expect(isotopeProgress(6e6)).toBe(0.5);
+    expect(isotopeProgress(7.2e6)).toBeCloseTo(0.7);
   });
 
   it('wipes the run and keeps what the spec says survives', () => {
@@ -275,6 +303,64 @@ describe('prestige', () => {
     expect(after.achievements).toEqual(['first-press']);
     expect(after.revealed).toHaveLength(AUTO_TAPPERS.length);
     expect(after.announced).toEqual({});
+    // A fresh reactor, tended as the run begins.
+    expect(after.tendedAt).toBe(NOW + 1);
+  });
+});
+
+describe('run-down', () => {
+  it('holds full output, then falls in a straight line to nothing', () => {
+    expect(outputShare(0, RUNDOWN)).toBe(1);
+    expect(outputShare(RUNDOWN.fullS, RUNDOWN)).toBe(1);
+    expect(outputShare(RUNDOWN.fullS + RUNDOWN.fallS / 2, RUNDOWN)).toBeCloseTo(0.5);
+    expect(outputShare(faultAtS(RUNDOWN), RUNDOWN)).toBe(0);
+    expect(outputShare(99 * 3600, RUNDOWN)).toBe(0);
+    expect(faultAtS(RUNDOWN)).toBe(2 * 3600);
+  });
+
+  it('pays at most 75 minutes of output, however long the absence', () => {
+    expect(fullOutputSeconds(0, 600, RUNDOWN)).toBe(600);
+    expect(fullOutputSeconds(0, RUNDOWN.fullS, RUNDOWN)).toBe(30 * 60);
+    expect(fullOutputSeconds(0, faultAtS(RUNDOWN), RUNDOWN)).toBe(75 * 60);
+    expect(fullOutputSeconds(0, 48 * 3600, RUNDOWN)).toBe(75 * 60);
+    // From one hour untended to two: a third of the output, on average.
+    expect(fullOutputSeconds(3600, 7200, RUNDOWN)).toBeCloseTo(1200);
+    expect(fullOutputSeconds(600, 300, RUNDOWN)).toBe(0);
+  });
+
+  it('recovers on a press, but faults at two hours, and only a restart brings it back', () => {
+    const s = defaultSave(NOW);
+    expect(untendedS(s, NOW + 5000)).toBe(5);
+    expect(isFaulted(s, NOW + faultAtS(RUNDOWN) * 1000 - 1)).toBe(false);
+    // An hour in, the output has fallen; a press brings it straight back.
+    expect(tend(s, NOW + 3_600_000)).toBe(true);
+    expect(s.tendedAt).toBe(NOW + 3_600_000);
+    const fault = s.tendedAt + faultAtS(RUNDOWN) * 1000;
+    expect(isFaulted(s, fault)).toBe(true);
+    expect(tend(s, fault)).toBe(false);
+    expect(s.tendedAt).toBe(NOW + 3_600_000);
+    restartReactor(s, fault + 3000);
+    expect(isFaulted(s, fault + 3000)).toBe(false);
+  });
+
+  it('credits a hidden or closed tab on the clock that began at the last press', () => {
+    const s = defaultSave(NOW);
+    s.tappers.pneumatic = 2; // 6 a second
+    // Left alone 20 minutes in view, then away 40: 10 more at full, then 30 of the fall.
+    s.lastSeen = NOW + 20 * 60_000;
+    const award = untendedAward(s, NOW + 60 * 60_000);
+    expect(award.awayS).toBe(40 * 60);
+    expect(award.energy).toBeCloseTo(6 * 2100);
+    // A day away pays the rest of the run-down and no more.
+    expect(untendedAward(s, NOW + 24 * 3_600_000).energy).toBeCloseTo(6 * (75 - 20) * 60);
+  });
+
+  it('earns nothing without auto-tappers, and lets Idle Hands work', () => {
+    const s = defaultSave(NOW);
+    expect(untendedAward(s, NOW + 3_600_000).energy).toBe(0);
+    s.tappers.pneumatic = 2;
+    expect(untendedRate(s)).toBe(6);
+    expect(untendedRate(s, bent({ idleBoostMult: 2, idleBoostAfterS: 10 }))).toBeCloseTo(12);
   });
 });
 
@@ -406,11 +492,86 @@ describe('combo tracker', () => {
     expect(r.combo).toBe(1); // the press itself starts the next combo
   });
 
-  it('drops by ten instead of resetting with the Stabiliser', () => {
+  it('drops a broken combo to the start of the tier below with the Stabiliser', () => {
+    for (const [from, to] of [
+      [120, 50],
+      [60, 25],
+      [30, 10],
+      [12, 0],
+    ] as const) {
+      const c = new ComboTracker(() => true);
+      const { t } = cadence(c, 0, 200, from);
+      expect(c.tick(t + 1000)).toBe(true);
+      expect(c.combo, `from ${from}`).toBe(to);
+    }
+  });
+
+  it('drops a tier on the third off-beat press with the Stabiliser', () => {
     const c = new ComboTracker(() => true);
-    const { t } = cadence(c, 0, 200, 40);
+    const { t } = cadence(c, 0, 200, 30);
+    c.press(t + 500);
+    c.press(t + 500 + 120);
+    expect(c.press(t + 500 + 120 + 500).broke).toBe(true);
+    expect(c.combo).toBe(10);
+  });
+
+  it('drops through the run’s own tiers', () => {
+    const tiers: ComboTierDef[] = [{ min: 200, multiplier: 4, label: 'Overtone' }, ...COMBO_TIERS];
+    const c = new ComboTracker(
+      () => true,
+      undefined,
+      () => tiers
+    );
+    const { t } = cadence(c, 0, 200, 250);
     c.tick(t + 1000);
-    expect(c.combo).toBe(30);
+    expect(c.combo).toBe(100);
+  });
+
+  it('ends the combo on a pause past ten seconds, even with the Stabiliser', () => {
+    const c = new ComboTracker(() => true);
+    const { t } = cadence(c, 0, 200, 120);
+    expect(c.tick(t + 1000)).toBe(true); // the grace window: one tier
+    expect(c.combo).toBe(50);
+    expect(c.tick(t + COMBO.pauseEndsMs)).toBe(false);
+    expect(c.tick(t + COMBO.pauseEndsMs + 1)).toBe(true); // the pause: the rest
+    expect(c.combo).toBe(0);
+    expect(c.tick(t + 60_000)).toBe(false); // once
+
+    // Without the Stabiliser the grace window took it all; the pause has nothing to end.
+    const d = new ComboTracker();
+    const run = cadence(d, 0, 200, 120);
+    expect(d.tick(run.t + 1000)).toBe(true);
+    expect(d.tick(run.t + 60_000)).toBe(false);
+  });
+
+  it('keeps the tier below for a press inside ten seconds', () => {
+    const c = new ComboTracker(() => true);
+    const { t } = cadence(c, 0, 200, 120);
+    c.tick(t + 1000);
+    const r = c.press(t + 5000);
+    expect(r.broke).toBe(false);
+    expect(r.combo).toBe(51); // a free start on top of Resonance
+  });
+
+  it('ends a pause past ten seconds with no frame in it, on the next press or frame', () => {
+    // No frame at all: the press finds the pause over.
+    const c = new ComboTracker(() => true);
+    const a = cadence(c, 0, 200, 120);
+    const r = c.press(a.t + 12_000);
+    expect(r.broke).toBe(true);
+    expect(r.combo).toBe(1);
+    // A frame caught the grace window, the press finds the pause over.
+    const d = new ComboTracker(() => true);
+    const b = cadence(d, 0, 200, 120);
+    d.tick(b.t + 1000);
+    const s = d.press(b.t + 12_000);
+    expect(s.broke).toBe(true);
+    expect(s.combo).toBe(1);
+    // The first frame comes after ten seconds (a hidden tab).
+    const e = new ComboTracker(() => true);
+    const f = cadence(e, 0, 200, 120);
+    expect(e.tick(f.t + 11_000)).toBe(true);
+    expect(e.combo).toBe(0);
   });
 
   it('reports the draining grace window', () => {
@@ -419,6 +580,49 @@ describe('combo tracker', () => {
     expect(c.graceRemaining(1000)).toBe(1);
     expect(c.graceRemaining(1400)).toBeCloseTo(0.5);
     expect(c.graceRemaining(1000 + COMBO.graceMs)).toBe(0);
+  });
+});
+
+describe('restart tracker', () => {
+  it('restarts on the tenth press on a steady beat, and is ready for the next fault', () => {
+    const r = new RestartTracker();
+    const counts: number[] = [];
+    for (let i = 0; i < RESTART_PRESSES; i++) {
+      const res = r.press(i * 250);
+      counts.push(res.count);
+      expect(res.done).toBe(i === RESTART_PRESSES - 1);
+    }
+    expect(counts).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(r.count).toBe(0);
+    expect(r.press(10_000).count).toBe(1);
+  });
+
+  it('starts over from a press off the beat', () => {
+    const r = new RestartTracker();
+    for (let i = 0; i < 6; i++) r.press(i * 250);
+    expect(r.press(1250 + 400)).toEqual({ count: 1, done: false, startedOver: true });
+    // The beat starts again from that press.
+    expect(r.press(1650 + 250).count).toBe(2);
+  });
+
+  it('starts over after a pause, and a slow second press only sets the start', () => {
+    const r = new RestartTracker();
+    r.press(0);
+    r.press(250);
+    r.press(500);
+    expect(r.press(2500)).toEqual({ count: 1, done: false, startedOver: true });
+    expect(r.press(3200)).toEqual({ count: 1, done: false, startedOver: false });
+  });
+
+  it('judges the beat by the run’s rhythm rules', () => {
+    const strict = new RestartTracker();
+    const loose = new RestartTracker(() => ({ ...COMBO, tolerance: 0.4 }));
+    for (const t of [0, 200, 400, 600]) {
+      strict.press(t);
+      loose.press(t);
+    }
+    expect(strict.press(870).count).toBe(1); // +35%
+    expect(loose.press(870).count).toBe(5);
   });
 });
 
@@ -492,7 +696,16 @@ describe('save', () => {
     expect(s.achievements).toEqual(['first-press']);
     expect(s.revealed).toEqual(['assistant', 'arm']);
     expect(s.lastSeen).toBe(NOW); // never in the future
+    expect(s.tendedAt).toBe(NOW); // the last visit, for a save from before the run-down
     expect(s.announced).toEqual({ finger: 3 });
+  });
+
+  it('reads when the reactor was last tended, defaulting to the last visit', () => {
+    const at = (fields: object) => parseSave(JSON.stringify(fields), NOW).tendedAt;
+    expect(at({ lastSeen: NOW - 5000 })).toBe(NOW - 5000);
+    expect(at({ lastSeen: NOW - 5000, tendedAt: NOW - 9000 })).toBe(NOW - 9000);
+    expect(at({ lastSeen: NOW - 5000, tendedAt: 'soon' })).toBe(NOW - 5000);
+    expect(at({ tendedAt: NOW + 1e9 })).toBe(NOW); // never in the future
   });
 });
 
@@ -543,6 +756,7 @@ describe('run modifiers', () => {
     expect(modsOf(defaultSave(NOW))).toEqual(BASE_MODS);
     expect(BASE_MODS.combo).toBe(COMBO);
     expect(BASE_MODS.surge).toBe(SURGE);
+    expect(BASE_MODS.rundown).toBe(RUNDOWN);
     expect(BASE_MODS.offline).toBe(OFFLINE);
     expect(BASE_MODS.tiers).toBe(COMBO_TIERS);
   });

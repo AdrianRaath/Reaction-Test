@@ -109,6 +109,11 @@ export interface SaveState {
   playedS: number;
   /** Epoch ms of the last save — offline progress is measured from it. */
   lastSeen: number;
+  /**
+   * Epoch ms the reactor was last tended, by a press, a purchase or a restart.
+   * The run-down's clock runs from it (rundown.ts).
+   */
+  tendedAt: number;
   createdAt: number;
   perks: PerkState;
 }
@@ -162,6 +167,7 @@ export function defaultSave(now: number): SaveState {
     achievements: [],
     playedS: 0,
     lastSeen: now,
+    tendedAt: now,
     createdAt: now,
     perks: freshRun({ rng: seedFrom(now), codex: {} }),
   };
@@ -337,6 +343,8 @@ export function parseSave(raw: string | null, now: number): SaveState {
   const forks = cleanPicks(d.forks);
   // The track decides how many perks and keystones the run may hold.
   const rules = modsOf({ ...fresh, isotopes, forks });
+  // A lastSeen in the future (clock change) must not mint negative time.
+  const lastSeen = Math.min(num(d.lastSeen, now, 1), now);
   return {
     v: SAVE_VERSION,
     energy: num(d.energy, 0),
@@ -356,8 +364,9 @@ export function parseSave(raw: string | null, now: number): SaveState {
     surges: Math.floor(num(d.surges, 0)),
     achievements: idList<AchievementId>(d.achievements, (id) => ACHIEVEMENT_IDS.has(id)),
     playedS: num(d.playedS, 0),
-    // A lastSeen in the future (clock change) must not mint negative time.
-    lastSeen: Math.min(num(d.lastSeen, now, 1), now),
+    lastSeen,
+    // A save from before the run-down counts as tended at its last visit.
+    tendedAt: Math.min(num(d.tendedAt, lastSeen, 1), now),
     createdAt: Math.min(num(d.createdAt, now, 1), now),
     perks: parsePerks(d.perks, now, rules),
   };
@@ -426,6 +435,8 @@ export function prestigeReset(
     forks,
     prestiges: state.prestiges + 1,
     lastSeen: now,
+    // A fresh reactor: a reset tends it, and clears a fault.
+    tendedAt: now,
     perks: freshRun(state.perks),
   };
 

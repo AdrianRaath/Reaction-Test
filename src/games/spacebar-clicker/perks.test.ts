@@ -7,6 +7,7 @@ import {
   PERK_EFFECT,
   PERK_SLOTS,
   PERKS,
+  RUNDOWN,
   type PerkId,
   type ShopTab,
 } from './config';
@@ -123,7 +124,7 @@ describe('perk table', () => {
     expect(perkDetail(at('afterglow', 'for {v}', [10, 0, 0]), 1)).toBe('for 10 s');
     expect(perkDetail(at('overtone', 'for {v}', [3.75, 0, 0]), 1)).toBe('for x3.75');
     expect(perkDetailAllLevels(def('night-shift'))).toBe(
-      'Away progress pays 100% instead of 50%, capped at 8 h / 12 h / 24 h instead of 4 h'
+      'Left alone, the reactor takes 3 h / 4.5 h / 6 h to run down instead of 1.5 h'
     );
   });
 });
@@ -340,7 +341,17 @@ describe('perk effects on auto-tappers and time away', () => {
     expect(energyPerSecond(s, { idleS: PERK_EFFECT.idleAfterS })).toBeCloseTo(6 * v('idle-hands'));
   });
 
-  it('Night Shift pays all of away time, for longer', () => {
+  it('Night Shift lengthens the run-down’s fall, and its fault with it', () => {
+    for (const level of [1, 2, 3]) {
+      const { rundown } = modsOf(holding(['night-shift', level]));
+      expect(rundown.fullS).toBe(RUNDOWN.fullS);
+      expect(rundown.fallS).toBe(v('night-shift', level) * 3600);
+    }
+    // Level III: 30 minutes at full, then six hours of fall.
+    expect(v('night-shift', 3) * 3600).toBe(6 * 3600);
+  });
+
+  it('Night Shift pays all of the legacy away time, for longer', () => {
     const s = holding(['night-shift', 1]);
     s.tappers.pneumatic = 2;
     expect(offlineAward(s, 600)).toEqual({ seconds: 600, energy: 3600 });
@@ -783,6 +794,8 @@ describe('modifiers with perks', () => {
     expect(BASE_MODS.combo).toBe(COMBO);
     expect(COMBO.tolerance).toBe(0.25);
     expect(BASE_MODS.surge.multiplier).toBe(10);
+    expect(BASE_MODS.rundown).toBe(RUNDOWN);
+    expect(RUNDOWN.fallS).toBe(90 * 60);
     expect(BASE_MODS.offline.rate).toBe(0.5);
   });
 });

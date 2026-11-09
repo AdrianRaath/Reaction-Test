@@ -208,7 +208,8 @@ export function simulateRun(
   let mods = modsOf(state);
   const combo = new ComboTracker(
     () => mods.stabiliser,
-    () => mods.combo
+    () => mods.combo,
+    () => mods.tiers
   );
   const income = new IncomeMeter();
   const cycle = (player.burstS ?? 0) + (player.restS ?? 0);
