@@ -263,29 +263,6 @@ export function isotopeProgress(runLifetime: number): number {
   return Math.min(1, Math.max(0, (runLifetime - from) / (to - from)));
 }
 
-export interface OfflineAward {
-  /** Seconds credited, after the cap. */
-  seconds: number;
-  energy: number;
-}
-
-/**
- * Legacy away progress, until the script moves to the run-down (rundown.ts,
- * SPACEBAR-CLICKER.md §8.5.4 step 3). Spec §7: half EPS for the time away,
- * capped at four hours, only with at least one auto-tapper and more than a
- * minute away. Null means nothing to show.
- */
-export function offlineAward(
-  state: SaveState,
-  awayS: number,
-  mods = modsOf(state)
-): OfflineAward | null {
-  const owned = AUTO_TAPPERS.some((t) => state.tappers[t.id] > 0);
-  if (!owned || awayS <= mods.offline.minAwayS) return null;
-  const seconds = Math.min(awayS, mods.offline.capS);
-  return { seconds, energy: energyPerSecond(state, {}, mods) * seconds * mods.offline.rate };
-}
-
 /** Credit energy to the run. The one place both lifetime counters move. */
 export function earn(state: SaveState, amount: number): void {
   state.energy += amount;

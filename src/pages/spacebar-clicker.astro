@@ -15,6 +15,7 @@ import {
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
   REACTOR_STATES,
+  RESTART_PRESSES,
   TRACK_EFFECT,
 } from '../games/spacebar-clicker/config';
 import { formatEnergy } from '../games/spacebar-clicker/format';
@@ -71,6 +72,16 @@ const MOTES = Array.from({ length: 12 }, (_, i) => ({
   size: `${i % 3 === 0 ? 3 : 2}px`,
   dir: i % 4 === 3 ? 'reverse' : 'normal',
 }));
+
+// The restart's marks (SPACEBAR-CLICKER.md §8.5): RESTART_PRESSES segments on
+// the arc's own circle, clockwise from twelve o'clock with a small gap
+// between each, out of a path length of 100.
+const RESTART_STEP = 100 / RESTART_PRESSES;
+const RESTART_GAP = 1.6;
+const RESTART_DASH = `${RESTART_STEP - RESTART_GAP} ${100 - RESTART_STEP + RESTART_GAP}`;
+const restartMarks = Array.from({ length: RESTART_PRESSES }, (_, i) =>
+  (-(i * RESTART_STEP + RESTART_GAP / 2)).toFixed(2)
+);
 
 const dialLeds = REACTOR_STATES.slice(1).map((s, i, all) => {
   const angle = (i / all.length) * 2 * Math.PI;
@@ -157,21 +168,46 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
               <!-- The dial: progress to the next state as an arc, and one light per
                  state reached, so the run's history reads at a glance. -->
               <svg class="core-arc" viewBox="0 0 100 100" aria-hidden="true">
-                <circle class="arc-track" cx="50" cy="50" r={ARC_R}></circle>
-                <circle
-                  class="arc-fill"
-                  id="sc-arc"
-                  cx="50"
-                  cy="50"
-                  r={ARC_R}
-                  stroke-dasharray={ARC_LEN}
-                  stroke-dashoffset={ARC_LEN}></circle>
+                <g class="dial-arc">
+                  <circle class="arc-track" cx="50" cy="50" r={ARC_R}></circle>
+                  <circle
+                    class="arc-fill"
+                    id="sc-arc"
+                    cx="50"
+                    cy="50"
+                    r={ARC_R}
+                    stroke-dasharray={ARC_LEN}
+                    stroke-dashoffset={ARC_LEN}></circle>
+                </g>
                 {
                   dialLeds.map((led) => (
                     <g class={`dial-led led-${led.id}`} data-led={led.id}>
                       <circle class="led-halo" cx={led.x} cy={led.y} r="3.4" />
                       <circle class="led-dot" cx={led.x} cy={led.y} r="1.5" />
                     </g>
+                  ))
+                }
+              </svg>
+              <!-- A faulted reactor: the dial's arc gives way to the restart's marks
+                 on the same circle, one lit for each press on the beat. Its own
+                 layer, so the grey of the fault never reaches it. -->
+              <svg
+                class="restart-ring"
+                id="sc-restart-ring"
+                viewBox="0 0 100 100"
+                aria-hidden="true"
+              >
+                {
+                  restartMarks.map((offset) => (
+                    <circle
+                      class="restart-mark"
+                      cx="50"
+                      cy="50"
+                      r={ARC_R}
+                      pathLength="100"
+                      stroke-dasharray={RESTART_DASH}
+                      stroke-dashoffset={offset}
+                    />
                   ))
                 }
               </svg>
@@ -228,6 +264,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
               <div class="unlock-card" id="sc-unlock-card" aria-hidden="true" hidden>
                 <p class="unlock-card-title">Unlocked</p>
                 <ul class="unlock-list" id="sc-unlock-list"></ul>
+                <p class="unlock-more" id="sc-unlock-more" hidden></p>
               </div>
             </div>
 
@@ -236,6 +273,12 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
               <span class="state-noun">reactor</span>
             </p>
             <p class="surge-label" id="sc-surge-label" hidden>Surge incoming</p>
+            <!-- Left alone, the reactor runs down, then faults (§8.5): this stands
+               in for the state label, with the output left or the restart's count. -->
+            <p class="power-label" id="sc-power-label" hidden>
+              <span class="power-name" id="sc-power-name">Running down</span>
+              <span class="power-detail" id="sc-power-detail"></span>
+            </p>
 
             <div class="combo" id="sc-combo-meter">
               <div class="combo-row">
@@ -822,29 +865,6 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
       </div>
     </div>
 
-    <!-- Offline progress (spec §7). -->
-    <div
-      class="modal-overlay"
-      id="sc-away-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="sc-away-title"
-      hidden
-    >
-      <div class="modal">
-        <h3 class="modal-title" id="sc-away-title">While you were away</h3>
-        <p class="modal-message">
-          Your auto-tappers ran for{' '}<span class="readout" id="sc-away-time">0s</span> at{' '}
-          <span id="sc-away-rate">half speed</span> and made{' '}
-          <span class="readout" id="sc-away-energy">0</span> energy.<span id="sc-away-credit" hidden
-          ></span><span id="sc-away-offers" hidden></span>
-        </p>
-        <div class="modal-actions">
-          <button class="btn btn-primary" id="sc-away-collect" type="button">Collect</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Buying a perk that needs room: with all five slots full the player
          picks one to drop, and a second keystone asks before it swaps out the
          first. The script fills it for the offer at hand. -->
@@ -989,6 +1009,11 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   }
   .game-section :global([data-family='machines']) {
     --perk: var(--perk-machines);
+  }
+  /* Not a perk: a rung of the isotope track credited where it acts, in the
+     isotopes' blue (the Reactor-Ramp Exception), such as Night Lab's toast. */
+  .game-section :global([data-family='track']) {
+    --perk: var(--ramp-blue);
   }
 
   .game-card {
@@ -1503,14 +1528,124 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     }
   }
 
-  /* --- Asleep (while you were away) and the reset sequence ------------------- */
+  /* --- Run-down, fault and restart (SPACEBAR-CLICKER.md §8.5) ----------------
 
-  /* Asleep: the core and dial sit dim behind the "While you were away" dialog,
-     then brighten over the same 0.9 s the energy takes to count in. */
-  .reactor-face.is-asleep .core,
-  .reactor-face.is-asleep .core-arc {
-    opacity: 0.35;
-    filter: saturate(0.3);
+     Left alone, the reactor runs down: the core and the dial fade and lose
+     their color in step with the output, --power, which the script steps from
+     1 to 0. A press brings it straight back, the color returning over the
+     same 0.9 s fade. At nothing it faults: a grey, still core, and the dial's
+     arc gives way to the restart's marks, which light in the stage color one
+     press on the beat at a time. Grey is all the run-down adds: no red, no
+     amber, and nothing flickers (the Reactor-Ramp Exception). */
+  .reactor-face {
+    --power: 1;
+  }
+
+  .reactor-face[data-power] .core,
+  .reactor-face[data-power] .core-arc {
+    opacity: calc(0.3 + 0.7 * var(--power));
+    filter: saturate(calc(0.15 + 0.85 * var(--power)));
+  }
+
+  /* Still: the core no longer breathes, and its motes hold where they are. */
+  .reactor-face[data-power='fault'] .core {
+    opacity: 0.28;
+    filter: grayscale(1);
+    animation: none;
+  }
+
+  .reactor-face[data-power='fault'] .mote {
+    animation-play-state: paused;
+  }
+
+  .reactor-face[data-power='fault'] .core-arc {
+    opacity: 0.45;
+    filter: grayscale(1);
+  }
+
+  .dial-arc,
+  .dial-led {
+    transition: opacity 400ms ease;
+  }
+
+  /* The dial clears for the restart's marks; its arc and lights come back after. */
+  .reactor-face[data-power='fault'] :is(.dial-arc, .dial-led) {
+    opacity: 0;
+  }
+
+  /* The restart's marks, on the arc's own circle. Unlit, they are hairlines;
+     lit, the stage color with a little of its glow. */
+  .restart-ring {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    width: calc(var(--core-size) + 56px);
+    height: calc(var(--core-size) + 56px);
+    overflow: visible;
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-90deg);
+    pointer-events: none;
+    transition: opacity 400ms ease;
+  }
+
+  .reactor-face[data-power='fault'] .restart-ring {
+    opacity: 1;
+  }
+
+  .restart-mark {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 3;
+    transition:
+      stroke 320ms ease,
+      filter 320ms ease;
+  }
+
+  .restart-mark.is-lit {
+    stroke: var(--stage);
+    filter: drop-shadow(0 0 2.5px color-mix(in srgb, var(--stage) 70%, transparent));
+    transition-duration: 120ms;
+  }
+
+  /* Each press on the beat: its mark lands a touch heavy, then settles. */
+  .restart-mark.is-igniting {
+    animation: mark-ignite 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes mark-ignite {
+    0% {
+      stroke-width: 6;
+    }
+    100% {
+      stroke-width: 3;
+    }
+  }
+
+  /* The tenth press: the full ring swells once and fades as the dial's arc
+     and the core's color come back. */
+  .restart-ring.is-complete {
+    animation: restart-done 1000ms ease forwards;
+  }
+
+  .restart-ring.is-complete .restart-mark {
+    stroke: var(--stage);
+    animation: mark-swell 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes restart-done {
+    0%,
+    45% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes mark-swell {
+    40% {
+      stroke-width: 6;
+    }
   }
 
   /* Reset the experiment: everything else on the face dims while the core
@@ -2301,6 +2436,37 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     color: var(--gold);
   }
 
+  /* Stands in for the state label while the reactor runs down or has
+     faulted: neutral ink, since the run-down adds no color. */
+  .power-label {
+    z-index: 1;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+    font-size: var(--text-title-size);
+  }
+
+  .power-name {
+    font-weight: 700;
+    color: var(--ink-secondary);
+  }
+
+  .power-label.is-fault .power-name {
+    color: var(--ink-primary);
+  }
+
+  .power-detail {
+    color: var(--ink-muted);
+  }
+
+  .power-detail :global(.readout) {
+    color: var(--ink-secondary);
+  }
+
+  .power-name.is-settling {
+    animation: name-settle 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
   /* --- Combo meter ----------------------------------------------------------- */
 
   .combo {
@@ -2605,6 +2771,22 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     font-size: 0.75rem;
     line-height: 1.5;
     color: var(--ink-secondary);
+  }
+
+  /* A reset that lands more rungs than the card lists points to the rest. */
+  .unlock-more {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  .unlock-more :global(.readout) {
+    color: var(--ramp-blue);
+  }
+
+  /* While a card is over the core, the core's area comes forward, so a tall
+     card covers the labels around it rather than sitting under them. */
+  .core-wrap:has(> :is(.unlock-card, .surge-card):not([hidden])) {
+    z-index: 2;
   }
 
   /* --- Toast ---------------------------------------------------------------- */
@@ -4141,7 +4323,11 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     .isotope-next.is-arriving,
     .isotope-next.is-up,
     .isotope-ring-fill,
-    .isotope-meter-fill {
+    .isotope-meter-fill,
+    .restart-mark.is-igniting,
+    .restart-ring.is-complete,
+    .restart-ring.is-complete .restart-mark,
+    .power-name.is-settling {
       animation: none;
       transition: none;
     }

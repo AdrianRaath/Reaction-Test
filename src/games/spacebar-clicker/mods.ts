@@ -23,7 +23,6 @@ import {
   COMBO,
   COMBO_TIERS,
   ISOTOPE_BONUS,
-  OFFLINE,
   PERK_DROPS,
   PERK_EFFECT,
   PERK_SLOTS,
@@ -35,7 +34,6 @@ import {
   type AutoTapperId,
   type ComboRules,
   type ComboTierDef,
-  type OfflineRules,
   type PerkId,
   type PerkRarity,
   type RundownRules,
@@ -107,8 +105,6 @@ export interface Mods {
   // --- Away --------------------------------------------------------------
   /** How a reactor left alone runs down (rundown.ts). */
   rundown: Readonly<RundownRules>;
-  /** Legacy away progress, until the script moves to the run-down. */
-  offline: Readonly<OfflineRules>;
 
   // --- Perk rules the isotope track bends ----------------------------------
   /** Perks a run can hold. */
@@ -163,7 +159,6 @@ export const BASE_MODS: Readonly<Mods> = Object.freeze({
   tapperCostMult: 1,
   replicateEveryS: 0,
   rundown: RUNDOWN,
-  offline: OFFLINE,
   perkSlots: PERK_SLOTS,
   keystoneSlots: 1,
   freshLevel: 1,
@@ -175,11 +170,10 @@ export const BASE_MODS: Readonly<Mods> = Object.freeze({
 });
 
 /** Mods while perks are applied: the nested rule sets are this run's own copies. */
-type Draft = Omit<Mods, 'combo' | 'surge' | 'rundown' | 'offline' | 'tapperMultById'> & {
+type Draft = Omit<Mods, 'combo' | 'surge' | 'rundown' | 'tapperMultById'> & {
   combo: ComboRules;
   surge: SurgeRules;
   rundown: RundownRules;
-  offline: OfflineRules;
   tapperMultById: Record<AutoTapperId, number>;
 };
 
@@ -265,9 +259,6 @@ const EFFECTS: Record<PerkId, (m: Draft, v: number) => void> = {
   },
   'night-shift': (m, v) => {
     m.rundown.fallS = v * 3600;
-    // Legacy away progress, until the script moves to the run-down.
-    m.offline.rate = PERK_EFFECT.nightShiftRate;
-    m.offline.capS = v * 3600;
   },
   'feedback-loop': (m, v) => {
     m.pressPaysEps = v;
@@ -299,10 +290,6 @@ const RUNGS: Partial<Record<RungId, (m: Draft) => void>> = {
   'night-lab': (m) => {
     // Night Lab holds full output longer; Night Shift lengthens the fall, so they add up.
     m.rundown.fullS = Math.max(m.rundown.fullS, TRACK_EFFECT.nightLabFullS);
-    // Legacy away progress, until the script moves to the run-down. Night
-    // Shift pays more, and wins where it does.
-    m.offline.rate = Math.max(m.offline.rate, TRACK_EFFECT.nightLabRate);
-    m.offline.capS = Math.max(m.offline.capS, TRACK_EFFECT.nightLabCapS);
   },
   'lucky-find': (m) => {
     m.dropOdds = TRACK_EFFECT.luckyFindOdds;
@@ -337,7 +324,6 @@ function build(state: SaveState, rungs: readonly RungId[]): Readonly<Mods> {
     combo: { ...BASE_MODS.combo },
     surge: { ...BASE_MODS.surge },
     rundown: { ...BASE_MODS.rundown },
-    offline: { ...BASE_MODS.offline },
     tapperMultById: { ...BASE_MODS.tapperMultById },
     stabiliser: state.upgrades.stabiliser > 0,
     syncShare: state.upgrades.sync > 0 ? SYNC_SHARE : 0,

@@ -137,7 +137,7 @@ test('the save survives a reload', async ({ page }) => {
   await expect(page.locator('.shop-item[data-id="finger"] [data-level]')).toHaveText('1/20');
 });
 
-test('away progress: the dialog, the award, and Collect', async ({ page }) => {
+test('time away: paid on the run-down’s clock and counted in, with no dialog', async ({ page }) => {
   await openGame(page);
   await editSave(page, (s) => {
     s.tappers = { ...s.tappers, pneumatic: 2 };
@@ -146,18 +146,19 @@ test('away progress: the dialog, the award, and Collect', async ({ page }) => {
     s.revealed = ['assistant', 'pneumatic', 'arm'];
     s.seen = ['assistant', 'pneumatic'];
     s.lastSeen = Date.now() - 600_000;
+    s.tendedAt = s.lastSeen;
   });
 
   await expect(page.locator('#sc-new-auto'), 'a newly revealed tapper tags its tab').toBeVisible();
-  await expect(page.locator('#sc-away-modal')).toBeVisible();
-  // 6 a second for 600 s at half rate, x1.05 for Warming.
-  await expect(page.locator('#sc-away-energy')).toHaveText('1,890');
-
-  const before = await energy(page);
-  await page.click('#sc-away-collect');
+  // Ten minutes is inside the half hour at full output: 6 a second, x1.05 for Warming.
+  // Loading adds a moment, so the last digits may run on a little.
+  await expect(page.locator('#sc-toast-text')).toHaveText(
+    /^Untended 10m 0\ds: \+3,7[89]\d energy$/
+  );
+  await expect(page.locator('.modal-overlay:not([hidden])')).toHaveCount(0);
+  await expect(page.locator('#sc-reactor')).not.toHaveAttribute('data-power');
   await page.waitForTimeout(1100); // the energy counts in over 0.9 s
-  expect(await energy(page)).toBeGreaterThanOrEqual(before + 1890);
-  expect(await page.evaluate(() => document.activeElement?.id)).toBe('sc-reactor');
+  expect(await energy(page)).toBeGreaterThanOrEqual(3780);
 
   await page.click('[data-shop-tab="auto"]');
   await expect(page.locator('#sc-new-auto'), 'opening the tab clears its tag').toBeHidden();

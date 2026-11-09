@@ -31,6 +31,7 @@ import {
   earn,
   energyPerPress,
   energyPerSecond,
+  isotopeThreshold,
   luckyMultiplier,
   offerOn,
   perk,
@@ -43,6 +44,7 @@ import { IncomeMeter } from './income';
 import { modsOf, type Mods } from './mods';
 import {
   buyPerk,
+  deferPerks,
   perkLevel,
   perkTick,
   placeOffer,
@@ -52,6 +54,7 @@ import {
   surgeDrop,
 } from './perks';
 import { nextRandom } from './rng';
+import { fullOutputSeconds, untendedRate } from './rundown';
 import { defaultSave, keepable, prestigeReset, type PerkOffer, type SaveState } from './save';
 import { activeRungs, type ForkPicks } from './track';
 
@@ -513,9 +516,10 @@ export function summarize(player: Player, policy: PerkPolicy, seeds: readonly nu
 
 /**
  * When a player resets: as soon as a reset pays `isotopes`. One resets at a
- * million; two waits for 4M; three waits for 9M.
+ * million; two waits for 3M; three waits for 9M; four waits for 27M, the top
+ * of the best range on the tripling payout (§8.5).
  */
-export const HABITS = { eager: 1, patient: 2, saver: 3 } as const;
+export const HABITS = { eager: 1, patient: 2, saver: 3, late: 4 } as const;
 export type Habit = keyof typeof HABITS;
 
 export interface CareerRun {
@@ -543,6 +547,22 @@ export function keepAtReset(state: SaveState): PerkId | undefined {
 }
 
 /**
+ * Reset a run for what it pays, with these fork picks, the keeping rung
+ * carrying a perk across. The picks are made at the first reset that reaches
+ * each fork, as the reset dialog asks for them.
+ */
+function resetRun(state: SaveState, picks: ForkPicks, now: number): SaveState {
+  const gain = prestigeGain(state.runLifetime);
+  // Keeping reads the rungs the reset reaches, so it uses the picks too.
+  const reached = {
+    ...state,
+    isotopes: state.isotopes + gain,
+    forks: { ...state.forks, ...picks },
+  };
+  return prestigeReset(state, gain, now, { forks: picks, keep: keepAtReset(reached) });
+}
+
+/**
  * Play run after run from a new save, resetting on `habit` with these fork
  * picks, until the career holds `until` isotopes. The picks are made at the
  * first reset that reaches each fork, as the reset dialog asks for them, and
@@ -558,7 +578,7 @@ export function simulateCareer(
 ): CareerResult {
   const runs: CareerRun[] = [];
   const reachedAt: Partial<Record<number, number>> = {};
-  const goal = PRESTIGE_UNLOCK * HABITS[habit] ** 2;
+  const goal = isotopeThreshold(HABITS[habit]);
   let from: SaveState | undefined;
   let totalS = 0;
   while (!from || from.isotopes < until) {
@@ -567,19 +587,97 @@ export function simulateCareer(
     if (r.firstPrestigeS === null) return { runs, reachedAt, finished: false };
     totalS += r.firstPrestigeS;
     runs.push({ isotopes, minutes: r.firstPrestigeS / 60, millionMinutes: r.millionS! / 60 });
-
-    const gain = prestigeGain(r.state.runLifetime);
-    // Keeping reads the rungs the reset reaches, so it uses the picks too.
-    const reached = {
-      ...r.state,
-      isotopes: isotopes + gain,
-      forks: { ...r.state.forks, ...picks },
-    };
-    from = prestigeReset(r.state, gain, totalS * 1000, {
-      forks: picks,
-      keep: keepAtReset(reached),
-    });
+    from = resetRun(r.state, picks, totalS * 1000);
     for (let i = isotopes + 1; i <= from.isotopes; i++) reachedAt[i] = totalS / 60;
   }
   return { runs, reachedAt, finished: true };
+}
+
+// --- Sittings (the run-down, §8.5) ----------------------------------------------------
+
+/** How a player spreads their play: sittings at the reactor, and the reactor left alone between. */
+export interface Schedule {
+  name: string;
+  /** Seconds at the reactor each sitting. */
+  activeS: number;
+  /** Seconds away after each sitting. */
+  awayS: number;
+}
+
+export const SCHEDULES = {
+  /** 45 minutes an evening, then a night away: the run-down pays in full and faults. */
+  evenings: { name: 'Evenings', activeS: 45 * 60, awayS: 14 * 3600 },
+  /** Five minutes an hour at work: the run-down never faults. */
+  work: { name: 'At work', activeS: 5 * 60, awayS: 55 * 60 },
+} as const satisfies Record<string, Schedule>;
+
+export interface SittingsResult {
+  /** The sitting, from 1, and the minutes of play when the career first held each isotope count. */
+  reachedAt: Partial<Record<number, { sitting: number; minutes: number }>>;
+  /** The most isotopes a reset straight after an absence paid beyond the habit's own. */
+  mostFromAbsence: number;
+  /** False if the career ran out of sittings first. */
+  finished: boolean;
+}
+
+/**
+ * Play a career in sittings: `schedule.activeS` at the reactor, then away for
+ * `schedule.awayS`, the run-down paying for the time away as the game does on
+ * return (rundown.ts). The player presses up to the moment they leave, so the
+ * run-down's clock starts as the sitting ends. A reset comes as soon as the
+ * run pays `habit`, in a sitting or on return. A fault's restart takes a few
+ * seconds and isn't played. `absencePay: false` plays the career with nothing
+ * for time away, to compare.
+ */
+export function simulateSittings(
+  player: Player,
+  policy: PerkPolicy,
+  seed: number,
+  habit: Habit,
+  picks: ForkPicks,
+  schedule: Schedule,
+  { until = 12, absencePay = true, maxSittings = 500 } = {}
+): SittingsResult {
+  const goal = isotopeThreshold(HABITS[habit]);
+  let state = defaultSave(0);
+  state.perks.rng = seed >>> 0;
+  const reachedAt: SittingsResult['reachedAt'] = {};
+  let mostFromAbsence = 0;
+  let playedS = 0;
+  let back = false;
+  for (let sitting = 1; sitting <= maxSittings; sitting++) {
+    let left = schedule.activeS;
+    while (left > 0) {
+      const r = simulateRun(player, policy, seed + sitting * 7919 + Math.round(left), {
+        goal,
+        from: state,
+        maxS: left,
+      });
+      const used = r.firstPrestigeS ?? left;
+      left -= used;
+      playedS += used;
+      if (r.firstPrestigeS === null) break;
+      const isotopes = state.isotopes;
+      if (back)
+        mostFromAbsence = Math.max(
+          mostFromAbsence,
+          prestigeGain(state.runLifetime) - HABITS[habit]
+        );
+      state = resetRun(state, picks, playedS * 1000);
+      for (let i = isotopes + 1; i <= state.isotopes; i++) {
+        reachedAt[i] = { sitting, minutes: playedS / 60 };
+      }
+      if (state.isotopes >= until) return { reachedAt, mostFromAbsence, finished: true };
+      back = false;
+    }
+    if (absencePay) {
+      const mods = modsOf(state);
+      const amount = untendedRate(state, mods) * fullOutputSeconds(0, schedule.awayS, mods.rundown);
+      earn(state, amount);
+      // As in the game, time away never runs an offer down.
+      deferPerks(state, amount);
+    }
+    back = true;
+  }
+  return { reachedAt, mostFromAbsence, finished: false };
 }

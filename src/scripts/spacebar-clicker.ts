@@ -15,20 +15,21 @@
 import { browserAdapter, KEY_PREFIX } from '../engine/storage';
 import { createBeeper } from '../engine/sound';
 import { checkAchievements } from '../games/spacebar-clicker/achievements';
-import { ComboTracker, type PressResult } from '../games/spacebar-clicker/combo';
+import { ComboTracker, RestartTracker, type PressResult } from '../games/spacebar-clicker/combo';
 import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
   COMBO,
   ISOTOPE_TRACK,
   MIN_PRESS_GAP_MS,
-  OFFLINE,
   PERK_FAMILY_NAMES,
   PERK_RARITY_NAMES,
   PERKS,
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
   REACTOR_STATES,
+  RESTART_PRESSES,
+  RUNDOWN,
   SAVE_INTERVAL_MS,
   TRACK_EFFECT,
   type AutoTapperId,
@@ -57,7 +58,6 @@ import {
   nextComboTier,
   nextIsotopeAt,
   offerOn,
-  offlineAward,
   perk,
   pressUpgrade,
   prestigeGain,
@@ -97,6 +97,14 @@ import {
   swapChoices,
   type OfferCredit,
 } from '../games/spacebar-clicker/perks';
+import {
+  isFaulted,
+  outputShare,
+  restartReactor,
+  tend,
+  untendedAward,
+  untendedS,
+} from '../games/spacebar-clicker/rundown';
 import {
   defaultSave,
   keepable,
@@ -150,8 +158,12 @@ function saveSettings(): void {
   adapter.set(SETTINGS_KEY, JSON.stringify(settings));
 }
 
+/**
+ * Write the save. It leaves lastSeen alone: that moves only where energy is
+ * counted, in the frame loop and on return, so a save from a background tab's
+ * timer can't swallow the time away it hasn't paid for.
+ */
 function save(): void {
-  state.lastSeen = Date.now();
   adapter.set(SAVE_KEY, serializeSave(state));
 }
 
@@ -191,6 +203,15 @@ const announceEl = el('sc-announce');
 
 const stateLabelEl = el('sc-state-label');
 const surgeLabel = el('sc-surge-label');
+// The run-down (SPACEBAR-CLICKER.md §8.5): the label that stands in for the
+// stage name, and the restart's marks on the dial's circle.
+const powerLabel = el('sc-power-label');
+const powerName = el('sc-power-name');
+const powerDetail = el('sc-power-detail');
+const restartRing = document.getElementById('sc-restart-ring') as SVGSVGElement | null;
+const restartMarks = Array.from(
+  restartRing?.querySelectorAll<SVGCircleElement>('.restart-mark') ?? []
+);
 const coreNum = el('sc-core-num');
 const coreUnit = el('sc-core-unit');
 const sparksEl = el('sc-sparks');
@@ -254,6 +275,7 @@ const surgeDropName = el('sc-surge-drop-name');
 const surgeCredit = el('sc-surge-credit');
 const unlockCard = el('sc-unlock-card');
 const unlockList = el('sc-unlock-list');
+const unlockMore = el('sc-unlock-more');
 
 const toastEl = el('sc-toast');
 const toastText = el('sc-toast-text');
@@ -381,14 +403,6 @@ const prestigeConfirm = el('sc-prestige-confirm');
 const resetChoices = el('sc-reset-choices');
 const resetPickHint = el('sc-reset-pick-hint');
 
-const awayModal = el('sc-away-modal');
-const awayTime = el('sc-away-time');
-const awayRate = el('sc-away-rate');
-const awayEnergy = el('sc-away-energy');
-const awayOffers = el('sc-away-offers');
-const awayCredit = el('sc-away-credit');
-const awayCollect = el('sc-away-collect');
-
 const swapModal = el('sc-swap-modal');
 const swapTitle = el('sc-swap-title');
 const swapIncoming = el('sc-swap-incoming');
@@ -435,7 +449,8 @@ const SOUND = {
   reactorUp: () => chord([659, 880, 1046]),
   achievement: () => chord([784, 1175]),
   prestige: () => chord([523, 659, 784, 1046], 110),
-  collect: () => chord([523, 659, 784], 80),
+  // The reactor back from a fault: a rising run, lower than a stage change's.
+  restart: () => chord([392, 523, 659, 784], 85),
   perkDrop: (rarity: PerkRarity) => chord(...DROP_CHIMES[rarity]),
   perkBuy: () => chord([880, 1318], 60),
 };
@@ -465,11 +480,14 @@ function announce(text: string): void {
   });
 }
 
-const toastQueue: { text: string; family?: PerkFamily }[] = [];
+const toastQueue: { text: string; family?: PerkFamily | 'track' }[] = [];
 let toastTimer = 0;
 
-/** A short notice on the reactor face. A perk's notice wears its family's hue. */
-function toast(text: string, family?: PerkFamily): void {
+/**
+ * A short notice on the reactor face. A perk's notice wears its family's hue,
+ * and a rung of the isotope track credited where it acts, the isotopes' blue.
+ */
+function toast(text: string, family?: PerkFamily | 'track'): void {
   toastQueue.push({ text, family });
   if (!toastTimer) showNextToast();
 }
@@ -572,9 +590,163 @@ function pressBoost(play: PlayContext, mods = modsOf(state)): number {
 }
 scheduleSurge();
 
+// --- The run-down (SPACEBAR-CLICKER.md §8.5) -----------------------------------
+// Left alone, the reactor runs down on the save's clock (`tendedAt`): full
+// output for a while after the last press or purchase, then less, then a
+// fault, until ten presses on a beat restart it. The rules are pure
+// (rundown.ts); this draws them: the face's --power and data-power, the label
+// that stands in for the stage name, the hint, and the restart's marks.
+
+type Power = 'full' | 'down' | 'fault';
+
+/** The restart's beat, judged by the run's rhythm rules, so Metronome and Perfect Pitch widen it. */
+const restart = new RestartTracker(() => modsOf(state).combo);
+/** What the face shows, and the output it last drew, in whole percent. */
+let power: Power = 'full';
+let powerPct = 100;
+
+const HINT = isTouchInput
+  ? 'Tap the reactor to generate energy. Keep a steady beat to build a combo.'
+  : 'Press the spacebar to generate energy. Keep a steady beat to build a combo.';
+const HINT_DOWN = isTouchInput
+  ? 'Tap the reactor once to bring it back to full power.'
+  : 'Press once to bring the reactor back to full power.';
+const HINT_FAULT = isTouchInput
+  ? 'Tap the reactor on a steady beat to restart it.'
+  : 'Press the spacebar on a steady beat to restart the reactor.';
+const REACTOR_LABEL = reactor.getAttribute('aria-label') ?? '';
+const REACTOR_LABEL_FAULT = `Reactor, faulted. Press the spacebar, or tap here, ${RESTART_PRESSES} times on a steady beat to restart it.`;
+
+/** The share of full output now: 1, falling while the reactor is left alone, 0 at a fault. */
+function powerShare(wall = Date.now()): number {
+  return outputShare(untendedS(state, wall), modsOf(state).rundown);
+}
+
+function powerOf(wall = Date.now()): Power {
+  if (isFaulted(state, wall)) return 'fault';
+  return powerShare(wall) < 1 ? 'down' : 'full';
+}
+
+/**
+ * Draw the reactor's power. Called every frame, it writes only what changed.
+ * `live` is false on a page's first draw and on return from time away, where
+ * the return's own announcement says what happened.
+ */
+function renderPower(wall = Date.now(), live = true): void {
+  const next = powerOf(wall);
+  if (next !== power) {
+    power = next;
+    if (next === 'full') delete reactor.dataset.power;
+    else reactor.dataset.power = next;
+    powerLabel.classList.toggle('is-fault', next === 'fault');
+    setText(powerName, next === 'fault' ? 'Fault' : 'Running down');
+    if (next !== 'full') replay(powerName, 'is-settling');
+    powerLabel.hidden = next === 'full';
+    stateLabelEl.hidden = next !== 'full';
+    if (next !== 'full') surgeLabel.hidden = true;
+    hintEl.textContent = next === 'fault' ? HINT_FAULT : next === 'down' ? HINT_DOWN : HINT;
+    reactor.setAttribute('aria-label', next === 'fault' ? REACTOR_LABEL_FAULT : REACTOR_LABEL);
+    if (next === 'fault') {
+      restart.reset();
+      lightMarks(0);
+      setSentence(powerDetail, ...restartDetail(0));
+      if (live) announce('The reactor has faulted. Press on a steady beat to restart it.');
+    }
+    powerPct = -1;
+  }
+  // The run-down steps by whole percents, so the face fades smoothly without
+  // a style write every frame.
+  const pct =
+    next === 'full'
+      ? 100
+      : next === 'fault'
+        ? 0
+        : Math.min(99, Math.max(1, Math.round(powerShare(wall) * 100)));
+  if (pct !== powerPct) {
+    powerPct = pct;
+    reactor.style.setProperty('--power', String(pct / 100));
+    if (next === 'down') setSentence(powerDetail, [`${pct}%`]);
+  }
+}
+
+/** The fault's detail under the core: the presses left, and a word after a stumble. */
+function restartDetail(count: number, stumbled = false): SentencePart[] {
+  const left = RESTART_PRESSES - count;
+  if (count === 0) return [[String(left)], ' presses on a beat to restart'];
+  return [stumbled ? 'Off the beat: ' : '', [String(left)], ' to restart'];
+}
+
+/** Light the first `count` restart marks; the newest lands with a little weight. */
+function lightMarks(count: number, ignite = false): void {
+  restartMarks.forEach((mark, i) => mark.classList.toggle('is-lit', i < count));
+  if (ignite && count > 0) replay(restartMarks[count - 1]!, 'is-igniting');
+}
+
+/**
+ * A press on a faulted reactor earns nothing. It counts toward the restart
+ * if it keeps the beat, and draws on the rhythm scope either way, so the
+ * player can see their beat while they find it.
+ */
+function restartPress(now: number): void {
+  const before = restart.count;
+  const r = restart.press(now);
+  blips.push({ t: now, kept: r.done || r.count === before + 1, pitch: false });
+  if (reducedMotion()) drawScope(now);
+  if (r.done) {
+    completeRestart();
+    return;
+  }
+  lightMarks(r.count, !r.startedOver);
+  setSentence(powerDetail, ...restartDetail(r.count, r.startedOver));
+  if (r.startedOver) announce('Off the beat. The restart starts again.');
+}
+
+/**
+ * The tenth press on the beat: the ring of marks swells, a ring of light
+ * rolls out from the core with the graticule's wash, and the color flows back
+ * over the face's fade as the stage name settles.
+ */
+function completeRestart(): void {
+  restartReactor(state, Date.now());
+  lightMarks(RESTART_PRESSES);
+  if (restartRing) replay(restartRing, 'is-complete');
+  if (reducedMotion()) lightMarks(0);
+  renderPower();
+  replay(coreEl, 'is-stepped');
+  replay(shockEl, 'is-firing');
+  washFromCore();
+  replay(stateEl, 'is-settling');
+  toast('Reactor restarted');
+  announce('Reactor restarted. Back to full power.');
+  SOUND.restart();
+  dirty = true;
+  save();
+}
+
+restartRing?.addEventListener('animationend', (e) => {
+  if (e.target !== restartRing) return;
+  restartRing.classList.remove('is-complete');
+  lightMarks(0);
+});
+
+/** A press or a purchase brought a run-down reactor back: the color returns over the fade. */
+function onRecovered(): void {
+  renderPower();
+  replay(stateEl, 'is-settling');
+  spawnRimFloat('Full power');
+  announce('Back to full power.');
+}
+
+/** A purchase tends the reactor as a press does. A faulted one still needs its restart. */
+function tendReactor(): void {
+  const wall = Date.now();
+  const wasDown = powerOf(wall) === 'down';
+  if (tend(state, wall) && wasDown) onRecovered();
+}
+
 // --- Rendering ------------------------------------------------------------------
 
-/** How long collected away-energy takes to count into the readout. */
+/** How long energy earned while away takes to count into the readout. */
 const ROLL_MS = 900;
 /** Away-energy still counting in: the readout trails the real balance by it. */
 let energyRoll: { amount: number; start: number } | null = null;
@@ -588,8 +760,9 @@ function renderReadouts(): void {
   }
   energyEl.textContent = formatEnergy(shown);
   const play = playContext();
-  epsEl.textContent = formatRate(energyPerSecond(state, play));
-  eppEl.textContent = formatEnergy(energyPerPress(state, play));
+  // The rates the reactor runs at now: run down, less; faulted, nothing.
+  epsEl.textContent = formatRate(energyPerSecond(state, play) * powerShare());
+  eppEl.textContent = formatEnergy(power === 'fault' ? 0 : energyPerPress(state, play));
 }
 
 function renderReactor(): void {
@@ -646,12 +819,7 @@ function celebrateStage(prevIdx: number): void {
   }
   replay(stateEl, 'is-settling');
   replay(shockEl, 'is-firing');
-
-  const face = reactor.getBoundingClientRect();
-  const core = coreEl.getBoundingClientRect();
-  washEl.style.setProperty('--wash-x', `${core.left - face.left + core.width / 2}px`);
-  washEl.style.setProperty('--wash-y', `${core.top - face.top + core.height / 2}px`);
-  replay(washEl, 'is-washing');
+  washFromCore();
 
   // During a surge the dial is the surge clock; it sweeps back when that ends.
   if (!arcEl || surge.phase === 'warning' || surge.phase === 'active') return;
@@ -667,15 +835,26 @@ function celebrateStage(prevIdx: number): void {
   );
 }
 
+/** The graticule lights in a band travelling out from the core: a stage reached, or a restart. */
+function washFromCore(): void {
+  const face = reactor.getBoundingClientRect();
+  const core = coreEl.getBoundingClientRect();
+  washEl.style.setProperty('--wash-x', `${core.left - face.left + core.width / 2}px`);
+  washEl.style.setProperty('--wash-y', `${core.top - face.top + core.height / 2}px`);
+  replay(washEl, 'is-washing');
+}
+
 function renderCombo(now: number): void {
   const { tiers, comboOff } = modsOf(state);
   // Brute Force: the beat still draws on the scope, but the combo stands down.
-  comboMeter.classList.toggle('is-off', comboOff);
-  if (comboOff) {
+  // So it does on a faulted reactor until the restart.
+  const standDown = comboOff || power === 'fault';
+  comboMeter.classList.toggle('is-off', standDown);
+  if (standDown) {
     setText(comboEl, '0');
     setText(comboTierEl, 'combo');
     comboTierEl.classList.remove('is-tiered');
-    setText(comboNextEl, `off with ${perk('brute-force').name}`);
+    setText(comboNextEl, comboOff ? `off with ${perk('brute-force').name}` : 'after the restart');
     setText(comboMultEl, 'x1');
     comboFill.style.transform = 'scaleX(0)';
     return;
@@ -2003,6 +2182,17 @@ function press(e?: Event): void {
   replay(keycapEl, 'is-down');
   unpinTip();
 
+  // A faulted reactor takes presses toward its restart, and earns nothing.
+  const wall = Date.now();
+  if (isFaulted(state, wall)) {
+    restartPress(now);
+    return;
+  }
+  // A press tends the reactor: one that has run down comes straight back.
+  const wasDown = powerShare(wall) < 1;
+  tend(state, wall);
+  if (wasDown) onRecovered();
+
   const mods = modsOf(state);
   const result = combo.press(now);
   // Brute Force: the beat is still tracked for the scope, but counts for nothing.
@@ -2343,7 +2533,8 @@ function perkFrame(now: number, activeDt: number): void {
 
 /** While Afterglow lasts, the label under the core counts it down in place of the stage name. */
 function renderAfterglow(now: number): void {
-  if (surge.phase === 'warning' || surge.phase === 'active') return;
+  // The run-down's label outranks it (renderPower).
+  if (surge.phase === 'warning' || surge.phase === 'active' || power !== 'full') return;
   const left = afterglowUntil - now;
   const glowing = left > 0;
   reactor.classList.toggle('is-afterglow', glowing);
@@ -2362,21 +2553,31 @@ let lastPanelRender = 0;
 let dirty = false;
 
 function frame(now: number): void {
+  // A page that stalled in view, such as a laptop asleep with the game open,
+  // is paid as time away, on the run-down's clock, rather than lost.
+  if (Date.now() - state.lastSeen > STALL_MS) {
+    settleAbsence();
+    lastFrame = now;
+  }
   const dt = Math.min((now - lastFrame) / 1000, 1);
   lastFrame = now;
   const mods = modsOf(state);
+  const wall = Date.now();
+  renderPower(wall);
 
   // Active play, the clock surges, perk drops and Self-Replicator run on: the
-  // page in view and a press within the last minute.
+  // page in view and a press within the last minute. A faulted reactor has none.
   const visible = !document.hidden;
-  const activeDt = visible && now - lastPressAt < mods.surge.idleAfterS * 1000 ? dt : 0;
+  const activeDt =
+    visible && power !== 'fault' && now - lastPressAt < mods.surge.idleAfterS * 1000 ? dt : 0;
   if (visible) state.playedS += dt;
   activeS += activeDt;
 
   if (combo.tick(now)) onComboBroke();
 
   const play = playContext(now);
-  const eps = energyPerSecond(state, play, mods);
+  // Left alone, the reactor runs down: its output falls to nothing at a fault.
+  const eps = energyPerSecond(state, play, mods) * powerShare(wall);
   // Idle Hands at work: the per-second readout says so.
   epsEl.classList.toggle(
     'is-boosted',
@@ -2433,75 +2634,70 @@ function frame(now: number): void {
     lastPanelRender = now;
   }
 
+  // Everything up to now is counted: time away starts from here.
+  state.lastSeen = wall;
   requestAnimationFrame(frame);
 }
 
-// --- Offline / away progress --------------------------------------------------------------
+// --- Time away (SPACEBAR-CLICKER.md §8.5) ----------------------------------------------
 
-let pendingAway = 0;
+/** A gap up to this long is a tab switch: paid without a word. */
+const QUIET_AWAY_S = 60;
+/** A frame this long after the last, with the page in view, is a stall: paid as time away. */
+const STALL_MS = 3000;
 
 /**
- * Credit the time since the last save. Short gaps (a tab switch) pay full EPS
- * silently; a real absence pays half, capped, behind a Collect button (spec §7).
+ * Credit the time since energy was last counted (the save's lastSeen) on the
+ * run-down's clock: full output for a while after the last press or
+ * purchase, then less, then nothing once the reactor faults (rundown.ts).
+ * There is no dialog. A short gap is paid silently; a longer one counts into
+ * the readout, with a toast and an announcement, and Night Lab is credited
+ * where it held the output up. Time away never runs a perk offer down.
  */
 function settleAbsence(): void {
-  const awayS = Math.max(0, (Date.now() - state.lastSeen) / 1000);
-  if (awayS <= 0) return;
-
-  const award = offlineAward(state, awayS);
-  if (award) {
-    const { rate, capS } = modsOf(state).offline;
-    awayTime.textContent = formatDuration(award.seconds);
-    // Night Shift pays all of it. Night Lab's rate and cap are credited where
-    // they are the ones in force.
-    const lab = hasRung(state, 'night-lab');
-    const labName = rung('night-lab').name;
-    awayRate.textContent =
-      (rate >= 1
-        ? 'full speed'
-        : rate === 0.5
-          ? 'half speed'
-          : `${Math.round(rate * 100)}% speed`) +
-      (lab && rate === TRACK_EFFECT.nightLabRate ? ` with ${labName}` : '');
-    const longer = lab && capS === TRACK_EFFECT.nightLabCapS && award.seconds > OFFLINE.capS;
-    awayCredit.hidden = !longer;
-    awayCredit.textContent = ` ${labName} kept them running past the usual ${OFFLINE.capS / 3600} hours.`;
-    awayEnergy.textContent = formatEnergy(award.energy);
-    // An offer still in the shop is worth a mention: time away didn't use it up.
-    const waiting = state.perks.offers.map((o) => perkTitle(o.id, o.level));
-    awayOffers.hidden = waiting.length === 0;
-    awayOffers.textContent =
-      waiting.length === 1
-        ? ` ${waiting[0]} is still on offer in the shop: time away doesn't count against its window.`
-        : ` ${waiting.join(' and ')} are still on offer in the shop: time away doesn't count against their windows.`;
-    pendingAway = award.energy;
-    // The reactor idled while you were gone; it wakes when you collect.
-    reactor.classList.add('is-asleep');
-    openDialog(awayModal, awayCollect);
-  } else if (awayS > 1) {
-    const amount = energyPerSecond(state) * Math.min(awayS, 60);
-    earn(state, amount);
-    // Time away never runs a perk offer down (SPACEBAR-CLICKER.md §8.1.2).
-    deferPerks(state, amount);
-    afterEarn();
+  const wall = Date.now();
+  const mods = modsOf(state);
+  const { awayS, energy } = untendedAward(state, wall, mods);
+  // The stretch of the run-down the absence covered, in seconds untended.
+  const fromS = Math.max(0, (state.lastSeen - state.tendedAt) / 1000);
+  state.lastSeen = wall;
+  if (energy > 0) {
+    earn(state, energy);
+    deferPerks(state, energy);
+    dirty = true;
   }
-  state.lastSeen = Date.now();
+  renderPower(wall, false);
+  if (awayS > QUIET_AWAY_S && energy > 0) announceReturn(awayS, energy, fromS, wall);
+  // After the return's notice, so a stage the energy reached is told second.
+  if (energy > 0) afterEarn();
 }
 
-awayCollect.addEventListener('click', () => {
-  const amount = pendingAway;
-  earn(state, amount);
-  deferPerks(state, amount);
-  pendingAway = 0;
-  // The core brightens (CSS) while the energy counts into the readout.
-  reactor.classList.remove('is-asleep');
-  if (!reducedMotion()) energyRoll = { amount, start: performance.now() };
-  SOUND.collect();
-  afterEarn();
-  closeDialog(awayModal);
-  renderAll();
-  save();
-});
+/** A real absence: the energy counts into the readout, told by a toast and the announcer. */
+function announceReturn(awayS: number, energy: number, fromS: number, wall: number): void {
+  const mods = modsOf(state);
+  if (!reducedMotion()) energyRoll = { amount: energy, start: performance.now() };
+  const untended = formatDuration(untendedS(state, wall));
+  toast(`Untended ${untended}: +${formatEnergy(energy)} energy`);
+  const words = [`Untended for ${untended}: ${formatEnergy(energy)} energy came in.`];
+  if (power === 'fault') words.push('The reactor faulted: press on a steady beat to restart it.');
+  if (power === 'down') words.push(`The reactor is at ${powerPct}%: press once to bring it back.`);
+  // Night Lab, where it held full output past the usual half hour.
+  if (hasRung(state, 'night-lab') && fromS < mods.rundown.fullS && fromS + awayS > RUNDOWN.fullS) {
+    const credit = `${rung('night-lab').name} held full output for ${spanWords(mods.rundown.fullS)}`;
+    toast(credit, 'track');
+    words.push(`${credit}.`);
+  }
+  const waiting = state.perks.offers.map((o) => perkTitle(o.id, o.level));
+  if (waiting.length) words.push(`Still on offer: ${listWords(waiting)}.`);
+  announce(words.join(' '));
+}
+
+/** A length of time in words for a sentence: "an hour", "45 minutes". */
+function spanWords(seconds: number): string {
+  const minutes = Math.round(seconds / 60);
+  if (minutes === 60) return 'an hour';
+  return minutes % 60 === 0 ? `${minutes / 60} hours` : `${minutes} minutes`;
+}
 
 // --- Dialogs ------------------------------------------------------------------------------
 
@@ -2523,12 +2719,12 @@ function closeDialog(modal: HTMLElement): void {
 }
 
 function anyDialogOpen(): boolean {
-  return !resetModal.hidden || !prestigeModal.hidden || !awayModal.hidden || !swapModal.hidden;
+  return !resetModal.hidden || !prestigeModal.hidden || !swapModal.hidden;
 }
 
-for (const modal of [resetModal, prestigeModal, awayModal, swapModal]) {
+for (const modal of [resetModal, prestigeModal, swapModal]) {
   modal.addEventListener('click', (e) => {
-    if (e.target === modal && modal !== awayModal) closeDialog(modal);
+    if (e.target === modal) closeDialog(modal);
   });
 }
 
@@ -2562,6 +2758,11 @@ function restartRun(): void {
   afterglowUntil = 0;
   replicateClock = 0;
   reactor.classList.remove('is-afterglow');
+  // A reset tends the reactor (save.ts), so a fault or a run-down clears.
+  restart.reset();
+  restartRing?.classList.remove('is-complete');
+  lightMarks(0);
+  renderPower(Date.now(), false);
   surgeDropEl.hidden = true;
   window.clearTimeout(unlockTimer);
   unlockCard.hidden = true;
@@ -2581,8 +2782,10 @@ function restartRun(): void {
 const IMPLODE_MS = 500;
 const BLOOM_MS = 900;
 const FLY_MS = 700;
-/** How long the unlock card stays over the core. */
+/** How long the unlock card stays over the core, and a second more for each line past two. */
 const UNLOCK_MS = 5000;
+/** Rungs the unlock card lists. A reset that lands more names the first few and points to the rest. */
+const UNLOCK_LISTED = 4;
 let unlockTimer = 0;
 /** True while the core collapses; presses are ignored for that half second. */
 let imploding = false;
@@ -2624,8 +2827,12 @@ function playReset(isotopesBefore: number, unlocked: readonly RungId[]): void {
 function showUnlocks(unlocked: readonly RungId[]): void {
   window.clearTimeout(unlockTimer);
   if (unlocked.length === 0) return;
+  const listed = unlocked.length > UNLOCK_LISTED ? unlocked.slice(0, UNLOCK_LISTED - 1) : unlocked;
+  const more = unlocked.length - listed.length;
+  unlockMore.hidden = more === 0;
+  if (more > 0) setSentence(unlockMore, [`+${more}`], ' more in the Isotopes tab');
   unlockList.replaceChildren(
-    ...unlocked.map((id) => {
+    ...listed.map((id) => {
       const item = document.createElement('li');
       item.append(
         cardLine('unlock-name', rung(id).name),
@@ -2635,9 +2842,13 @@ function showUnlocks(unlocked: readonly RungId[]): void {
     })
   );
   unlockCard.hidden = false;
-  unlockTimer = window.setTimeout(() => {
-    unlockCard.hidden = true;
-  }, UNLOCK_MS);
+  const lines = listed.length + (more > 0 ? 1 : 0);
+  unlockTimer = window.setTimeout(
+    () => {
+      unlockCard.hidden = true;
+    },
+    UNLOCK_MS + Math.max(0, lines - 2) * 1000
+  );
 }
 
 /** Beads fly from the core to each new slot on the shelf, then land. Returns ms until the last lands. */
@@ -2937,6 +3148,7 @@ for (const [key, btn] of shopButtons) {
         ? buyUpgrade(state, id as PressUpgradeId)
         : buyTapper(state, id as AutoTapperId);
     if (!bought) return;
+    tendReactor();
     SOUND.purchase();
     // The item's glyph plays its own motion once (ShopIcon.astro).
     const glyph = btn.querySelector('.shop-glyph');
@@ -3005,6 +3217,7 @@ function buyOffer(tab: ShopTab, replace?: PerkId): void {
   const result = buyPerk(state, tab, replace);
   if (result !== 'bought' && result !== 'upgraded' && result !== 'swapped') return;
 
+  tendReactor();
   SOUND.perkBuy();
   // Where the flight to the shelf starts, before the tile flares.
   const from = offerRows[tab].tile.getBoundingClientRect();
@@ -3199,9 +3412,7 @@ window.setInterval(() => {
 
 // --- Boot ---------------------------------------------------------------------------------------
 
-hintEl.textContent = isTouchInput
-  ? 'Tap the reactor to generate energy. Keep a steady beat to build a combo.'
-  : 'Press the spacebar to generate energy. Keep a steady beat to build a combo.';
+hintEl.textContent = HINT;
 if (isTouchInput) reactor.classList.add('touch-key');
 
 // The markup ships as Dormant; the saved stage should apply on first paint

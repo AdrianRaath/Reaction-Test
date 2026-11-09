@@ -225,7 +225,6 @@ test('time away never runs an offer down, but play does', async ({ page }) => {
       tappers: { assistant: 0, pneumatic: 10, arm: 0, quantum: 0, collider: 0 },
       perks: {
         ...noDrops,
-        owned: [{ id: 'night-shift', level: 1 }],
         // Half its window left: 200 energy, under ten seconds of these tappers.
         offers: [offer('metronome', 1, 999_999, 4800, 400)],
       },
@@ -234,14 +233,9 @@ test('time away never runs an offer down, but play does', async ({ page }) => {
   );
   await openGame(page);
 
-  await expect(page.locator('#sc-away-modal')).toBeVisible();
-  await expect(page.locator('#sc-away-rate'), 'Night Shift pays all of it').toHaveText(
-    'full speed'
-  );
-  await expect(page.locator('#sc-away-offers')).toHaveText(
-    " Metronome is still on offer in the shop: time away doesn't count against its window."
-  );
-  await page.click('#sc-away-collect');
+  // Ten minutes of 30 a second came in, far past the window, and it still stands.
+  // Loading adds a moment, so the last digits may run on a little.
+  await expect(page.locator('#sc-toast-text')).toHaveText(/^Untended 10m 0\ds: \+18,9\d\d energy$/);
   const row = page.locator('#sc-offer-press');
   await page.waitForTimeout(500);
   await expect(row, 'thousands collected, and the offer is still there').toBeVisible();

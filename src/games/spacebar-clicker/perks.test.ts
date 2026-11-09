@@ -19,7 +19,6 @@ import {
   luckyMultiplier,
   markShopTabSeen,
   offerOn,
-  offlineAward,
   shopTabHasNews,
   tapperCost,
   upgradeSwitchedOff,
@@ -349,13 +348,6 @@ describe('perk effects on auto-tappers and time away', () => {
     }
     // Level III: 30 minutes at full, then six hours of fall.
     expect(v('night-shift', 3) * 3600).toBe(6 * 3600);
-  });
-
-  it('Night Shift pays all of the legacy away time, for longer', () => {
-    const s = holding(['night-shift', 1]);
-    s.tappers.pneumatic = 2;
-    expect(offlineAward(s, 600)).toEqual({ seconds: 600, energy: 3600 });
-    expect(offlineAward(s, 48 * 3600)!.seconds).toBe(v('night-shift') * 3600);
   });
 
   it('Feedback Loop pays a share of per-second income on every press', () => {
@@ -796,6 +788,5 @@ describe('modifiers with perks', () => {
     expect(BASE_MODS.surge.multiplier).toBe(10);
     expect(BASE_MODS.rundown).toBe(RUNDOWN);
     expect(RUNDOWN.fallS).toBe(90 * 60);
-    expect(BASE_MODS.offline.rate).toBe(0.5);
   });
 });

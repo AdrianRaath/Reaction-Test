@@ -31,6 +31,14 @@ const PLAYER_FOR: Partial<Record<PerkId, Who>> = {
 /** Only pays for time away, which the simulation doesn't play. */
 const OFFLINE_ONLY: readonly PerkId[] = ['night-shift'];
 
+/**
+ * A build's perfect run may be up to 40% faster than its player without
+ * perks; the idle build, 45% (SPACEBAR-CLICKER.md §8.5.7). The build is no
+ * stronger than before; the plain idler slowed when a pause past ten seconds
+ * began to end its combo, and trimming Autopilot would slow idle players twice.
+ */
+const MOST_FASTER: Partial<Record<keyof typeof BUILDS, number>> = { idle: 0.45 };
+
 const run = (who: Who, policy: PerkPolicy): Summary => summarize(PLAYERS[who], policy, SEEDS);
 /** How much faster than `base`, as a share: 0.2 is 20% faster. */
 const faster = (base: Summary, s: Summary) => (base.median - s.median) / base.median;
@@ -101,11 +109,11 @@ describe('pacing with perks', () => {
     expect(f).toBeLessThan(0.25);
   });
 
-  it('makes every build’s perfect run 15% to 40% faster for its player', () => {
+  it('makes every build’s perfect run 15% to 40% faster for its player, the idle build 45%', () => {
     for (const [name, build] of Object.entries(BUILDS)) {
       const f = faster(base[build.player], dreams[name as keyof typeof BUILDS]);
       expect(f, name).toBeGreaterThan(0.15);
-      expect(f, name).toBeLessThan(0.4);
+      expect(f, name).toBeLessThan(MOST_FASTER[name as keyof typeof BUILDS] ?? 0.4);
     }
   });
 

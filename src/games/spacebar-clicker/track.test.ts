@@ -4,7 +4,6 @@ import { ComboTracker } from './combo';
 import {
   COMBO,
   ISOTOPE_TRACK,
-  OFFLINE,
   PERK_DROPS,
   PERK_SLOTS,
   PERKS,
@@ -226,17 +225,6 @@ describe('track rungs', () => {
     expect(lab.fallS).toBe(RUNDOWN.fallS);
     const both = modsOf(hold(onTrack(4), ['night-shift', 1])).rundown;
     expect(both).toEqual({ fullS: TRACK_EFFECT.nightLabFullS, fallS: v('night-shift', 1) * 3600 });
-  });
-
-  it('Night Lab pays more for the legacy away time, and Night Shift still wins', () => {
-    const lab = modsOf(onTrack(4)).offline;
-    expect(lab.rate).toBe(TRACK_EFFECT.nightLabRate);
-    expect(lab.capS).toBe(TRACK_EFFECT.nightLabCapS);
-    expect(modsOf(onTrack(3)).offline).toEqual(OFFLINE);
-    const shift = modsOf(hold(onTrack(4), ['night-shift', 1])).offline;
-    // The longer cap and the higher rate win, whichever gives them.
-    expect(shift.capS).toBe(Math.max(v('night-shift', 1) * 3600, TRACK_EFFECT.nightLabCapS));
-    expect(shift.rate).toBe(1);
   });
 
   it('Lucky Find then Rich Find lean ordinary drops rarer', () => {

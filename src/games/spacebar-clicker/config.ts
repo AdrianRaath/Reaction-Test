@@ -168,13 +168,6 @@ export interface RundownRules {
   fallS: number;
 }
 
-/** Legacy away progress (spec §7), until the script moves to the run-down. */
-export interface OfflineRules {
-  capS: number;
-  rate: number;
-  minAwayS: number;
-}
-
 export interface PerkDef {
   id: PerkId;
   name: string;
@@ -225,7 +218,9 @@ export const PRESS_UPGRADES: readonly PressUpgradeDef[] = [
     id: 'stabiliser',
     name: 'Stabiliser',
     detail: 'A broken combo drops one tier instead of resetting',
-    baseCost: 20_000,
+    // 5,000 since it drops a tier rather than 10 (SPACEBAR-CLICKER.md §8.5.7):
+    // a smaller effect, a smaller price, and the first run back near 24 minutes.
+    baseCost: 5_000,
     scale: 1,
     max: 1,
   },
@@ -363,13 +358,6 @@ export const RUNDOWN: Readonly<RundownRules> = {
 
 /** Presses on a steady beat that restart a faulted reactor. */
 export const RESTART_PRESSES = 10;
-
-/** Legacy away progress (spec §7), until the script moves to the run-down. */
-export const OFFLINE: Readonly<OfflineRules> = {
-  capS: 4 * 3600,
-  rate: 0.5,
-  minAwayS: 60,
-};
 
 /** Spec §2. Presses closer together than this are discarded. */
 export const PRESS_CAP_PER_S = 30;
@@ -675,8 +663,6 @@ export const PERK_EFFECT = {
   afterglowMult: 3,
   /** Idle Hands' seconds without a press. */
   idleAfterS: 10,
-  /** Night Shift's rate for the legacy away progress, until the script moves to the run-down. */
-  nightShiftRate: 1,
   /** Overtone's tier. */
   overtoneMin: 200,
 } as const;
@@ -882,9 +868,6 @@ export const TRACK_EFFECT = {
   capacitorS: 1,
   /** Night Lab: seconds a reactor left alone holds full output. */
   nightLabFullS: 60 * 60,
-  /** Night Lab's legacy away rate and cap, until the script moves to the run-down. */
-  nightLabRate: 0.6,
-  nightLabCapS: 6 * 3600,
   luckyFindOdds: { common: 0.58, rare: 0.35, keystone: 0.07 } as Readonly<
     Record<PerkRarity, number>
   >,

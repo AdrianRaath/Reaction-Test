@@ -331,7 +331,9 @@ test('an offer with nothing from the track has no credit line', async ({ page })
   await expect(page.locator('#sc-offer-press [data-perk-credit]')).toBeHidden();
 });
 
-test('the away dialog credits Night Lab’s rate and its longer cap', async ({ page }) => {
+test('a return credits Night Lab where it held full output past the half hour', async ({
+  page,
+}) => {
   await seedSave(
     page,
     {
@@ -342,14 +344,18 @@ test('the away dialog credits Night Lab’s rate and its longer cap', async ({ p
       tappers: { assistant: 4 },
       perks: noDrops,
     },
-    5 * 3600 * 1000
+    50 * 60 * 1000
   );
   await openGame(page);
-  await expect(page.locator('#sc-away-modal')).toBeVisible();
-  await expect(page.locator('#sc-away-rate')).toHaveText('60% speed with Night Lab');
-  await expect(page.locator('#sc-away-credit')).toContainText(
-    'Night Lab kept them running past the usual 4 hours.'
+  // 50 minutes, all at full output with Night Lab: 2 a second, x1.05 Warming, x1.4 isotopes.
+  const toast = page.locator('#sc-toast-text');
+  // Loading adds a moment, so the last digits may run on a little.
+  await expect(toast).toHaveText(/^Untended 50m 0\ds: \+8,8[2-4]\d energy$/);
+  await expect(page.locator('#sc-reactor'), 'still at full power').not.toHaveAttribute(
+    'data-power'
   );
+  await expect(toast).toHaveText('Night Lab held full output for an hour', { timeout: 5000 });
+  await expect(page.locator('#sc-toast')).toHaveAttribute('data-family', 'track');
 });
 
 test('Perfect Pitch: a press it catches floats its name', async ({ page }) => {
@@ -422,6 +428,44 @@ test.describe('on a phone', () => {
     await page.click('#sc-prestige-confirm');
     // From 11 to 13 isotopes, the capstone is the only rung reached.
     await expect(page.locator('#sc-unlock-card .unlock-name')).toHaveText(['Twin Keystones']);
+  });
+
+  test('a reset that lands every rung lists three on the card, and points to the rest', async ({
+    page,
+  }) => {
+    // A first run held to 177B pays all twelve isotopes in one reset.
+    await seedSave(page, {
+      energy: 50,
+      runLifetime: 180e9,
+      totalLifetime: 180e9,
+      isotopes: 0,
+      perks: noDrops,
+    });
+    await openGame(page);
+    await page.click('[data-tab="prestige"]');
+    await page.click('#sc-prestige-btn');
+    for (const fieldset of await page.locator('#sc-reset-choices fieldset').all()) {
+      await fieldset.locator('input[type="radio"]').first().check();
+    }
+    await page.locator('#sc-prestige-confirm').scrollIntoViewIfNeeded();
+    await page.click('#sc-prestige-confirm');
+
+    const card = page.locator('#sc-unlock-card');
+    await expect(card).toBeVisible({ timeout: 5000 });
+    await expect(card.locator('.unlock-name')).toHaveText([
+      'Warm Start',
+      'Capacitor',
+      'Sixth Slot',
+    ]);
+    await expect(page.locator('#sc-unlock-more')).toHaveText('+9 more in the Isotopes tab');
+    const fit = await page.evaluate(() => {
+      const c = document.getElementById('sc-unlock-card')!.getBoundingClientRect();
+      const f = document.getElementById('sc-reactor')!.getBoundingClientRect();
+      return {
+        inside: c.top >= f.top && c.bottom <= f.bottom && c.left >= f.left && c.right <= f.right,
+      };
+    });
+    expect(fit).toEqual({ inside: true });
   });
 
   test('six sockets, twelve beads and the ring keep clear of each other', async ({ page }) => {

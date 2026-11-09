@@ -6,7 +6,6 @@ import {
   AUTO_TAPPERS,
   COMBO,
   COMBO_TIERS,
-  OFFLINE,
   PRESS_UPGRADES,
   REACTOR_STATES,
   RESTART_PRESSES,
@@ -28,7 +27,6 @@ import {
   milestoneBonus,
   nextComboTier,
   nextIsotopeAt,
-  offlineAward,
   prestigeGain,
   reactorProgress,
   reactorState,
@@ -101,7 +99,7 @@ describe('costs', () => {
 
   it('keeps one-off upgrades at a fixed price', () => {
     const s = defaultSave(NOW);
-    expect(upgradeCost(s, 'stabiliser')).toBe(20_000);
+    expect(upgradeCost(s, 'stabiliser')).toBe(5_000);
   });
 
   it('prices the Nth auto-tapper from the count owned', () => {
@@ -361,22 +359,6 @@ describe('run-down', () => {
     s.tappers.pneumatic = 2;
     expect(untendedRate(s)).toBe(6);
     expect(untendedRate(s, bent({ idleBoostMult: 2, idleBoostAfterS: 10 }))).toBeCloseTo(12);
-  });
-});
-
-describe('offline progress', () => {
-  it('awards nothing without an auto-tapper or under a minute away', () => {
-    const s = defaultSave(NOW);
-    expect(offlineAward(s, 3600)).toBeNull();
-    s.tappers.assistant = 1;
-    expect(offlineAward(s, 60)).toBeNull();
-  });
-
-  it('pays half EPS for the time away, capped at four hours', () => {
-    const s = defaultSave(NOW);
-    s.tappers.pneumatic = 2; // 6 EPS
-    expect(offlineAward(s, 600)).toEqual({ seconds: 600, energy: 6 * 600 * 0.5 });
-    expect(offlineAward(s, 10 * 3600)!.seconds).toBe(4 * 3600);
   });
 });
 
@@ -757,7 +739,6 @@ describe('run modifiers', () => {
     expect(BASE_MODS.combo).toBe(COMBO);
     expect(BASE_MODS.surge).toBe(SURGE);
     expect(BASE_MODS.rundown).toBe(RUNDOWN);
-    expect(BASE_MODS.offline).toBe(OFFLINE);
     expect(BASE_MODS.tiers).toBe(COMBO_TIERS);
   });
 
@@ -853,14 +834,6 @@ describe('run modifiers', () => {
     expect(tapperCost(s, 'assistant', bent({ tapperCostMult: 0.8 }))).toBe(60);
     s.tappers.assistant = 1; // 90
     expect(tapperCost(s, 'assistant', bent({ tapperCostMult: 0.7 }))).toBe(63);
-  });
-
-  it('bend away progress', () => {
-    const s = defaultSave(NOW);
-    s.tappers.pneumatic = 2; // 6
-    const night = bent({ offline: { ...OFFLINE, rate: 1, capS: 8 * 3600 } });
-    expect(offlineAward(s, 600, night)).toEqual({ seconds: 600, energy: 3600 });
-    expect(offlineAward(s, 10 * 3600, night)!.seconds).toBe(8 * 3600);
   });
 });
 

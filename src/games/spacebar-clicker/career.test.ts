@@ -6,6 +6,8 @@
  *
  * Each habit plays every fork on its first side, then each fork flipped
  * alone, so the two sides of a fork are compared with everything else equal.
+ * Each habit also plays a career in sittings, with the run-down paying for
+ * the time away between them (§8.5.7).
  *
  * Set CAREER_REPORT to a file path to write the whole table there, as the doc
  * quotes it: CAREER_REPORT=career.txt npx vitest run career
@@ -16,14 +18,18 @@ import { writeFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { ISOTOPE_TRACK } from './config';
+import { isotopeThreshold } from './economy';
 import {
   HABITS,
   PLAYERS,
+  SCHEDULES,
   simulateCareer,
   simulateRun,
+  simulateSittings,
   type CareerResult,
   type Habit,
   type PerkPolicy,
+  type SittingsResult,
 } from './sim';
 import { isFork, type ForkPicks } from './track';
 
@@ -39,8 +45,12 @@ const SECOND: ForkPicks = Object.fromEntries(FORKS.map((s) => [s.isotopes, s.run
 const flipped = (isotopes: number): ForkPicks => ({ ...FIRST, [isotopes]: SECOND[isotopes] });
 
 const HABIT_NAMES = Object.keys(HABITS) as Habit[];
+type ScheduleName = keyof typeof SCHEDULES;
+const SCHEDULE_NAMES = Object.keys(SCHEDULES) as ScheduleName[];
 /** Careers by habit, then by pick set: 'first', 'second', or the fork flipped. */
 const careers = {} as Record<Habit, Record<string, CareerResult[]>>;
+/** Careers in sittings to 12 isotopes, by schedule, then habit, every fork on its first side. */
+const sittings = {} as Record<ScheduleName, Record<Habit, SittingsResult[]>>;
 const firstRuns: number[] = [];
 
 const play = (habit: Habit, picks: ForkPicks) =>
@@ -50,6 +60,14 @@ beforeAll(() => {
   for (const habit of HABIT_NAMES) {
     careers[habit] = { first: play(habit, FIRST), second: play(habit, SECOND) };
     for (const step of FORKS) careers[habit][step.isotopes] = play(habit, flipped(step.isotopes));
+  }
+  for (const name of SCHEDULE_NAMES) {
+    sittings[name] = {} as Record<Habit, SittingsResult[]>;
+    for (const habit of HABIT_NAMES) {
+      sittings[name][habit] = SEEDS.map((seed) =>
+        simulateSittings(PLAYERS.steady, POLICY, seed, habit, FIRST, SCHEDULES[name])
+      );
+    }
   }
   for (const seed of SEEDS) firstRuns.push(simulateRun(PLAYERS.steady, POLICY, seed).millionS!);
   if (process.env.CAREER_REPORT) writeFileSync(process.env.CAREER_REPORT, report());
@@ -86,7 +104,7 @@ function report(): string {
   ];
   for (const habit of HABIT_NAMES) {
     const cs = all(habit);
-    const goal = HABITS[habit] ** 2;
+    const goal = isotopeThreshold(HABITS[habit]) / 1e6;
     lines.push('', `${habit}: resets at ${goal}M, for ${HABITS[habit]} isotope(s) a reset`);
     const reached = Array.from({ length: UNTIL }, (_, i) => i + 1)
       .filter((n) => cs[0]!.reachedAt[n] !== undefined)
@@ -110,6 +128,16 @@ function report(): string {
         `  Fork ${step.isotopes}, minutes from it to ${UNTIL}: ${ra} ${a.toFixed(1)}, ${rb} ${b.toFixed(1)} (${Math.round(apart([a, b]) * 100)}% apart)`
       );
     }
+  }
+  lines.push('', 'Sittings to 6 and 12 isotopes (median), with the run-down between');
+  for (const name of SCHEDULE_NAMES) {
+    const row = HABIT_NAMES.map((habit) => {
+      const rs = sittings[name][habit];
+      const at = (n: number) => median(rs.map((r) => r.reachedAt[n]?.sitting ?? Infinity));
+      const most = Math.max(...rs.map((r) => r.mostFromAbsence));
+      return `${habit} ${at(6)}/${at(12)} (most extra ${most})`;
+    });
+    lines.push(`  ${SCHEDULES[name].name}: ${row.join(', ')}`);
   }
   return lines.join('\n');
 }
@@ -157,6 +185,28 @@ describe('careers with the isotope track', () => {
       const minutes = millionsBeforeCapstone(habit);
       expect(minutes[0], habit).toBeGreaterThanOrEqual(7);
       expect(minutes.filter((m) => m < 8).length / minutes.length, habit).toBeLessThanOrEqual(0.01);
+    }
+  });
+});
+
+describe('careers in sittings, with the run-down between', () => {
+  it('reach 12 isotopes on every schedule and habit', () => {
+    for (const name of SCHEDULE_NAMES) {
+      for (const habit of HABIT_NAMES) {
+        for (const r of sittings[name][habit]) expect(r.finished, `${name}, ${habit}`).toBe(true);
+      }
+    }
+  });
+
+  // Time away pays, but never skips the track: a night away once took a
+  // reset from 3 isotopes to 13 (finding 2, §8.5.1).
+  it('pay a reset straight after an absence at most 2 isotopes beyond the habit', () => {
+    for (const name of SCHEDULE_NAMES) {
+      for (const habit of HABIT_NAMES) {
+        for (const r of sittings[name][habit]) {
+          expect(r.mostFromAbsence, `${name}, ${habit}`).toBeLessThanOrEqual(2);
+        }
+      }
     }
   });
 });

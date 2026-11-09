@@ -63,33 +63,33 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 
 ## 3. Code map
 
-| File                                                  | Responsibility                                                                                                                                                                                                                                                                                 |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, offline, achievements. Pure data.                                                                                                                                                                  |
-| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, the luck roll, reactor state and progress, prestige gain and where the next isotope comes, offline award, buying, shop reveals, shop-tab notices, and which one-off upgrades a perk switches off.                        |
-| `src/games/spacebar-clicker/mods.ts`                  | A run's modifiers: every rule a perk or a track rung can bend, in one object. `BASE_MODS` is the shipped game; `modsOf(state)` folds in the Stabiliser, Synchronisation, every owned perk at its level, then the track's rungs in force.                                                       |
-| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo, with the Stabiliser's tier drop and the 10-second pause. `RestartTracker`: the restart's 10 presses on a beat. Both take timestamps from the caller, so they have no clock of their own, and read the run's rules on every press.                            |
-| `src/games/spacebar-clicker/rng.ts`                   | A seeded random generator (mulberry32). Pure; for perk drops, so a reload can't reroll them.                                                                                                                                                                                                   |
-| `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together, without a surge's or Afterglow's boost. Perk prices and windows are set in it.                                                                                                         |
-| `src/games/spacebar-clicker/rundown.ts`               | The run-down (§8.5): the output share of a reactor left alone, the energy over a stretch of it, the fault, tending and the restart, and what a hidden or closed tab earned. Pure.                                                                                                              |
-| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`, which starts the new run with the track's head starts and any kept perk.                                                                                                                                                          |
-| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                                                                                                                               |
-| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                                                                         |
-| `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                                                                                      |
-| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks, the run-down and the restart included (83 as of 2026-11-09).                                                                                                                                                                                            |
-| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12), and whole careers of runs and resets with the isotope track (§8.3.7).                                                                                               |
-| `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                                                                                 |
-| `src/games/spacebar-clicker/career.test.ts`           | Holds careers to the isotope track's targets (§8.3.7): a first run unchanged, the two sides of each fork. About 20 s.                                                                                                                                                                          |
-| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (62 as of 2026-11-09).                                                                                                                                                                                      |
-| `src/games/spacebar-clicker/track.ts`                 | The isotope track (§8.3): which rungs are in force for an isotope count and fork picks, what a reset reaches, which forks still need a pick, and the next steps to show. Pure.                                                                                                                 |
-| `src/games/spacebar-clicker/track.test.ts`            | Unit tests for the track: the table, every rung, both sides of every fork, the reset, the save, and the credits (38 as of 2026-11-09).                                                                                                                                                         |
-| `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, every reactor state, perks in play, isotopes, and the isotope track in play (§7).                                                                                                                                 |
-| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, perks in play, the isotope track in play (tooltips, the Isotopes tab, the reset dialog, the unlock card, the reroll), saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine. |
-| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the isotope and perk shelves and their tooltips, the swap and reset dialogs, the isotope track, the unlock card, the Perks panel and the glyph template. The frontmatter computes the dial, bezel, mote and offer-ring geometry.       |
-| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                                                                                                                                     |
-| `src/components/games/PerkIcon.astro`                 | The 25 perk glyphs, in ShopIcon's idiom. The page renders them all into a `<template>` for the script to clone.                                                                                                                                                                                |
-| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`, every perk and the drop odds included.                                                                                                                                                                                  |
-| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                                                                                                                            |
+| File                                                  | Responsibility                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, offline, achievements. Pure data.                                                                                                                                                                                                                               |
+| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, the luck roll, reactor state and progress, prestige gain and where the next isotope comes, offline award, buying, shop reveals, shop-tab notices, and which one-off upgrades a perk switches off.                                                                                     |
+| `src/games/spacebar-clicker/mods.ts`                  | A run's modifiers: every rule a perk or a track rung can bend, in one object. `BASE_MODS` is the shipped game; `modsOf(state)` folds in the Stabiliser, Synchronisation, every owned perk at its level, then the track's rungs in force.                                                                                                                    |
+| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo, with the Stabiliser's tier drop and the 10-second pause. `RestartTracker`: the restart's 10 presses on a beat. Both take timestamps from the caller, so they have no clock of their own, and read the run's rules on every press.                                                                                         |
+| `src/games/spacebar-clicker/rng.ts`                   | A seeded random generator (mulberry32). Pure; for perk drops, so a reload can't reroll them.                                                                                                                                                                                                                                                                |
+| `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together, without a surge's or Afterglow's boost. Perk prices and windows are set in it.                                                                                                                                                                      |
+| `src/games/spacebar-clicker/rundown.ts`               | The run-down (§8.5): the output share of a reactor left alone, the energy over a stretch of it, the fault, tending and the restart, and what a hidden or closed tab earned. Pure.                                                                                                                                                                           |
+| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`, which starts the new run with the track's head starts and any kept perk.                                                                                                                                                                                                                       |
+| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                                                                                                                                                                                            |
+| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                                                                                                                                      |
+| `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                                                                                                                                                   |
+| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks, the run-down and the restart included (80 as of 2026-11-09).                                                                                                                                                                                                                                                         |
+| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12), and whole careers of runs and resets with the isotope track (§8.3.7).                                                                                                                                                            |
+| `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                                                                                                                                              |
+| `src/games/spacebar-clicker/career.test.ts`           | Holds careers to the isotope track's targets (§8.3.7): a first run unchanged, the two sides of each fork. About 20 s.                                                                                                                                                                                                                                       |
+| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (61 as of 2026-11-09).                                                                                                                                                                                                                                                   |
+| `src/games/spacebar-clicker/track.ts`                 | The isotope track (§8.3): which rungs are in force for an isotope count and fork picks, what a reset reaches, which forks still need a pick, and the next steps to show. Pure.                                                                                                                                                                              |
+| `src/games/spacebar-clicker/track.test.ts`            | Unit tests for the track: the table, every rung, both sides of every fork, the reset, the save, and the credits (37 as of 2026-11-09).                                                                                                                                                                                                                      |
+| `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, every reactor state, perks in play, isotopes, and the isotope track in play (§7).                                                                                                                                                                                              |
+| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, perks in play, the isotope track in play (tooltips, the Isotopes tab, the reset dialog, the unlock card, the reroll), the run-down in play (time away, the fault and the restart), saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine. |
+| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the isotope and perk shelves and their tooltips, the swap and reset dialogs, the isotope track, the unlock card, the run-down's label and restart marks, the Perks panel and the glyph template. The frontmatter computes the dial, bezel, mote, restart-mark and offer-ring geometry.              |
+| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                                                                                                                                                                                                  |
+| `src/components/games/PerkIcon.astro`                 | The 25 perk glyphs, in ShopIcon's idiom. The page renders them all into a `<template>` for the script to clone.                                                                                                                                                                                                                                             |
+| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`, every perk and the drop odds included.                                                                                                                                                                                                                                               |
+| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                                                                                                                                                                                         |
 
 ## 4. How the game works
 
@@ -200,11 +200,12 @@ income. Cost = `round(base x scale ^ owned)`.
 | Finger Strength | +1 energy per press, each level             | 75        | x1.8  | 20  |
 | Double Tap      | +5% chance a press counts twice, each level | 1,500     | x2.5  | 10  |
 | Spring Keys     | Press value x1.5, each level                | 25,000    | x6    | 5   |
-| Stabiliser      | A broken combo drops one tier, not to 0     | 20,000    | n/a   | 1   |
+| Stabiliser      | A broken combo drops one tier, not to 0     | 5,000     | n/a   | 1   |
 | Synchronisation | Auto-tappers get half your combo multiplier | 100,000   | n/a   | 1   |
 
 Press-upgrade prices went up four to five times on 2026-10-23, and auto-tapper
-prices stayed put (§4.12).
+prices stayed put (§4.12). The Stabiliser came down from 20,000 to 5,000 on
+2026-11-09, when it began to drop a tier rather than 10 (§8.5.7).
 
 | Auto-tapper       | Energy/s each | Base cost | Scale |
 | ----------------- | ------------- | --------- | ----- |
@@ -330,29 +331,57 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
   new rung, a fork as its pick, for 5 seconds. A kept perk is on the shelf at
   level I. Stats shows isotopes with their bonus: "3, +30%".
 
-### 4.8 Away progress
+### 4.8 Time away: the run-down
 
-**Changing (§8.5).** The run-down replaces this section in step 3 of the
-launch review. Its rules are in place since step 1: `rundown.ts`,
-`mods.rundown`, `tendedAt` in the save, and Night Lab's and Night Shift's new
-effects and descriptions. Until step 3 the script still pays the legacy away
-progress below, kept so time away is credited between steps. Night Shift's
-legacy cap now reads its new values, so it pays full speed for 3, 4.5 or 6
-hours.
+Since 2026-11-09 (§8.5), replacing half-speed away progress and its dialog.
+The rules are pure, in `rundown.ts`; the numbers are `RUNDOWN` in the config.
 
-- Measured from the save's `lastSeen`. A hidden tab counts as away.
-- A gap of 60 s or less, such as a tab switch, pays full energy per second
-  silently.
-- Longer, with at least one auto-tapper, pays 50% of energy per second, capped
-  at 4 hours. It sits behind a "While you were away" dialog with a Collect
-  button. With Night Shift it pays all of it, and the dialog says "full speed"
-  instead of "half speed".
-- **Night Lab** (§8.3) pays 60% for up to 6 hours. Where its rate is the one
-  in force, the dialog says "60% speed with Night Lab"; past 4 hours away, it
-  adds "Night Lab kept them running past the usual 4 hours."
-- Energy credited for time away, by Collect or by the silent short gap, moves
-  every perk offer's window past itself (`deferPerks`), so being away never
-  runs an offer down.
+- **One clock.** It runs from `tendedAt`, the last press, purchase or
+  restart, whether the tab is in view, hidden or closed.
+- **The curve.** Full output for 30 minutes, then a straight fall to nothing
+  over 90, and a fault at 2 hours. Any absence pays at most 75 minutes of
+  output, however long it lasts. The output is the auto-tappers' with no
+  combo; Idle Hands counts.
+- **In view**, the frame loop scales its output by the share left
+  (`outputShare`). **Hidden or closed**, the time is credited on return
+  (`untendedAward`), from `lastSeen`. A page that stalls in view for more
+  than 3 s, such as a laptop asleep with the game open, is paid the same way.
+- **`lastSeen`** is the moment energy was last counted. The frame loop moves
+  it every frame and a return moves it; a save doesn't, so a background tab's
+  save timer can't swallow time away it hasn't paid for.
+- **Coming back.** There is no dialog. Up to 60 s away is paid silently.
+  Longer, the energy counts into the readout over 0.9 s, with a toast,
+  "Untended 1h 40m: +3.2M energy", and an announcement that adds the
+  reactor's state and any offer still waiting. Where Night Lab held full
+  output past the usual half hour, a second toast credits it in the isotopes'
+  blue: "Night Lab held full output for an hour".
+- **Running down.** `data-power="down"` on the face, and `--power` steps by
+  whole percents from 1 to 0, so the core and the dial fade and lose their
+  color in step. The label under the core reads "Running down 64%" in place
+  of the stage name, and the hint says a press brings it back. The next
+  press, or a purchase, does: the color returns over the 0.9 s fade, the
+  stage name settles, and "Full power" drifts off the rim. That press earns
+  as usual.
+- **A fault.** `data-power="fault"`: a grey, still core whose motes stop, and
+  the per-second and per-press readouts at 0. The dial's arc and lights give
+  way to ten restart marks on the arc's circle. The label reads "Fault 10
+  presses on a beat to restart", the hint and the face's accessible name say
+  how, and the combo stands down, "after the restart". Nothing earns, surges
+  and drops wait (there is no active play), and a purchase doesn't clear it.
+  A fault reached in view is announced, with no sound and no toast.
+- **The restart.** Presses go to `RestartTracker` and earn nothing, but draw
+  on the rhythm scope. The first two set the beat, and each after must keep it
+  by the run's rhythm rules, so Metronome and Perfect Pitch widen it. Each
+  one on the beat lights a mark in the stage color, landing a touch heavy. A
+  press off the beat, or after a pause, starts the count from itself: the lit
+  marks fade, and the label says "Off the beat: 9 to restart". The tenth
+  swells the ring, rolls the stage-change ring and the graticule's wash out
+  from the core, and plays a rising chord as the color flows back; a toast
+  says "Reactor restarted". A reset of either kind also clears a fault.
+- **Night Lab** keeps full output for an hour; **Night Shift** stretches the
+  fall to 3, 4.5 or 6 hours. They add up.
+- Energy credited for time away moves every perk offer's window past itself
+  (`deferPerks`), so being away never runs an offer down.
 
 ### 4.9 Achievements
 
@@ -403,7 +432,8 @@ Fresh Start (1 prestige) and Veteran (5).
 
 Sound plays through the engine's beeper, at gain 0.18. Events: purchase, combo
 tier up, surge warning ticks, surge start, surge end, reactor state up,
-achievement, prestige and away collect.
+achievement, prestige, and the restart after a fault: a rising run, lower
+than a stage change's. A fault itself makes no sound.
 
 Perks add two. A drop chimes by rarity: two rising notes for a common, three
 for a rare, five for a keystone, so a high tier is heard as an event. A surge's
@@ -415,9 +445,10 @@ two-note chord. An offer running out makes no sound.
 **Decided 2026-10-23: about 24 minutes to first prestige for a steady
 player.** This was option 1, chosen by the maintainer.
 
-**Out of date since 2026-11-09.** The Stabiliser change (§8.5) slows a
-steady first run to about 26.2 minutes. Step 2 of the launch review reruns
-these tables.
+**Retuned 2026-11-09** (§8.5.7). The Stabiliser's new rule, a tier for a
+break and nothing kept past a 10-second pause, slowed a steady first run to
+26.2 minutes. Its price came down from 20,000 to 5,000, which put the run
+back at 24.7. The tables below are from then.
 
 The old out-of-repo simulator had claimed 24 minutes, but by the real rules
 the game took about 14. The fix raised the press upgrades' base costs four to
@@ -449,43 +480,49 @@ careers, run after run with resets and the isotope track (§8.3.7).
 
 | Player      | Minutes                                  |
 | ----------- | ---------------------------------------- |
-| Steady      | 24.6                                     |
-| Sloppy      | 26.5                                     |
-| Masher      | 38.4, about 1.56 times as long as steady |
-| Idler       | 43.2                                     |
-| Perfect bot | 22.7                                     |
+| Steady      | 24.7                                     |
+| Sloppy      | 29.4                                     |
+| Masher      | 37.8, about 1.53 times as long as steady |
+| Idler       | 48.8                                     |
+| Perfect bot | 22.6                                     |
+
+The idler is slower than before 2026-11-09 (43.2): its 40-second rests now
+end its combo.
 
 **A steady first run.** The first purchase of each item comes at:
 
 | Item              | First bought |
 | ----------------- | ------------ |
 | Finger Strength   | 10 s         |
-| Lab Assistant     | 90 s         |
-| Pneumatic Key     | under 2 min  |
-| Spring Keys       | 5.7 min      |
-| Robot Arm         | 7.0 min      |
-| Stabiliser        | 10.2 min     |
-| Particle Collider | 15.0 min     |
+| Lab Assistant     | 1.7 min      |
+| Pneumatic Key     | 2.0 min      |
+| Double Tap        | 2.7 min      |
+| Stabiliser        | 4.2 min      |
+| Spring Keys       | 6.3 min      |
+| Robot Arm         | 7.4 min      |
+| Particle Collider | 14.5 min     |
 | Synchronisation   | 17.0 min     |
-| Quantum Keyboard  | 21.1 min     |
-| First prestige    | 24.6 min     |
+| Quantum Keyboard  | 21.2 min     |
+| First prestige    | 24.7 min     |
 
 So a first run sees the whole shop. The Collider pays better per energy than
 the Quantum Keyboard, so it comes first.
 
-**Auto-tappers versus presses.** Auto-tappers overtake presses at about minute
-16 for a steady player, 19 to 20 for a masher, and 7 to 8 for an idler. For a
-steady player they earn 17% of income in minutes 10 to 15, 50% in minutes 15
-to 20, and 85% in minutes 25 to 30.
+**Auto-tappers versus presses.** Auto-tappers overtake presses for good at
+about minute 17 for a steady player and 21 for a masher. An idler's
+auto-tappers earn most of its energy from minute 7, 58 to 65% from there,
+though its bursts of tapping still win some minutes. For a steady player
+they earn 20% of income in minutes 10 to 15, 56% in minutes 15 to 20, and
+87% in minutes 25 to 30.
 
 **Against the spec's §12 targets:**
 
 - **Met:** the first upgrade within 15 s; the first auto-tapper within 30 s
   (both cost 75, affordable at about 11 s of steady tapping); the Pneumatic
   Key at about 2 min.
-- **Missed:** the Robot Arm at 7 min against a 5-minute target; the Quantum
-  Keyboard at 21 against 12, and the Particle Collider at 15 against 30;
-  an idle share of 85% at 30 min against the spec's 50%.
+- **Missed:** the Robot Arm at 7.4 min against a 5-minute target; the
+  Quantum Keyboard at 21 against 12, and the Particle Collider at 14.5
+  against 30; an idle share of 87% at 30 min against the spec's 50%.
 - **Page copy:** the FAQ's "about twice that if you mash" now reads "about
   half as long again". The overview's "auto-tappers out-earn your fingers
   after about an hour" now reads "after fifteen or twenty minutes".
@@ -579,8 +616,9 @@ the build plan are in §8.1.
     empty sockets with their rarity's shape (a keystone's has its inner ring)
     and no name. Then a card for each perk found, with every level's number,
     the best held lit, and "Held up to level 2" or "Found, never held".
-- **The away dialog** names any offer still waiting in the shop: "Overtone is
-  still on offer in the shop: time away doesn't count against its window."
+- **Coming back from time away**, the announcement names any offer still
+  waiting: "Still on offer: Overtone II." Time away doesn't count against
+  its window.
 - **Effects the script runs:**
   - Afterglow, Storm Front and Lightning Rod (§4.4).
   - Chain Reaction's float chain (§4.2).
@@ -694,8 +732,10 @@ The visuals were built in three passes, all shipped 2026-10-22.
   - Reset sequence: the core implodes for 0.5 s while the face dims, then
     blooms back as Dormant over 0.9 s, while new isotope beads fly to the shelf
     over 0.7 s. The shelf shows up to 10 beads, then "+N".
-  - Away wake-up: the core sits dim behind the dialog, and Collect brightens it
-    over 0.9 s while the energy counts in.
+  - Time away (2026-11-09, §4.8): the energy counts in over 0.9 s. The core
+    and dial fade with the run-down, a fault greys and stills them, the
+    restart's marks land one by one, and the restart swells the ring and
+    rolls the stage-change ring and wash out as the color returns.
 - **Perks, step 4 (2026-10-23).**
   - A drop slides its row in and pops the tile. A rare or a keystone throws a
     ring off its tile, and a keystone sends a sheen down the row.
@@ -714,12 +754,13 @@ The visuals were built in three passes, all shipped 2026-10-22.
   the surge card, once the reset's beads have landed, and goes after 5 s. A
   reroll's new offer slides in like a drop.
 - **Reduced motion.** Color changes and lights stay; all travel, spin, flight
-  and implosion goes. Totals and collected energy apply at once, and the scope
+  and implosion goes. Totals and energy from time away apply at once, and the scope
   redraws only on presses. Perk rows appear and go at once, and the ring steps
   rather than glides and never breathes. A bought perk is simply on the shelf,
   and the shelf clears without fading. The isotope ring appears and counts
   without growing or popping, and its fill and the meter step. The unlock card
-  appears as the reset does, without rising.
+  appears as the reset does, without rising. The restart's marks light
+  without landing, and the restart clears them at once with no swell.
 
 ### 5.4 Accessibility
 
@@ -728,8 +769,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
   both resets. Messages from one moment are read as one, so a reset's unlocks
   and the achievement it earns are both heard.
 - Opening a dialog moves focus into it. Closing hands focus back to where it
-  was, or to the reactor when nothing was focused, such as the away dialog on
-  load. Shop buttons use `aria-disabled` so they stay focusable while
+  was, or to the reactor when nothing was focused. Shop buttons use `aria-disabled` so they stay focusable while
   unaffordable.
 - Tabs follow the ARIA tab pattern, with arrow keys.
 - The isotope shelf is two buttons. The beads are named like "3 isotopes,
@@ -829,15 +869,15 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ## 7. Testing
 
-- `npm test` runs Vitest: the 67 clicker tests, the 61 perk tests, the 37
+- `npm test` runs Vitest: the 80 clicker tests, the 61 perk tests, the 37
   track tests, the pacing bands and the career bands.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  60 as of 2026-10-28, in about seven minutes.
+  68 as of 2026-11-09, in about eight minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
-    shop tabs and "New" tag, save and reload, away progress, prestige, the
+    shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
     full reset, the panel tabs in one row and two by two on a phone, the
     phone layout, a whole surge on a fake clock with and without reduced
     motion, every reactor state, a live stage change, and the press pulse
@@ -864,9 +904,16 @@ The visuals were built in three passes, all shipped 2026-10-22.
     unlock card and the saved pick; Heirloom and Cornerstone carrying a perk;
     a reroll, and none without the rung; Prodigy's level II offer; six sockets
     and the Twin Keystones swap; the credits on an offer, and none without
-    the track; Night Lab in the away dialog; Perfect Pitch's float on a fake
+    the track; Night Lab's toast on return; Perfect Pitch's float on a fake
     clock; the unlock card under reduced motion; the dialog with every fork,
-    and six sockets with twelve beads, on a phone.
+    six sockets with twelve beads, and a reset that lands every rung, its
+    card listing three and the rest, on a phone.
+  - **The run-down** (`spacebar-clicker-rundown.e2e.ts`): a return to a
+    run-down reactor and a press bringing it back; a return to a fault, the
+    readouts at 0, ten presses on a beat restarting it; a stumble; the
+    run-down starting and the fault arriving in view, on a fake clock; a
+    stalled page paid as time away; and the Stabiliser's tier drop and
+    10-second pause.
   - **Staging a save.** The perk and isotope checks write a whole save before
     the page loads (`seedSave` in `fixtures.ts`), with seed 7 when they need a
     known draw: its first draw is under one in eight, so the first surge drops
@@ -888,8 +935,9 @@ The visuals were built in three passes, all shipped 2026-10-22.
   table to a file: `PACING_REPORT=pacing.txt npx vitest run pacing` in Git
   Bash, or `$env:PACING_REPORT="pacing.txt"; npx vitest run pacing` in
   PowerShell.
-- `career.test.ts` runs with `npm test` too, about 20 s, alongside the pacing
-  tests. Its table: `CAREER_REPORT=career.txt npx vitest run career`.
+- `career.test.ts` runs with `npm test` too, about 30 s, alongside the pacing
+  tests. It plays four reset habits and, since 2026-11-09, careers in
+  sittings with the run-down between. Its table: `CAREER_REPORT=career.txt npx vitest run career`.
 - Run every check at the end of each step.
 - **Never verified**: a real touch device, Firefox and Safari, long-session
   feel, and a human playtest of the balance.
@@ -1553,13 +1601,17 @@ proposed. Each pair sets two ways to play against each other:
 from the career simulation (§8.3.7): the median over 8 seeds and six sets of
 fork picks. Waiting longer before a reset lands several rungs at once.
 
-| Isotopes | Reset at 1M | Reset at 4M | Reset at 9M |
-| -------- | ----------- | ----------- | ----------- |
-| 1        | 22 minutes  | 29 minutes  | 35 minutes  |
-| 3        | 57 minutes  | 52 minutes  | 35 minutes  |
-| 6        | 104 minutes | 73 minutes  | 61 minutes  |
-| 9        | 145 minutes | 109 minutes | 83 minutes  |
-| 12       | 177 minutes | 124 minutes | 104 minutes |
+| Isotopes | Reset at 1M | Reset at 3M | Reset at 9M | Reset at 27M |
+| -------- | ----------- | ----------- | ----------- | ------------ |
+| 1        | 22 minutes  | 28 minutes  | 36 minutes  | 50 minutes   |
+| 3        | 59 minutes  | 52 minutes  | 36 minutes  | 50 minutes   |
+| 6        | 108 minutes | 71 minutes  | 65 minutes  | 84 minutes   |
+| 9        | 149 minutes | 105 minutes | 87 minutes  | 117 minutes  |
+| 12       | 182 minutes | 122 minutes | 108 minutes | 117 minutes  |
+
+Re-measured 2026-11-09 on the tripling payout, with the Stabiliser at
+5,000 (§8.5.7). Before, on squares, resets at 1M, 4M and 9M held all twelve
+rungs at 177, 124 and 104 minutes.
 
 These include the rungs' own effect. They come in up to 9% sooner than the
 estimates made before the track existed.
@@ -1868,8 +1920,11 @@ system fonts. Only the panel tabs change; the shop's two keep their row.
 
 **Status.** Decided: the Stabiliser, the run-down and the tripling payout
 (§8.5.2). The run-down's details and a four-step build plan were approved
-(§8.5.3, §8.5.4). Step 1, the logic and the save, is built; its calls await
-review (§8.5.6).
+(§8.5.3, §8.5.4). Step 1, the logic and the save, is built and signed off
+(§8.5.6). Step 2, the simulation and tuning, is done: the maintainer
+approved its proposals and every check passes (§8.5.7). Step 3, the run-down
+in play, is built; its calls await review (§8.5.8). Step 4, the page copy,
+is next.
 
 #### 8.5.1 The review
 
@@ -2019,13 +2074,13 @@ phases 1 and 2.
    - A restart tracker, `tendedAt` in the save, and Night Lab and Night Shift
      in `mods.ts`. The half-speed away rules go.
    - Unit tests for each.
-2. **Simulation and tuning.** The simulation plays the new Stabiliser, the
+2. **Simulation and tuning.** _Done 2026-11-09, §8.5.7._ The simulation plays the new Stabiliser, the
    tripling payout, and sittings with absences. The pacing and career tests
    rerun, with new bands proposed. The calls to make:
    - The Stabiliser slows a steady first run by about 1.6 minutes, 24.6 to
      26.2, against the 24-minute target.
    - The capstone fork's balance moves with fewer isotopes.
-3. **In play.**
+3. **In play.** _Built 2026-11-09; calls in §8.5.8._
    - The frame loop runs the run-down, and a return from a hidden or closed
      tab credits it. The away dialog goes.
    - The running-down and fault looks, the restart, toasts, announcements and
@@ -2042,7 +2097,7 @@ phases 1 and 2.
 
 Findings 5 to 8.
 
-#### 8.5.6 Step 1: calls for review, 2026-11-09
+#### 8.5.6 Step 1: calls signed off, 2026-11-09
 
 Built: tripling in the economy, the Stabiliser's tier drop and the 10-second
 pause in `combo.ts`, `RestartTracker`, `rundown.ts`, `mods.rundown` with Night
@@ -2091,6 +2146,130 @@ and the Stabiliser act in the game now. The rest has no UI until step 3.
 10. **The page copy is stale on dev** where it explains the payout: the reset
     section still gives the square root and its examples. Step 4 rewrites
     it, with the away paragraphs.
+
+#### 8.5.7 Step 2: the simulation, and proposals, 2026-11-09
+
+**Decided 2026-11-09.** The maintainer approved proposals 1 to 3: the
+Stabiliser at 5,000, the idle build's band widened to 45% (Autopilot
+untouched), and the sittings band. All three are in, and every check passes.
+The results below were measured before; the tests' own reports give saver's
+12 isotopes at 108 minutes against the 111 quoted here, from the way each
+takes a median.
+
+**What the simulation plays now.**
+
+- The career habits reset on the tripling thresholds: eager at 1M, patient
+  at 3M, saver at 9M, and a fourth, late, at 27M for four isotopes, the top
+  of the best range. `career.test.ts` plays all four.
+- `simulateSittings` plays a career in sittings with the run-down between
+  them: Evenings, 45 minutes then a night away, and At work, 5 minutes an
+  hour. It can play the same career with nothing for time away, to compare.
+
+**With the step 1 rules and no tuning:**
+
+- First run to a million without perks: steady 26.2 minutes, sloppy 30.5,
+  masher 38.7, idler 49.4, bot 23.4 (were 24.6, 26.5, 38.4, 43.2 and 22.7).
+  The idler slows most: its 40-second rests now end its combo.
+- Careers to 12 isotopes, median: eager 187 minutes, patient 124, saver 111,
+  late 119. The forks end 0 to 13% apart.
+- The three bands in §8.5.6, call 8, fail.
+
+**Proposals:**
+
+1. **The Stabiliser at 5,000 instead of 20,000.** Its effect is smaller now,
+   so is its price, and a steady player buys it at about 4 minutes instead of 11. It fixes two of the three bands and the pace:
+
+   | Measure                                  | Step 1             | Stabiliser at 5,000 |
+   | ---------------------------------------- | ------------------ | ------------------- |
+   | Steady first run, no perks               | 26.2               | 24.7                |
+   | Sloppy, masher, idler                    | 30.5, 38.7, 49.4   | 29.4, 37.8, 48.8    |
+   | Steady, buying perks                     | 23.7               | 21.9                |
+   | Masher's perfect run (must beat steady)  | 25.3               | 25.6                |
+   | Fastest million before the capstone      | 6.5                | 7.8                 |
+   | Forks apart                              | 0–13%              | 0–14%               |
+   | 12 isotopes: eager, patient, saver, late | 187, 124, 111, 119 | 182, 122, 111, 118  |
+
+   Tried and dropped: a cheaper Finger Strength (60), Spring Keys (20,000),
+   or every press upgrade (10% or 15% off). Each speeds the masher's Brute
+   Force run as much as the steady player, so it still wins.
+
+2. **The idle build**, 44% faster than a plain idler against a 40% band, is
+   untouched by price changes. Two ways:
+   - **Widen the idle build's band to 45%.** Recommended. The build is no
+     stronger: its perfect run takes 27.3 minutes, as before. The plain idler
+     is slower because it lost the combo it used to keep through its rests,
+     the fix finding 4 asked for. Trimming Autopilot would slow idle players
+     twice, and the maintainer wants idle play supported.
+   - **Trim Autopilot** from x1.7, x1.95 and x2.2 to x1.6, x1.85 and x2.1.
+     The build lands at 39%.
+3. **A new band for sittings:** a reset straight after an absence pays at
+   most 2 isotopes beyond the habit's own. Measured, at most 2. With
+   proposal 1, the sittings to 12 isotopes:
+
+   | Schedule                | Eager              | Saver      | Late       |
+   | ----------------------- | ------------------ | ---------- | ---------- |
+   | Evenings, with run-down | 4                  | 3          | 3          |
+   | Evenings, without       | 5                  | 3          | 3          |
+   | At work, with run-down  | 20 (1.7 h of play) | 12 (0.9 h) | 12 (0.9 h) |
+   | At work, without        | 40                 | 23         | 26         |
+
+   Evening players gain at most an evening; players who check in at work
+   need about half as many check-ins, as intended.
+
+4. **The capstone fork stays as it is.** Twin Keystones and Enrichment end 8
+   to 14% apart, inside the 15% band.
+5. **The page's claims, for step 4,** with proposal 1: 4 to 7 drops in a
+   steady first run; buying perks, a million in about 22 minutes against 25;
+   without perks, the first isotope at about 25 minutes and the second about
+   10 minutes later; all twelve rungs after 110 to 180 minutes of play,
+   depending on how often you reset. The FAQ's "20 to 25 minutes" still
+   holds.
+
+#### 8.5.8 Step 3: calls for review, 2026-11-09
+
+Built: the run-down in play, as §4.8 describes, and the legacy away code
+removed: `OFFLINE`, `offlineAward`, `mods.offline`, the away dialog and its
+Collect, and their tests. The unlock card's cap. 7 new browser checks, and
+the three away checks rewritten.
+
+1. **A sleeping laptop is paid.** A page that stalls in view for more than
+   3 s, such as a laptop asleep with the game open, is credited as time away
+   on its next frame. Before, the frame loop capped each frame at a second,
+   so that time was lost while the run-down's clock kept running.
+2. **A bug fixed on the way.** Every save set `lastSeen` to now, and the
+   5-second save timer keeps running in a background tab, about once a
+   minute. So a hidden tab's time away was mostly lost before this step, a
+   save at a time. Now only counting energy moves `lastSeen`.
+3. **The dial clears for the restart.** On a fault the arc and the stage
+   lights fade out, and the ten marks take the arc's circle in a layer of
+   their own, so the grey never reaches them. The lights sat on the marks
+   otherwise.
+4. **No new color.** The run-down and the fault are grey and the stage
+   color; the hint, the label and the face's accessible name carry the
+   fault. DESIGN.md's Reactor-Ramp Exception now says so, and names the
+   restart's marks and Night Lab's toast.
+5. **Readouts while down.** The per-second rate shows what the reactor makes
+   now, run down or 0; the per-press shows 0 on a fault.
+6. **The press that brings a run-down reactor back earns as usual**, and
+   floats "Full power" off the rim. A purchase brings it back too, without
+   the float's press.
+7. **The restart** is silent press by press, and announced on a stumble and
+   on the restart. Restart presses draw on the scope, count no combo, and
+   don't add to the press total.
+8. **Coming back** toasts the untended time, not just the time away, as the
+   run-down measures it. An absence with no auto-tappers says nothing. The
+   announcement adds the reactor's state and any offer still waiting, as the
+   away dialog did.
+9. **The unlock card** lists up to four rungs; a reset that lands more names
+   three and adds "+N more in the Isotopes tab", and stays a second longer
+   for each line past two. While a card is over the core, the core's area
+   comes forward, so a tall card covers the labels rather than sitting under
+   them. Measured with all twelve: 250 px on a 602 px face at 1440 wide, and
+   286 on 542 at 390.
+10. **Sound:** the away collect chord is gone; the restart has its own, a
+    rising run lower than a stage change's.
+11. **The page copy** still describes half-speed away progress. Step 4
+    rewrites it, with the payout.
 
 ### 8.6 Unassigned ideas
 
@@ -2260,3 +2439,24 @@ the maintainer asks.
   no UI until step 3. 18 more unit tests; browser checks follow the new
   thresholds. The pacing and career bands fail on the Stabiliser change and
   wait for step 2. Calls in §8.5.6.
+- **2026-11-09.** Launch review step 2, the simulation. Careers reset on the
+  tripling thresholds, with a fourth habit at 27M, and `simulateSittings`
+  plays careers in sittings with the run-down between. Proposals in §8.5.7:
+  the Stabiliser at 5,000, the idle build's band, a sittings band.
+- **2026-11-09.** Step 2's proposals approved and applied. The Stabiliser
+  costs 5,000, and a steady first run is back at 24.7 minutes. The idle
+  build's perfect run may be up to 45% faster than a plain idler. A new
+  career band holds a reset after an absence to at most 2 isotopes beyond
+  the habit's own, on two schedules and four habits. §4.12's tables and
+  §8.3.3's rung timings re-measured. Every check passes.
+- **2026-11-09.** Launch review step 3, the run-down in play (§4.8). Time
+  away is paid on the run-down's clock with no dialog: a toast and the
+  energy counting in, and Night Lab credited in blue. A run-down reactor
+  fades and loses its color with its output and comes back on a press; a
+  faulted one greys and stills, its dial giving way to ten restart marks that
+  light one press on the beat at a time, and the tenth brings the color back
+  with the stage-change ring and wash. A stalled page is paid as time away,
+  and a save no longer moves `lastSeen`, which had lost a hidden tab's time
+  away. The unlock card lists three rungs and the rest past four. The legacy
+  away code and the dialog removed. 7 new browser checks, 68 in all. Calls in
+  §8.5.8.

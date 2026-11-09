@@ -62,18 +62,26 @@ export type Staged = Partial<Omit<SaveState, 'perks' | 'tappers'>> & {
 
 /**
  * Write a save before the page's own scripts run, on the first load only.
- * `awayMs` backdates the last visit at load time, for away progress.
+ * `awayMs` backdates the last visit at load time, for time away. The
+ * reactor counts as last tended then too, unless `untendedMs` backdates that
+ * separately: left alone in view for a while, then away, or never away.
  */
-export async function seedSave(page: Page, save: Staged, awayMs = 0): Promise<void> {
+export async function seedSave(
+  page: Page,
+  save: Staged,
+  awayMs = 0,
+  untendedMs?: number
+): Promise<void> {
   await page.addInitScript(
-    ([key, json, away]) => {
+    ([key, json, away, untended]) => {
       if (sessionStorage.getItem('seeded')) return;
       sessionStorage.setItem('seeded', '1');
       const s = JSON.parse(json);
       if (away) s.lastSeen = Date.now() - away;
+      if (untended !== null) s.tendedAt = Date.now() - untended;
       localStorage.setItem(key, JSON.stringify(s));
     },
-    [SAVE_KEY, JSON.stringify(save), awayMs] as const
+    [SAVE_KEY, JSON.stringify(save), awayMs, untendedMs ?? null] as const
   );
 }
 
