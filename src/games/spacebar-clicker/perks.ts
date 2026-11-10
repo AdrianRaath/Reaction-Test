@@ -7,15 +7,19 @@
  *   fresh from an exponential distribution over seconds of active play
  *   (PERK_DROPS.meanGapS), so a drop can come seconds after the last or many
  *   minutes after it, and can't be timed. A hidden ceiling (maxGapS) is the
- *   only protection against a long dry spell.
+ *   only protection against a long dry spell. Isotopes quicken the clock,
+ *   every gap and the ceiling alike (perIsotope), so the shorter runs they
+ *   bring still see about as many drops (SPACEBAR-CLICKER.md §8.5.14).
  * - Surges are the boss fights: each ends with a chance of a bonus drop,
  *   weighted toward the rarer tiers (`surgeDrop`).
  * - A drop picks a tier by its odds, then a perk in that tier, for a tab with
  *   no live offer. A perk already owned can drop again as an upgrade; one at
  *   the top level can't. A drop due while both tabs hold offers is lost, not
  *   held: holding it would make the next drop predictable.
- * - A player's very first run gets one guaranteed drop, a common, at a random
- *   moment early on. Nothing else is guaranteed.
+ * - Every run's first drop comes early, at a random moment in its first
+ *   minutes of active play (firstDropS): a common on a player's very first
+ *   run, on the usual odds after a reset, so every run opens with a perk to
+ *   plan around. Nothing later is timed.
  * - Price and window are in seconds of income at the moment of the drop,
  *   because energy grows too fast for fixed amounts to mean anything for
  *   long. An upgrade costs PERK_UPGRADE_SCALE times more per level held.
@@ -105,9 +109,13 @@ function draw(perks: PerkState): number {
   return d.value;
 }
 
-/** Seconds of active play to the next drop: exponential, under the ceiling. */
-function nextGap(perks: PerkState): number {
-  return Math.min(-Math.log(1 - draw(perks)) * PERK_DROPS.meanGapS, PERK_DROPS.maxGapS);
+/**
+ * Seconds of active play to the next drop: exponential, under the ceiling,
+ * and both shorter for every isotope held.
+ */
+function nextGap(perks: PerkState, isotopes: number): number {
+  const gap = Math.min(-Math.log(1 - draw(perks)) * PERK_DROPS.meanGapS, PERK_DROPS.maxGapS);
+  return gap / (1 + PERK_DROPS.perIsotope * isotopes);
 }
 
 /** A player's very first run: nothing has ever dropped. */
@@ -219,10 +227,10 @@ export function perkTick(state: SaveState, income: number, activeDt: number): Pe
   });
 
   perks.activeS += Math.max(0, activeDt);
+  // A run's first drop: early, at a random moment.
   if (perks.nextDropAtS === null) {
-    const [lo, hi] = PERK_DROPS.firstEverS;
-    perks.nextDropAtS =
-      perks.activeS + (firstEver(state) ? lo + draw(perks) * (hi - lo) : nextGap(perks));
+    const [lo, hi] = PERK_DROPS.firstDropS;
+    perks.nextDropAtS = perks.activeS + lo + draw(perks) * (hi - lo);
   }
   if (perks.activeS < perks.nextDropAtS) return events;
 
@@ -230,7 +238,7 @@ export function perkTick(state: SaveState, income: number, activeDt: number): Pe
     commonOnly: firstEver(state),
     credit: true,
   });
-  perks.nextDropAtS = perks.activeS + nextGap(perks);
+  perks.nextDropAtS = perks.activeS + nextGap(perks, state.isotopes);
   if (offer) events.dropped.push(offer);
   return events;
 }

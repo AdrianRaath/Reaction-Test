@@ -689,7 +689,9 @@ export const PERK_UPGRADE_SCALE = 1.5;
  * seconds after the last or eight minutes after it. Surges are the boss
  * fights: each ends with a chance of a bonus drop, weighted to the rarer
  * tiers. Simulated: about 7 drops in a 30-minute run, keystones in about a
- * third of runs.
+ * third of runs. Every run's first drop comes early, and isotopes quicken the
+ * clock, so a short run late in a career still sees four or five
+ * (SPACEBAR-CLICKER.md §8.5.14).
  *
  * Prices and windows are in seconds of the run's income at the moment a perk
  * drops, so they mean the same early and late.
@@ -699,8 +701,19 @@ export const PERK_DROPS = {
   meanGapS: 360,
   /** The hidden ceiling: never longer than this without a drop. */
   maxGapS: 600,
-  /** A player's very first run: its first drop comes at a random moment in this range, and is a common. */
-  firstEverS: [60, 180] as readonly [number, number],
+  /**
+   * Isotopes quicken the clock: each gap, and the ceiling, divide by 1 plus
+   * this for every isotope held, so runs that isotopes shorten still see
+   * about as many drops. At 12 isotopes the mean is under 4 minutes and the
+   * ceiling about 6.
+   */
+  perIsotope: 0.05,
+  /**
+   * A run's first drop comes at a random moment in this range of active play:
+   * a common on a player's very first run, and on the usual odds on every run
+   * after a reset, so every run opens with a perk to plan around.
+   */
+  firstDropS: [60, 180] as readonly [number, number],
   /** Chance a surge ends with a bonus drop. */
   surgeChance: 1 / 8,
   /** Tier odds for a drop, and for a surge's bonus drop. */

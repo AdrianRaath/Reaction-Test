@@ -80,7 +80,7 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 | `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12), and whole careers of runs and resets with the isotope track (§8.3.7).                                                                                                                                                                                                                                                                                                                                  |
 | `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `src/games/spacebar-clicker/career.test.ts`           | Holds careers to the isotope track's targets (§8.3.7): a first run unchanged, the two sides of each fork. About 20 s.                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (61 as of 2026-11-09).                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (63 as of 2026-11-10).                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `src/games/spacebar-clicker/track.ts`                 | The isotope track (§8.3): which rungs are in force for an isotope count and fork picks, what a reset reaches, which forks still need a pick, and the next steps to show. Pure.                                                                                                                                                                                                                                                                                                                                                    |
 | `src/games/spacebar-clicker/track.test.ts`            | Unit tests for the track: the table, every rung, both sides of every fork, the reset, the save, and the credits (37 as of 2026-11-09).                                                                                                                                                                                                                                                                                                                                                                                            |
 | `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, every reactor state, perks in play, isotopes, and the isotope track in play (§7).                                                                                                                                                                                                                                                                                                                                                                    |
@@ -931,7 +931,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ## 7. Testing
 
-- `npm test` runs Vitest: the 89 clicker tests, the 61 perk tests, the 37
+- `npm test` runs Vitest: the 89 clicker tests, the 63 perk tests, the 37
   track tests, the pacing bands and the career bands.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
@@ -1096,16 +1096,25 @@ are proposals carried into the build plan.
     the game running never brings a drop.
   - **One hidden ceiling.** A gap never exceeds 10 minutes. With the ceiling,
     the average gap is about 4.9 minutes. There is no visible pity.
+  - **Isotopes quicken the clock** (since 2026-11-10, §8.5.14). Every gap and
+    the ceiling divide by 1 + 0.05 per isotope held (`perIsotope`): at 12
+    isotopes the mean is under 4 minutes and the ceiling about 6. The runs
+    isotopes shorten still see four or five drops.
   - **Surges are boss fights.** Each surge ends with a 1-in-8 chance of a
     bonus drop, on rarer odds. Surge drops don't affect the ordinary timing.
   - **Steep tiers.** Ordinary drops are 65% common, 30% rare and 5% keystone.
     Surge drops are 45%, 45% and 10%. A tier with nothing left to drop is
     skipped and the odds are spread over the rest. A perk is then picked
     evenly within its tier.
-  - **One guaranteed drop, ever.** It comes on a player's very first run,
-    meaning their codex is empty: a common, at a random moment 1 to 3 minutes
-    into active play. Nothing else is guaranteed. A full reset empties the
-    codex, so a fresh start gets the tutorial drop again.
+  - **An early first drop, every run** (since 2026-11-10, §8.5.14). A run's
+    first drop comes at a random moment 1 to 3 minutes into active play
+    (`firstDropS`). On a player's very first run, meaning their codex is
+    empty, it is a common; after a reset it is on the usual odds. A full reset
+    empties the codex, so a fresh start gets the tutorial drop again. Nothing
+    later is timed. Until 2026-11-10 only a player's very first run had it:
+    the step 2 model's guaranteed first drop on every run was removed on
+    2026-10-23 (below), and the maintainer brought an early one back, at a
+    random moment, for the short runs isotopes bring.
   - **Full tabs lose the drop.** At most one live offer per tab. A drop due
     while both tabs hold offers is lost, not held, because holding it would
     make the next drop predictable. A fresh moment is drawn.
@@ -1673,15 +1682,15 @@ fork picks. Waiting longer before a reset lands several rungs at once.
 | Isotopes | Reset at 1M | Reset at 3M | Reset at 9M | Reset at 27M |
 | -------- | ----------- | ----------- | ----------- | ------------ |
 | 1        | 21 minutes  | 26 minutes  | 36 minutes  | 47 minutes   |
-| 3        | 57 minutes  | 49 minutes  | 36 minutes  | 47 minutes   |
-| 6        | 102 minutes | 66 minutes  | 61 minutes  | 83 minutes   |
-| 9        | 142 minutes | 100 minutes | 82 minutes  | 110 minutes  |
-| 12       | 174 minutes | 114 minutes | 101 minutes | 110 minutes  |
+| 3        | 54 minutes  | 47 minutes  | 36 minutes  | 47 minutes   |
+| 6        | 99 minutes  | 66 minutes  | 61 minutes  | 75 minutes   |
+| 9        | 137 minutes | 97 minutes  | 84 minutes  | 99 minutes   |
+| 12       | 168 minutes | 110 minutes | 101 minutes | 99 minutes   |
 
-Re-measured 2026-11-10 with surges paying from the auto-tappers
-(§8.5.13), which brought all twelve 7 or 8 minutes sooner; on 2026-11-09,
-on the tripling payout with the Stabiliser at 5,000 (§8.5.7), they came at
-182, 122, 108 and 117 minutes. Before, on squares, resets at 1M, 4M and 9M held all twelve
+Re-measured 2026-11-10, after surges began to pay from the auto-tappers
+(§8.5.13) and isotopes to quicken the drop clock (§8.5.14). On 2026-11-09,
+on the tripling payout with the Stabiliser at 5,000 (§8.5.7), all twelve
+came at 182, 122, 108 and 117 minutes. Before, on squares, resets at 1M, 4M and 9M held all twelve
 rungs at 177, 124 and 104 minutes.
 
 These include the rungs' own effect. They come in up to 9% sooner than the
@@ -1999,7 +2008,9 @@ copy audit just before the merge (§8.5.9). Finding 5 was discussed on
 2026-11-10 (§8.5.10): ideas 1 and 2, the share bar and the auto-tappers'
 line, are built, and their calls await review (§8.5.11). Idea 3,
 Synchronisation's shop figure, is built too (§8.5.12). Idea 4, surge presses
-paying from the auto-tappers, is decided and built (§8.5.13).
+paying from the auto-tappers, is decided and built (§8.5.13). Finding 6 was
+discussed the same day; its ideas 1 and 2, isotopes quickening the drop
+clock and an early first drop every run, are decided and built (§8.5.14).
 
 #### 8.5.1 The review
 
@@ -2172,7 +2183,7 @@ phases 1 and 2.
 
 #### 8.5.5 Not yet discussed
 
-Findings 6 to 8. Finding 5 is §8.5.10.
+Findings 7 and 8. Finding 5 is §8.5.10, finding 6 §8.5.14.
 
 #### 8.5.6 Step 1: calls signed off, 2026-11-09
 
@@ -2373,11 +2384,14 @@ drift):
     against 24, so still about three.
   - The first isotope "at about 24 minutes and the second about 12 minutes
     later" (364): still about 24, and the second about 9 later.
-  - All twelve rungs "after 100 to 180 minutes": now 100 to 175.
+  - All twelve rungs "after 100 to 180 minutes": now 100 to 170.
   - The FAQ's "20 to 25 minutes" to a first reset still holds.
 - **Surges** (§8.5.13): wherever the page describes them as x10 presses
   for five seconds, they now also pay half a second of auto-tapper output a
   press, more with Storm Front.
+- **Drops** (§8.5.14): the perks section's "You can't time a drop" paragraph
+  could add that every run's first drop comes early and that isotopes bring
+  drops sooner, without numbers for the ceiling.
 - **The Stabiliser** reads from the config ("drops one tier") in the shop
   table, but any prose about it is worth a check.
 - **The share bar and the auto-tappers' line** (§8.5.10) aren't described
@@ -2549,6 +2563,85 @@ Calls for review:
    not energy, and the rule is pure, so the unit test covers it.
 3. **The doc's figures** (§4.12, §8.3.3) are re-measured. The page's are for
    the copy audit (§8.5.9).
+
+#### 8.5.14 Finding 6: short runs for perks, 2026-11-10
+
+Measured again on the current rules, for a steady player who buys perks, run
+after run over 8 seeds. Drops come on a clock of active play, so they come at
+about the same rate per minute in every run, one every 4 minutes or so. What
+falls is drops per run, as isotopes shorten the runs. A player who resets at
+every 1M:
+
+| Isotopes held | Run      | Drops | Perks held at the reset | A perk at level II+ | A keystone |
+| ------------- | -------- | ----- | ----------------------- | ------------------- | ---------- |
+| None          | 20.7 min | 5.1   | 3.8 of 5                | 75% of runs         | 25%        |
+| 4 to 6        | 14.6 min | 3.5   | 3.2 of 6                | 17%                 | 4%         |
+| 10 to 12      | 10.2 min | 2.7   | 3.3 of 6                | 13%                 | 4%         |
+
+So the perk system's depth, and the track's perk rungs, Sixth Slot to Twin
+Keystones, mostly miss the players who reset most. Players who wait for 9M or
+27M have 18 to 35 minute runs, 4 to 8 drops, and about 5 of 6 slots filled.
+
+Ideas put to the maintainer: (1) isotopes speed up the drop clock, the same
+random gaps, shorter; (2) each run's first drop comes early, at a random
+moment in its first 1 to 3 minutes, as a first-ever run's does; (3) surges
+drop more often as isotopes stack; (4) a draft at the reset, a perk to start
+the next run with. Not proposed: perks surviving a reset a level down, which
+would undo "perks last the run" and empty Heirloom and Cornerstone. The
+maintainer's brief: drops stay regular but never predictable, and not so
+rare that the game goes stale. **Picked to simulate: 1 and 2.**
+
+Simulated on a scratch copy of the drop clock against every career band (a
+first run is unchanged by both, so the pacing bands can't move). Idea 1
+divides the gap between drops, and its 10-minute ceiling, by (1 + b x
+isotopes). The figures are for the player who resets at every 1M, runs with
+4 to 12 isotopes held:
+
+| Variant        | Drops a run | Perks held at the reset | A perk at level II+ | All 12 rungs, by habit | Bands                     |
+| -------------- | ----------- | ----------------------- | ------------------- | ---------------------- | ------------------------- |
+| Now            | 2.7 to 3.5  | 2.9 to 3.3 of 6         | 13% to 17%          | 101 to 174 min         | pass                      |
+| 2 alone        | 2.5 to 4.3  | 3.0 to 3.7              | 13% to 25%          | 99 to 173              | pass                      |
+| 1, b 0.05      | 3.3 to 4.4  | 3.7 to 3.8              | 21% to 29%          | 101 to 171             | a fork 16% apart (15 max) |
+| 1, b 0.05, + 2 | 4.1 to 4.7  | 3.9 to 4.5              | 29% to 38%          | 99 to 168              | pass                      |
+| 1, b 0.1       | 4.5 to 5.3  | 4.0 to 5.0              | 17% to 38%          | 97 to 168              | a 6.8-minute run (7 min)  |
+| 1, b 0.1, + 2  | 4.7 to 5.3  | 4.1 to 4.7              | 33% to 42%          | 99 to 166              | 6 runs in 576 under 8 (5) |
+
+- Idea 2 alone does little at high isotopes: one early drop in place of one
+  later. With idea 1 it fills the opening of every run.
+- Players who wait longer get denser drops too: at 27M, 9 to 10 drops a run
+  and full slots in most runs, from 6 to 8, and their twelve rungs 11 minutes
+  sooner.
+- Drops come more often as isotopes stack: one every 2.5 minutes or so at 10
+  to 12 isotopes, against every 4 in a first run. Still on random gaps.
+- The fork and floor bands sit near their edges with 8 seeds, so one failing
+  by a point is partly noise; b 0.1 fails the floor in two of two runs.
+
+**Proposed:** idea 1 at b 0.05, so 12 isotopes bring the average gap from 6
+minutes to under 4 and the ceiling from 10 to about 6, with idea 2: every
+run after a reset has its first drop at a random moment 1 to 3 minutes into
+active play, on the usual odds rather than commons only.
+
+**Decided 2026-11-10: idea 1 at b 0.05, with idea 2.** Built the same day:
+`PERK_DROPS.perIsotope` and `firstDropS` (renamed from `firstEverS`) in
+the config, and the drop clock in `perks.ts`. A first run is untouched, so
+the pacing report is the same to the tenth. The repo's career test matches
+the simulated variant and every band passes: the worst fork 11% apart, the
+fastest million before the capstone 7.9 minutes, one run in 192 under 8. 2
+unit tests.
+
+Calls for review:
+
+1. **Every run's first drop comes early.** This brings back part of what was
+   removed on 2026-10-23, the step 2 model's guaranteed first drop on every
+   run (§8.1.2), in a random form: a random moment 1 to 3 minutes in, on the
+   usual odds. A drop due while both tabs hold offers would still be lost,
+   but at a run's start they are empty.
+2. **Applied by rule, not by reset count:** any run whose drop clock hasn't
+   started gets the early drop. That is every new run, and a save from before
+   perks.
+3. **No new UI**, and nothing on the page yet: drops come sooner as isotopes
+   stack, and the copy audit can say so (§8.5.9). The 10-minute ceiling stays
+   off the page (§6).
 
 ### 8.6 Unassigned ideas
 
@@ -2758,3 +2851,9 @@ the maintainer asks.
   seconds. A steady first run comes in 23.7 minutes, from 24.7; every pacing
   and career band passes. §4.12's and §8.3.3's figures re-measured. 1 unit
   test.
+- **2026-11-10.** Finding 6 (§8.5.14): isotopes quicken the drop clock, every
+  gap and the ceiling shorter by 1 + 0.05 per isotope held, and every run's
+  first drop comes at a random moment 1 to 3 minutes in. A player who resets
+  at every 1M now sees four or five drops in a late run rather than two or
+  three. A first run is unchanged; every career band passes. §8.3.3's figures
+  re-measured. 2 unit tests.

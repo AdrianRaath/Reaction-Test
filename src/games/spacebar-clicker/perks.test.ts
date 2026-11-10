@@ -427,6 +427,33 @@ describe('perk drops', () => {
     expect(Math.max(...times)).toBeGreaterThan(170);
   });
 
+  it('give every run after a reset its first drop early too, on the usual odds', () => {
+    const times: number[] = [];
+    const tiers = new Set<string>();
+    for (let seed = 0; seed < 300; seed++) {
+      const s = veteran(defaultSave(NOW));
+      s.perks.rng = seed;
+      s.isotopes = 6;
+      const [first] = play(s, 200);
+      expect(first, `seed ${seed}`).toBeDefined();
+      times.push(first!.t);
+      tiers.add(def(first!.offer.id).rarity);
+    }
+    expect(Math.min(...times)).toBeGreaterThanOrEqual(60);
+    expect(Math.max(...times)).toBeLessThanOrEqual(181);
+    expect([...tiers].sort()).toEqual(['common', 'keystone', 'rare']);
+  });
+
+  it('come sooner with isotopes: every gap and the ceiling shorter', () => {
+    const s = veteran(defaultSave(NOW));
+    s.isotopes = 12; // the clock runs 1.6 times as fast
+    const g = gaps(play(s, 300_000));
+    const mean = g.reduce((a, b) => a + b, 0) / g.length;
+    expect(mean).toBeGreaterThan(280 / 1.6);
+    expect(mean).toBeLessThan(305 / 1.6);
+    expect(Math.max(...g)).toBeLessThanOrEqual(Math.ceil(600 / 1.6) + 1);
+  });
+
   it('come at random intervals: clustered sometimes, long apart others, never past the ceiling', () => {
     const s = veteran(defaultSave(NOW));
     const g = gaps(play(s, 300_000));
