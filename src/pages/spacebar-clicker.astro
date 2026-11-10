@@ -512,6 +512,8 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
                       <span class="shop-text">
                         <span class="shop-name">{u.name}</span>
                         <span class="shop-detail">{u.detail}</span>
+                        {/* Until it is bought, what it would add at the player's combo (§8.5.12). */}
+                        {u.id === 'sync' && <span class="shop-note" data-sync-preview hidden />}
                       </span>
                       <span class="shop-nums">
                         <span class="shop-cost readout" data-cost>
@@ -3147,6 +3149,22 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   .shop-detail {
     font-size: 0.75rem;
     color: var(--ink-muted);
+  }
+
+  /* Synchronisation's row, until it is bought: what it would add to the
+     auto-tappers at the player's combo (SPACEBAR-CLICKER.md §8.5.12). The
+     number brightens with the row once it is affordable. */
+  .shop-note {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  .shop-note :global(.readout) {
+    color: var(--ink-secondary);
+  }
+
+  .shop-buy.is-affordable .shop-note :global(.readout) {
+    color: var(--ink-primary);
   }
 
   .shop-nums {

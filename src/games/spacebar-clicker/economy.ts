@@ -236,6 +236,20 @@ export function syncMultiplier(combo: number, mods: Mods): number {
 }
 
 /**
+ * What Synchronisation would add to the auto-tappers each second at this
+ * combo, for its shop row (SPACEBAR-CLICKER.md §8.5.12). Nothing once it is
+ * owned, under Brute Force, or where Full Sync already shares as much.
+ */
+export function syncGain(state: SaveState, combo: number): number {
+  if (state.upgrades.sync > 0) return 0;
+  const withSync = modsOf({ ...state, upgrades: { ...state.upgrades, sync: 1 } });
+  return Math.max(
+    0,
+    energyPerSecond(state, { combo }, withSync) - energyPerSecond(state, { combo })
+  );
+}
+
+/**
  * The auto-tappers' output in two parts (SPACEBAR-CLICKER.md §8.5.10): what
  * they make on their own, and what the player's play adds to it, the combo
  * through Synchronisation and a surge through Surge Lines. The face's share

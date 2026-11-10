@@ -65,6 +65,7 @@ import {
   reactorIndex,
   reactorProgress,
   shopTabHasNews,
+  syncGain,
   syncMultiplier,
   tapperCost,
   tapperSplit,
@@ -201,6 +202,8 @@ const comboNextEl = el('sc-combo-next');
 const comboMultEl = el('sc-combo-mult');
 const comboSyncMultEl = el('sc-combo-sync-mult');
 const comboFill = el('sc-combo-fill');
+/** Synchronisation's shop row: what it would add, until it is bought (§8.5.12). */
+const syncPreview = document.querySelector<HTMLElement>('[data-sync-preview]');
 const floats = el('sc-floats');
 // Where the energy comes from (SPACEBAR-CLICKER.md §8.5.10).
 const shareRow = el('sc-share');
@@ -914,6 +917,29 @@ function renderCombo(now: number): void {
   comboFill.style.transform = `scaleX(${combo.graceRemaining(now)})`;
 }
 
+/**
+ * Synchronisation's shop row, until it is bought (§8.5.12): what it would add
+ * to the auto-tappers each second at the player's combo tier, or at the first
+ * tier while they have none, so the number climbs with the combo. Hidden
+ * where it would add nothing even at the top tier: no auto-tappers yet,
+ * Brute Force, or Full Sync sharing more.
+ */
+function renderSyncPreview(): void {
+  if (!syncPreview) return;
+  const tiered = modsOf(state).tiers.filter((t) => t.multiplier > 1);
+  const top = tiered[0];
+  const first = tiered[tiered.length - 1];
+  const shown = !!top && syncGain(state, top.min) > 0;
+  syncPreview.hidden = !shown;
+  if (!shown) return;
+  const at = tiered.find((t) => combo.combo >= t.min) ?? first!;
+  setSentence(
+    syncPreview,
+    [`+${formatRate(syncGain(state, at.min))}`],
+    ` per second at ${at.label}`
+  );
+}
+
 function renderShop(): void {
   for (const def of PRESS_UPGRADES) {
     const btn = shopButtons.get(`press:${def.id}`);
@@ -932,6 +958,8 @@ function renderShop(): void {
     btn.classList.toggle('is-maxed', maxed);
     btn.setAttribute('aria-disabled', String(!affordable));
   }
+
+  renderSyncPreview();
 
   let anyHidden = false;
   for (const def of AUTO_TAPPERS) {

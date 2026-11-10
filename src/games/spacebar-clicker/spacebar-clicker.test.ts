@@ -31,6 +31,7 @@ import {
   reactorProgress,
   reactorState,
   shopTabHasNews,
+  syncGain,
   syncMultiplier,
   tapperCost,
   tapperSplit,
@@ -845,6 +846,25 @@ describe('run modifiers', () => {
     expect(syncMultiplier(9, modsOf(s))).toBe(1);
     expect(syncMultiplier(100, bent({ syncShare: 1.05 }))).toBeCloseTo(3.1);
     expect(syncMultiplier(100, { ...modsOf(s), comboOff: true })).toBe(1);
+  });
+
+  it('price what Synchronisation would add at a combo, until it is owned or redundant', () => {
+    const s = defaultSave(NOW);
+    expect(syncGain(s, 100), 'no auto-tappers').toBe(0);
+    s.tappers.pneumatic = 2; // 6
+    expect(syncGain(s, 100)).toBe(6); // x2 at Harmonic
+    expect(syncGain(s, 50)).toBe(4.5); // x1.75 at Resonance
+    expect(syncGain(s, 10)).toBe(1.5); // x1.25 at Steady
+    expect(syncGain(s, 9)).toBe(0);
+    // Full Sync already shares more than half; Brute Force shares nothing.
+    expect(
+      syncGain({ ...s, perks: { ...s.perks, owned: [{ id: 'full-sync', level: 1 }] } }, 100)
+    ).toBe(0);
+    expect(
+      syncGain({ ...s, perks: { ...s.perks, owned: [{ id: 'brute-force', level: 1 }] } }, 100)
+    ).toBe(0);
+    s.upgrades.sync = 1;
+    expect(syncGain(s, 100), 'owned').toBe(0);
   });
 
   it('split auto-tapper output into the machines’ own and what play adds', () => {

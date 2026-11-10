@@ -21,6 +21,16 @@ const run = {
   perks: noDrops,
 };
 
+/** Upgrade levels for a staged save: none, unless given. */
+const levels = (owned: { stabiliser?: number; sync?: number }) => ({
+  finger: 0,
+  double: 0,
+  spring: 0,
+  stabiliser: 0,
+  sync: 0,
+  ...owned,
+});
+
 /** The player's share as the bar's number reads it. */
 const youPct = async (page: import('@playwright/test').Page) =>
   Number((await page.textContent('#sc-share-you'))!.replace('%', ''));
@@ -86,6 +96,35 @@ test('Synchronisation opens the auto-tapper line, which follows the combo', asyn
   await expect(page.locator('#sc-combo-sync-mult')).toHaveText('x1.5');
 });
 
+test('Synchronisation’s row says what it would add, climbing with the combo', async ({ page }) => {
+  // Ten Pneumatic Keys, about 31 a second: Synchronisation adds a quarter at Steady, half at Locked in.
+  await seedSave(page, { ...run, tappers: { pneumatic: 10 } });
+  await openGame(page);
+  const preview = page.locator('.shop-item[data-id="sync"] [data-sync-preview]');
+  const gain = async () =>
+    Number((await preview.locator('.readout').textContent())!.replace(/[+,]/g, ''));
+
+  // No combo yet: the first tier's figure.
+  await expect(preview).toBeVisible();
+  await expect(preview).toHaveText(/^\+[\d.,]+ per second at Steady$/);
+  await pressSteady(page, 12, 200);
+  await expect(preview).toHaveText(/ at Steady$/);
+  const steady = await gain();
+  await pressSteady(page, 15, 200);
+  await expect(preview).toHaveText(/ at Locked in$/);
+  expect((await gain()) / steady).toBeCloseTo(2, 1);
+});
+
+test('Synchronisation’s row drops its figure once bought', async ({ page }) => {
+  await seedSave(page, { ...run, energy: 200_000, tappers: { pneumatic: 10 } });
+  await openGame(page);
+  const preview = page.locator('.shop-item[data-id="sync"] [data-sync-preview]');
+  await expect(preview).toBeVisible();
+  await page.locator('.shop-item[data-id="sync"] .shop-buy').click();
+  await expect(page.locator('.shop-item[data-id="sync"] [data-level]')).toHaveText('Owned');
+  await expect(preview).toBeHidden();
+});
+
 test('a fault stands the share bar down', async ({ page }) => {
   await seedSave(page, run, 3 * 60 * MIN);
   await openGame(page);
@@ -98,7 +137,7 @@ test('a fault stands the share bar down', async ({ page }) => {
 test('the face fits a 1440x900 screen with the share bar and the auto-tapper line', async ({
   page,
 }) => {
-  await seedSave(page, { ...run, upgrades: { sync: 1, stabiliser: 1 } });
+  await seedSave(page, { ...run, upgrades: levels({ sync: 1, stabiliser: 1 }) });
   await openGame(page);
   await pressSteady(page, 12, 200);
 
@@ -113,7 +152,7 @@ test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test('"auto-tappers" shortens to "auto", and the bar keeps its length', async ({ page }) => {
-    await seedSave(page, { ...run, upgrades: { sync: 1 } });
+    await seedSave(page, { ...run, upgrades: levels({ sync: 1 }) });
     await openGame(page);
     await pressSteady(page, 12, 200);
 

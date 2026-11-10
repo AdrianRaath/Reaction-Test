@@ -63,33 +63,33 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 
 ## 3. Code map
 
-| File                                                  | Responsibility                                                                                                                                                                                                                                                                                                                                                                                              |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, the run-down, achievements. Pure data.                                                                                                                                                                                                                                                                          |
-| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, what the combo gives the auto-tappers (`syncMultiplier`) and their output split into the machines' own and what play adds (`tapperSplit`), the luck roll, reactor state and progress, prestige gain and where the next isotope comes, buying, shop reveals, shop-tab notices, and which one-off upgrades a perk switches off.         |
-| `src/games/spacebar-clicker/mods.ts`                  | A run's modifiers: every rule a perk or a track rung can bend, in one object. `BASE_MODS` is the shipped game; `modsOf(state)` folds in the Stabiliser, Synchronisation, every owned perk at its level, then the track's rungs in force.                                                                                                                                                                    |
-| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo, with the Stabiliser's tier drop and the 10-second pause. `RestartTracker`: the restart's 10 presses on a beat. Both take timestamps from the caller, so they have no clock of their own, and read the run's rules on every press.                                                                                                                                         |
-| `src/games/spacebar-clicker/rng.ts`                   | A seeded random generator (mulberry32). Pure; for perk drops, so a reload can't reroll them.                                                                                                                                                                                                                                                                                                                |
-| `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together, without a surge's or Afterglow's boost. Perk prices and windows are set in it. `ShareMeter`: the player's share of recent energy, for the share bar (§4.2).                                                                                                                                         |
-| `src/games/spacebar-clicker/rundown.ts`               | The run-down (§8.5): the output share of a reactor left alone, the energy over a stretch of it, the fault, tending and the restart, and what a hidden or closed tab earned. Pure.                                                                                                                                                                                                                           |
-| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`, which starts the new run with the track's head starts and any kept perk.                                                                                                                                                                                                                                                                       |
-| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                                                                                                                                                                                                                                            |
-| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                                                                                                                                                                                      |
-| `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                                                                                                                                                                                                   |
-| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks, the run-down, the restart and the share meter included (87 as of 2026-11-10).                                                                                                                                                                                                                                                                                        |
-| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12), and whole careers of runs and resets with the isotope track (§8.3.7).                                                                                                                                                                                                            |
-| `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                                                                                                                                                                                              |
-| `src/games/spacebar-clicker/career.test.ts`           | Holds careers to the isotope track's targets (§8.3.7): a first run unchanged, the two sides of each fork. About 20 s.                                                                                                                                                                                                                                                                                       |
-| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (61 as of 2026-11-09).                                                                                                                                                                                                                                                                                                   |
-| `src/games/spacebar-clicker/track.ts`                 | The isotope track (§8.3): which rungs are in force for an isotope count and fork picks, what a reset reaches, which forks still need a pick, and the next steps to show. Pure.                                                                                                                                                                                                                              |
-| `src/games/spacebar-clicker/track.test.ts`            | Unit tests for the track: the table, every rung, both sides of every fork, the reset, the save, and the credits (37 as of 2026-11-09).                                                                                                                                                                                                                                                                      |
-| `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, every reactor state, perks in play, isotopes, and the isotope track in play (§7).                                                                                                                                                                                                                                              |
-| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, perks in play, the isotope track in play (tooltips, the Isotopes tab, the reset dialog, the unlock card, the reroll), the run-down in play (time away, the fault and the restart), the share bar and the combo's auto-tapper line, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine. |
-| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the isotope and perk shelves and their tooltips, the swap and reset dialogs, the isotope track, the unlock card, the run-down's label and restart marks, the share bar, the Perks panel and the glyph template. The frontmatter computes the dial, bezel, mote, restart-mark and offer-ring geometry.                                               |
-| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                                                                                                                                                                                                                                                  |
-| `src/components/games/PerkIcon.astro`                 | The 25 perk glyphs, in ShopIcon's idiom. The page renders them all into a `<template>` for the script to clone.                                                                                                                                                                                                                                                                                             |
-| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`, every perk and the drop odds included.                                                                                                                                                                                                                                                                                               |
-| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                                                                                                                                                                                                                                         |
+| File                                                  | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/games/spacebar-clicker/config.ts`                | Every number and table: shop items, combo tiers and rules, surge, reactor states, prestige, the run-down, achievements. Pure data.                                                                                                                                                                                                                                                                                                                                    |
+| `src/games/spacebar-clicker/economy.ts`               | Pure functions over the save: costs, energy per press and per second, what the combo gives the auto-tappers (`syncMultiplier`), what Synchronisation would add before it is bought (`syncGain`), and their output split into the machines' own and what play adds (`tapperSplit`), the luck roll, reactor state and progress, prestige gain and where the next isotope comes, buying, shop reveals, shop-tab notices, and which one-off upgrades a perk switches off. |
+| `src/games/spacebar-clicker/mods.ts`                  | A run's modifiers: every rule a perk or a track rung can bend, in one object. `BASE_MODS` is the shipped game; `modsOf(state)` folds in the Stabiliser, Synchronisation, every owned perk at its level, then the track's rungs in force.                                                                                                                                                                                                                              |
+| `src/games/spacebar-clicker/combo.ts`                 | `ComboTracker`: the rhythm combo, with the Stabiliser's tier drop and the 10-second pause. `RestartTracker`: the restart's 10 presses on a beat. Both take timestamps from the caller, so they have no clock of their own, and read the run's rules on every press.                                                                                                                                                                                                   |
+| `src/games/spacebar-clicker/rng.ts`                   | A seeded random generator (mulberry32). Pure; for perk drops, so a reload can't reroll them.                                                                                                                                                                                                                                                                                                                                                                          |
+| `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together, without a surge's or Afterglow's boost. Perk prices and windows are set in it. `ShareMeter`: the player's share of recent energy, for the share bar (§4.2).                                                                                                                                                                                                   |
+| `src/games/spacebar-clicker/rundown.ts`               | The run-down (§8.5): the output share of a reactor left alone, the energy over a stretch of it, the fault, tending and the restart, and what a hidden or closed tab earned. Pure.                                                                                                                                                                                                                                                                                     |
+| `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`, which starts the new run with the track's head starts and any kept perk.                                                                                                                                                                                                                                                                                                                                 |
+| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                                                                                                                                                                                                                                                |
+| `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                                                                                                                                                                                                                                                             |
+| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks, the run-down, the restart and the share meter included (88 as of 2026-11-10).                                                                                                                                                                                                                                                                                                                                                  |
+| `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12), and whole careers of runs and resets with the isotope track (§8.3.7).                                                                                                                                                                                                                                                                      |
+| `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `src/games/spacebar-clicker/career.test.ts`           | Holds careers to the isotope track's targets (§8.3.7): a first run unchanged, the two sides of each fork. About 20 s.                                                                                                                                                                                                                                                                                                                                                 |
+| `src/games/spacebar-clicker/perks.test.ts`            | Unit tests for perks: the table, every effect, drops, buying, notices and the save (61 as of 2026-11-09).                                                                                                                                                                                                                                                                                                                                                             |
+| `src/games/spacebar-clicker/track.ts`                 | The isotope track (§8.3): which rungs are in force for an isotope count and fork picks, what a reset reaches, which forks still need a pick, and the next steps to show. Pure.                                                                                                                                                                                                                                                                                        |
+| `src/games/spacebar-clicker/track.test.ts`            | Unit tests for the track: the table, every rung, both sides of every fork, the reset, the save, and the credits (37 as of 2026-11-09).                                                                                                                                                                                                                                                                                                                                |
+| `tests/browser/*.e2e.ts`, `playwright.config.ts`      | Browser checks in Playwright: the main flows, a whole surge on a fake clock, every reactor state, perks in play, isotopes, and the isotope track in play (§7).                                                                                                                                                                                                                                                                                                        |
+| `src/scripts/spacebar-clicker.ts`                     | The browser side: DOM, input, frame loop, surge scheduler, perks in play, the isotope track in play (tooltips, the Isotopes tab, the reset dialog, the unlock card, the reroll), the run-down in play (time away, the fault and the restart), the share bar and the combo's auto-tapper line, saving, sound, every animation. Reuses only `browserAdapter`/`KEY_PREFIX` and `createBeeper` from the engine.                                                           |
+| `src/pages/spacebar-clicker.astro`                    | Markup and all game CSS, including the perk offer rows, the isotope and perk shelves and their tooltips, the swap and reset dialogs, the isotope track, the unlock card, the run-down's label and restart marks, the share bar, the Perks panel and the glyph template. The frontmatter computes the dial, bezel, mote, restart-mark and offer-ring geometry.                                                                                                         |
+| `src/components/games/ShopIcon.astro`                 | The ten bespoke shop glyphs and their purchase animations.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `src/components/games/PerkIcon.astro`                 | The 25 perk glyphs, in ShopIcon's idiom. The page renders them all into a `<template>` for the script to clone.                                                                                                                                                                                                                                                                                                                                                       |
+| `src/content/tools/spacebar-clicker.mdx`              | The long-form copy below the game. Its tables render from `config.ts`, every perk and the drop odds included.                                                                                                                                                                                                                                                                                                                                                         |
+| `src/data/tools.ts`                                   | Registry entry: icon `ph:atom`, `telemetry: false`.                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ## 4. How the game works
 
@@ -245,6 +245,14 @@ prices stayed put (§4.12). The Stabiliser came down from 20,000 to 5,000 on
   it back does not re-announce it. The open tab is always treated as seen.
 - **Rows** are a three-column grid: a 36px glyph tile, the name and detail, and
   the cost and level. Unaffordable rows are greyed.
+- **Synchronisation's figure** (2026-11-10, §8.5.12). Until it is bought, its
+  row has a third line: what it would add to the auto-tappers each second at
+  the player's combo tier, "+291 per second at Resonance", or at Steady while
+  they have no tier, so the number climbs with the combo (`syncGain`). It
+  shows even before Synchronisation is affordable, and its number brightens
+  with the row once it is. It hides where Synchronisation would add nothing
+  even at the top tier: no auto-tappers yet, Brute Force, or Full Sync
+  sharing more.
 - The shop is pinned to the reactor's height and scrolls inside itself.
 
 ### 4.6 Reactor states
@@ -906,12 +914,12 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ## 7. Testing
 
-- `npm test` runs Vitest: the 87 clicker tests, the 61 perk tests, the 37
+- `npm test` runs Vitest: the 88 clicker tests, the 61 perk tests, the 37
   track tests, the pacing bands and the career bands.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  74 as of 2026-11-10, in about nine minutes.
+  76 as of 2026-11-10, in about nine minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
@@ -953,8 +961,9 @@ The visuals were built in three passes, all shipped 2026-10-22.
     10-second pause.
   - **Whose energy** (`spacebar-clicker-share.e2e.ts`): the share bar waiting
     for auto-tappers, rising with presses and draining after; the
-    auto-tappers' line opening with Synchronisation and following the combo; a
-    fault standing the bar down; the face at 1440x900 within 588px with both
+    auto-tappers' line opening with Synchronisation and following the combo;
+    Synchronisation's shop figure climbing with the combo and going once
+    bought; a fault standing the bar down; the face at 1440x900 within 588px with both
     showing; and the short words on a phone, with nothing in the combo row
     wrapping.
   - **Staging a save.** The perk and isotope checks write a whole save before
@@ -1969,7 +1978,8 @@ approved its proposals and every check passes (§8.5.7). Step 3, the run-down
 in play, is built (§8.5.8). Step 4, the page copy, is deferred to a full
 copy audit just before the merge (§8.5.9). Finding 5 was discussed on
 2026-11-10 (§8.5.10): ideas 1 and 2, the share bar and the auto-tappers'
-line, are built, and their calls await review (§8.5.11).
+line, are built, and their calls await review (§8.5.11). Idea 3,
+Synchronisation's shop figure, is built too (§8.5.12).
 
 #### 8.5.1 The review
 
@@ -2348,8 +2358,9 @@ drift):
   table, but any prose about it is worth a check.
 - **The share bar and the auto-tappers' line** (§8.5.10) aren't described
   on the page. Their words in the game are worth the audit too: "You",
-  "auto-tappers" and "auto" on the bar and the combo meter, and "Energy from
-  you" in the Stats panel.
+  "auto-tappers" and "auto" on the bar and the combo meter, "Energy from
+  you" in the Stats panel, and Synchronisation's "+291 per second at
+  Resonance" in the shop.
 - **This doc's §6**, once the page changes.
 
 #### 8.5.10 Finding 5: presses and surges fade, 2026-11-10
@@ -2388,8 +2399,8 @@ presses also paying a share of a second's income, so a surge stays worth
 about half a minute of output, leaving Surge Lines its own job. The stalled
 per-press number left alone: with the bar it matters less.
 
-**Decided:** 1 and 2 first, built (§8.5.11). 3 and 4 not yet; 4 needs the
-simulation to size it.
+**Decided:** 1 and 2 first, built (§8.5.11). Then 3, built (§8.5.12). 4 not
+yet; it needs the simulation to size it.
 
 #### 8.5.11 Ideas 1 and 2: calls for review, 2026-11-10
 
@@ -2436,6 +2447,27 @@ Built: the share bar (§4.2) and the auto-tappers' line (§4.3), with
    Glass Rhythm's x3.75, which read x3.8 before.
 10. **Stats** lists the share as "Energy from you", for anyone not looking at
     the face, whose contents sit inside the reactor's button.
+
+#### 8.5.12 Idea 3: calls for review, 2026-11-10
+
+Built: Synchronisation's shop figure (§4.5), `syncGain` in the economy, 1
+unit test and 2 browser checks.
+
+1. **Which combo it prices.** The player's own tier, so the number climbs as
+   the combo does: in a check, +97, +194, +291 and +389 per second from Steady
+   to Harmonic. With no tier it shows Steady's, not Harmonic's, so a broken
+   combo never makes the number jump up.
+2. **The words:** "+291 per second at Resonance", on one line in the row's
+   text column, which "Up to" would have wrapped. In the detail's muted grey,
+   the number in the row's own ink. The copy audit can revisit it (§8.5.9).
+3. **It shows from the start of a run**, priced and climbing long before
+   Synchronisation is affordable, since saving for it is the point. It goes
+   once bought, and the row reads Owned as before.
+4. **Room.** It adds a line to the last row of Upgrades. At 1440 the list
+   still fits with a perk offer showing; an offer with a note and a credit
+   would make it scroll, as it already scrolls on a phone.
+5. **It prices the reactor at full power**, run down or not: it is what the
+   upgrade does, not what the reactor makes this minute.
 
 ### 8.6 Unassigned ideas
 
@@ -2635,3 +2667,7 @@ the maintainer asks.
   spacing tightens, so it still fits 1440x900. Multipliers show two decimal
   places where they need them. "Energy from you" in Stats. 7 unit tests and 6
   browser checks, 74 in all. Calls in §8.5.11.
+- **2026-11-10.** Finding 5, idea 3 (§8.5.12): until it is bought,
+  Synchronisation's shop row says what it would add to the auto-tappers at
+  the player's combo tier, climbing with the combo. 1 unit test and 2 browser
+  checks, 76 in all.
