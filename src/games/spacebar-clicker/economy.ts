@@ -321,6 +321,18 @@ export function isotopeProgress(runLifetime: number): number {
   return Math.min(1, Math.max(0, (runLifetime - from) / (to - from)));
 }
 
+/**
+ * How full the isotope badge's ring and the Isotopes tab's meter are, 0 to 1
+ * (SPACEBAR-CLICKER.md §8.5.17). Before a reset opens, a cube-root scale
+ * toward the first isotope: a run's energy climbs faster as it goes, so a
+ * linear fill would sit near empty for half a first run, where this one
+ * keeps pace with the clock. From there, linear from one isotope to the next.
+ */
+export function isotopeFill(runLifetime: number): number {
+  if (runLifetime >= PRESTIGE_UNLOCK) return isotopeProgress(runLifetime);
+  return Math.cbrt(Math.max(0, runLifetime) / PRESTIGE_UNLOCK);
+}
+
 /** Credit energy to the run. The one place both lifetime counters move. */
 export function earn(state: SaveState, amount: number): void {
   state.energy += amount;

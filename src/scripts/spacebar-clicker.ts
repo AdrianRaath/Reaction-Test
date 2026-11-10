@@ -57,7 +57,7 @@ import {
   earn,
   energyPerPress,
   energyPerSecond,
-  isotopeProgress,
+  isotopeFill,
   luckyMultiplier,
   markShopTabSeen,
   nextComboTier,
@@ -237,12 +237,14 @@ const bezelEl = document.getElementById('sc-bezel') as SVGSVGElement | null;
 // The isotope shelf over the face's top-left corner: the beads held, then a
 // ring for the next reset once one is open, and a tooltip of its own.
 const shelfEl = el('sc-shelf');
-const isotopesHeld = el<HTMLButtonElement>('sc-isotopes-held');
-const pelletsEl = el('sc-pellets');
-const shelfMoreEl = el('sc-shelf-more');
-const isotopeNext = el<HTMLButtonElement>('sc-isotope-next');
+const isotopeBadge = el<HTMLButtonElement>('sc-isotope-badge');
+const isotopeDial = el('sc-isotope-dial');
 const isotopeRing = document.getElementById('sc-isotope-ring') as SVGCircleElement | null;
-const isotopeNextCount = el('sc-isotope-next-count');
+const isotopeCountEl = el('sc-isotope-count');
+const isotopeSeed = el('sc-isotope-seed');
+const isotopeTag = el('sc-isotope-tag');
+const isotopeNameEl = el('sc-isotope-name');
+const isotopeProgressEl = el('sc-isotope-progress');
 const isotopeTip = el('sc-isotope-tip');
 const isotopeTipName = el('sc-isotope-tip-name');
 const isotopeTipKind = el('sc-isotope-tip-kind');
@@ -1345,11 +1347,10 @@ function renderPerkShelf(): void {
   renderTip();
 }
 
-// A shelf's tooltip: a perk chip's, by its slot, or the isotope shelf's beads
-// or ring. It shows for whatever is under a mouse, else what has keyboard
+// A shelf's tooltip: a perk chip's, by its slot, or the isotope badge's. It shows for whatever is under a mouse, else what has keyboard
 // focus, else what was last tapped. Escape dismisses it until the next hover,
 // focus or tap.
-type TipTarget = number | 'held' | 'next';
+type TipTarget = number | 'badge';
 let tipHover: TipTarget | null = null;
 let tipFocus: TipTarget | null = null;
 let tipPinned: TipTarget | null = null;
@@ -1361,7 +1362,7 @@ let lastPointer = 'mouse';
 function renderTip(): void {
   const target = tipDismissed ? null : (tipHover ?? tipFocus ?? tipPinned);
   renderPerkTip(typeof target === 'number' ? target : null);
-  renderIsotopeTip(typeof target === 'string' ? target : null);
+  renderIsotopeTip(target === 'badge');
 }
 
 function renderPerkTip(slot: number | null): void {
@@ -1387,45 +1388,54 @@ function renderPerkTip(slot: number | null): void {
   perkTip.style.setProperty('--caret-right', `${shelf.right - (chip.left + chip.width / 2)}px`);
 }
 
-/** The isotopes held, or the next reset: what it pays now and where the next one comes. */
-function renderIsotopeTip(target: 'held' | 'next' | null): void {
-  const held = state.isotopes;
-  const gain = prestigeGain(state.runLifetime);
-  const shown = target === 'held' ? held > 0 : target === 'next' && gain > 0;
+/**
+ * The badge's tooltip. Before a reset opens: the isotopes held and what they
+ * are worth, how far off a reset is, then the track's next unlock. Once one
+ * is open: what it pays now, what it unlocks, and where the next comes.
+ */
+function renderIsotopeTip(shown: boolean): void {
   isotopeTip.hidden = !shown;
   if (!shown) {
     isotopeTipShown = '';
     return;
   }
-  const key = `${target}:${held}:${gain}:${JSON.stringify(state.forks)}`;
+  const held = state.isotopes;
+  const gain = prestigeGain(state.runLifetime);
+  const next = nextIsotopeAt(state.runLifetime);
+  const toGo = gain > 0 ? '' : formatEnergy(next - state.runLifetime);
+  const key = `${held}:${gain}:${toGo}:${JSON.stringify(state.forks)}`;
   if (key === isotopeTipShown) return;
   isotopeTipShown = key;
 
   // The track's line: the next unlock, or what this reset unlocks.
   let unlock: Node[] = [];
-  if (target === 'held') {
+  if (gain === 0) {
     const rate = Math.round(isotopeRate(held, state.forks) * 100);
-    isotopeTipName.textContent = isotopeCount(held);
-    isotopeTipKind.textContent = `${bonusText(held)} to all gains`;
-    isotopeTipDetail.textContent = `Each one adds ${rate}% to everything you earn, and they last through every reset.`;
-    const next = nextSteps(held, 1)[0];
-    unlock = next
-      ? [text(`Next at ${isotopeCount(next.isotopes)}: `), ...unlockNodes([next]), text('.')]
+    isotopeTipName.textContent = held > 0 ? isotopeCount(held) : 'Isotopes';
+    isotopeTipKind.textContent =
+      held > 0 ? `${bonusText(held)} to all gains` : `Each adds ${rate}% to all gains`;
+    isotopeTipDetail.textContent =
+      held > 0
+        ? `Each one adds ${rate}% to everything you earn, and they last through every reset. A reset opens at ${formatEnergy(next)} energy: ${toGo} to go.`
+        : `Resetting the experiment pays them, and they last through every reset. The first comes at ${formatEnergy(next)} energy: ${toGo} to go.`;
+    const step = nextSteps(held, 1)[0];
+    unlock = step
+      ? [text(`Next at ${isotopeCount(step.isotopes)}: `), ...unlockNodes([step]), text('.')]
       : [text('Every rung of the isotope track is unlocked.')];
   } else {
     isotopeTipName.textContent = `Reset now for ${isotopeCount(gain)}`;
     isotopeTipKind.textContent = `${bonusText(held)} now, ${bonusText(held + gain)} after`;
-    isotopeTipDetail.textContent = `The next isotope comes at ${formatEnergy(nextIsotopeAt(state.runLifetime))} energy this run. Click to open the Isotopes tab.`;
+    isotopeTipDetail.textContent = `The next isotope comes at ${formatEnergy(next)} energy this run. Click to open the Isotopes tab.`;
     const steps = stepsReached(held, held + gain);
     if (steps.length > 0) unlock = [text('Unlocks '), ...unlockNodes(steps), text('.')];
   }
   isotopeTipUnlock.hidden = unlock.length === 0;
   isotopeTipUnlock.replaceChildren(...unlock);
-  // The ring's hook is what the reset unlocks, so it leads; the beads' next unlock follows.
-  if (target === 'held') isotopeTipDetail.after(isotopeTipUnlock);
+  // An open reset's hook is what it unlocks, so it leads; the next unlock follows.
+  if (gain === 0) isotopeTipDetail.after(isotopeTipUnlock);
   else isotopeTipDetail.before(isotopeTipUnlock);
-  // The caret points at the beads or the ring, and stays clear of the corner.
-  const anchor = (target === 'held' ? isotopesHeld : isotopeNext).getBoundingClientRect();
+  // The caret points at the ring, and stays clear of the corner.
+  const anchor = isotopeDial.getBoundingClientRect();
   const tip = isotopeTip.getBoundingClientRect();
   const caret = Math.max(12, anchor.left + anchor.width / 2 - tip.left);
   isotopeTip.style.setProperty('--caret-left', `${caret}px`);
@@ -1486,8 +1496,7 @@ function wireTip(
 }
 
 perkSlots.forEach((slot, i) => wireTip(slot.chip, i));
-wireTip(isotopesHeld, 'held');
-wireTip(isotopeNext, 'next', openResetTab);
+wireTip(isotopeBadge, 'badge', openResetTab);
 
 for (const shelf of [shelfEl, perkShelf]) {
   shelf.addEventListener('pointerleave', (e) => {
@@ -1503,7 +1512,7 @@ document.addEventListener('pointerdown', (e) => {
 });
 
 /**
- * The ring's way in: select the Isotopes tab and bring it into
+ * The badge's way in: select the Isotopes tab and bring it into
  * view. From the keyboard, focus follows to the tab; from a pointer it lets
  * go, so Space keeps pressing the reactor.
  */
@@ -1516,7 +1525,7 @@ function openResetTab(fromKeyboard: boolean): void {
     .closest('.panels')
     ?.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
   if (fromKeyboard) prestigeTab.focus();
-  else isotopeNext.blur();
+  else isotopeBadge.blur();
 }
 
 /** How long a bought perk takes to fly from its offer to its socket. */
@@ -1784,7 +1793,7 @@ function renderPrestige(): void {
     setSentence(prestigeProgress, [formatEnergy(PRESTIGE_UNLOCK - state.runLifetime)], ' to go');
   }
   renderResetUnlocks(ready ? stepsReached(held, held + gain) : []);
-  isotopeMeter.style.transform = `scaleX(${isotopeProgress(state.runLifetime)})`;
+  isotopeMeter.style.transform = `scaleX(${isotopeFill(state.runLifetime)})`;
   renderTrack();
 }
 
@@ -1901,97 +1910,119 @@ function renderPanels(): void {
   renderPrestige();
 }
 
-/** Pellets shown on the shelf before the rest collapse into "+N". */
-const SHELF_MAX = 10;
-
-/** What a reset paid when the shelf last drew, so a rise can pop the ring; null before the first draw. */
+/** What a reset paid when the badge last drew, so a rise can pop the tag; null before the first draw. */
 let shelfGain: number | null = null;
 
+/** The count the badge shows while a reset's isotopes fly to it; null otherwise. */
+let badgeHold: number | null = null;
+
 /**
- * The trophy shelf: one bead per isotope, kept across every reset. Once a
- * reset is open, the ring after them: the isotopes it pays now, filling
- * toward the next. Runs on the panel tick, so it only touches what changed.
+ * The isotope badge: the count held (a waiting bead before the first), the
+ * ring filling toward the next isotope, the "+N" tag once a reset is open,
+ * and two lines: "13 isotopes" over "next in 600K", "First isotope" over
+ * "600K to go" before any is held, and "Reset for +1" once a reset is open.
+ * Runs on the panel tick, so it only touches what changed.
  */
 function renderShelf(): void {
-  const count = state.isotopes;
+  const held = state.isotopes;
+  const shown = badgeHold ?? held;
   const gain = prestigeGain(state.runLifetime);
-  shelfEl.hidden = count === 0 && gain === 0;
+  const open = gain > 0;
+  isotopeBadge.classList.toggle('is-open', open);
 
-  isotopesHeld.hidden = count === 0;
-  const next = nextSteps(count, 1)[0];
-  const heldLabel =
-    `${isotopeCount(count)}, ${bonusText(count)} to all gains, kept through every reset.` +
-    (next ? ` Next unlock at ${isotopeCount(next.isotopes)}: ${unlockWords([next])}.` : '');
-  if (isotopesHeld.getAttribute('aria-label') !== heldLabel) {
-    isotopesHeld.setAttribute('aria-label', heldLabel);
+  isotopeCountEl.hidden = shown === 0;
+  isotopeSeed.hidden = shown > 0;
+  const count = String(shown);
+  if (isotopeCountEl.textContent !== count) {
+    isotopeCountEl.textContent = count;
+    isotopeCountEl.dataset.digits = String(count.length);
   }
 
-  isotopeNext.hidden = gain === 0;
-  if (gain > 0) renderRing(gain);
+  isotopeTag.hidden = !open;
+  if (open) setText(isotopeTag, `+${gain}`);
   if (shelfGain !== null && gain > shelfGain) {
-    // A reset just opened, or pays one more: the ring grows in, or pops. The
-    // other motion's class goes first, since the ring keeps its last one
+    // A reset just opened, or pays one more: the tag grows in, or pops. The
+    // other motion's class goes first, since the tag keeps its last one
     // through a hidden run.
-    isotopeNext.classList.remove('is-arriving', 'is-up');
-    replay(isotopeNext, shelfGain === 0 ? 'is-arriving' : 'is-up');
+    isotopeTag.classList.remove('is-arriving', 'is-up');
+    replay(isotopeTag, shelfGain === 0 ? 'is-arriving' : 'is-up');
   }
-  shelfGain = gain;
 
-  const shown = Math.min(count, SHELF_MAX);
-  while (pelletsEl.childElementCount < shown) {
-    const pellet = document.createElement('span');
-    pellet.className = 'pellet';
-    pelletsEl.appendChild(pellet);
+  const toGo = formatEnergy(nextIsotopeAt(state.runLifetime) - state.runLifetime);
+  setText(isotopeNameEl, shown > 0 ? isotopeCount(shown) : 'First isotope');
+  setText(
+    isotopeProgressEl,
+    open ? `Reset for +${gain}` : shown > 0 ? `next in ${toGo}` : `${toGo} to go`
+  );
+
+  const label = badgeLabel(held, gain);
+  if (isotopeBadge.getAttribute('aria-label') !== label) {
+    isotopeBadge.setAttribute('aria-label', label);
   }
-  while (pelletsEl.childElementCount > shown) pelletsEl.lastElementChild!.remove();
-  shelfMoreEl.hidden = count <= SHELF_MAX;
-  shelfMoreEl.textContent = `+${count - SHELF_MAX}`;
+  renderRing(gain);
+  shelfGain = gain;
   fitShelves();
   renderTip();
 }
 
-/** The room the two shelves keep between them before the perk shelf drops a row. */
+/**
+ * The badge's name for screen readers: what the isotopes held are worth, then
+ * the next reset, by its thresholds rather than the energy to go, so the name
+ * doesn't change with every press.
+ */
+function badgeLabel(held: number, gain: number): string {
+  const worth =
+    held > 0
+      ? `${isotopeCount(held)}, ${bonusText(held)} to all gains, kept through every reset.`
+      : 'No isotopes yet. Resetting the experiment pays them, and they last through every reset.';
+  if (gain > 0) {
+    const steps = stepsReached(held, held + gain);
+    const unlocks = steps.length > 0 ? ` and unlocking ${unlockWords(steps)}` : '';
+    const next = formatEnergy(nextIsotopeAt(state.runLifetime));
+    return `${worth} Reset the experiment now for ${isotopeCount(gain)}, taking all gains to ${bonusText(held + gain)}${unlocks}. The next isotope comes at ${next} energy.`;
+  }
+  const step = nextSteps(held, 1)[0];
+  const unlock = step
+    ? ` Next unlock at ${isotopeCount(step.isotopes)}: ${unlockWords([step])}.`
+    : '';
+  return `${worth} A reset opens at ${formatEnergy(PRESTIGE_UNLOCK)} energy.${unlock}`;
+}
+
+/** The room the two shelves keep between them. */
 const SHELF_GAP = 12;
+/** The room the badge's lines take beside the ring: their gap and fixed width. */
+const LINES_ROOM = 96;
 
 /**
- * On a narrow face the shelves can meet in the middle. Measured, since the
- * isotope row's length depends on its beads, its "+N" and the ring; the
- * perk shelf's left edge is the same stacked or not, so this never flips
- * back and forth.
+ * On a narrow face the perk shelf can come near the badge. Measured against
+ * the ring, which never moves: when the lines wouldn't fit before the perk
+ * shelf, they go and the ring stands alone; when even the ring wouldn't, the
+ * wrap is marked stacked and the perk shelf drops below the badge.
  */
 function fitShelves(): void {
-  let meet = false;
-  if (!shelfEl.hidden && !perkShelf.hidden) {
-    const last = !isotopeNext.hidden
-      ? isotopeNext.querySelector('svg')!
-      : !shelfMoreEl.hidden
-        ? shelfMoreEl
-        : pelletsEl;
-    meet = last.getBoundingClientRect().right + SHELF_GAP > perkShelf.getBoundingClientRect().left;
+  let compact = false;
+  let stacked = false;
+  if (!perkShelf.hidden) {
+    const ring = isotopeDial.getBoundingClientRect().right;
+    const perks = perkShelf.getBoundingClientRect().left;
+    compact = ring + LINES_ROOM + SHELF_GAP > perks;
+    stacked = ring + SHELF_GAP > perks;
   }
-  reactorWrap.classList.toggle('is-stacked', meet);
+  reactorWrap.classList.toggle('is-compact', compact);
+  reactorWrap.classList.toggle('is-stacked', stacked);
 }
 
 new ResizeObserver(fitShelves).observe(reactorWrap);
 
-/** The ring: its count, its fill toward the next isotope, and its name for screen readers. */
+/**
+ * The ring's fill toward the next isotope, on a cube-root scale before a
+ * reset opens (`isotopeFill`). A fresh count starts it empty at once rather
+ * than winding back.
+ */
 function renderRing(gain: number): void {
-  const count = gain < 10 ? `+${gain}` : String(gain);
-  if (isotopeNextCount.textContent !== count) {
-    isotopeNextCount.textContent = count;
-    isotopeNextCount.dataset.digits = String(String(gain).length);
-  }
-  const next = formatEnergy(nextIsotopeAt(state.runLifetime));
-  const steps = stepsReached(state.isotopes, state.isotopes + gain);
-  const unlocks = steps.length > 0 ? ` and unlocking ${unlockWords(steps)}` : '';
-  const label = `Reset the experiment now for ${isotopeCount(gain)}, taking all gains to ${bonusText(state.isotopes + gain)}${unlocks}. The next isotope comes at ${next} energy.`;
-  if (isotopeNext.getAttribute('aria-label') !== label)
-    isotopeNext.setAttribute('aria-label', label);
-
   if (!isotopeRing) return;
-  const offset = (100 * (1 - isotopeProgress(state.runLifetime))).toFixed(2);
+  const offset = (100 * (1 - isotopeFill(state.runLifetime))).toFixed(2);
   if (shelfGain !== null && gain > shelfGain) {
-    // A fresh count starts an empty ring at once, rather than winding back.
     isotopeRing.style.transition = 'none';
     isotopeRing.style.strokeDashoffset = offset;
     void isotopeRing.getBoundingClientRect();
@@ -2916,7 +2947,7 @@ let imploding = false;
 /**
  * The core collapses to a point while the rest of the face dims, then blooms
  * back as a Dormant reactor while the isotopes just earned fly from the core
- * to the shelf. The save has already been reset; this only holds the reactor's
+ * into the badge. The save has already been reset; this only holds the reactor's
  * old look until the collapse completes. Once the beads land, a card names
  * the rungs the reset unlocked. Reduced motion shows the result at once.
  */
@@ -2927,6 +2958,8 @@ function playReset(isotopesBefore: number, unlocked: readonly RungId[]): void {
     return;
   }
   imploding = true;
+  // The badge keeps its old count until the reset's isotopes land in it.
+  badgeHold = isotopesBefore;
   reactor.classList.remove('is-blooming');
   reactor.classList.add('is-imploding');
   // The run's perks go with it: the shelf fades as the core collapses.
@@ -2974,23 +3007,28 @@ function showUnlocks(unlocked: readonly RungId[]): void {
   );
 }
 
-/** Beads fly from the core to each new slot on the shelf, then land. Returns ms until the last lands. */
+/**
+ * The reset's isotopes fly from the core into the badge as beads, up to three
+ * for any number, and its count steps up as each lands. Returns ms until the
+ * last lands.
+ */
 function flyIsotopes(before: number): number {
-  const fresh = Array.from(pelletsEl.children).slice(Math.min(before, SHELF_MAX)) as HTMLElement[];
-  for (const pellet of fresh) pellet.classList.add('is-pending');
-  // Past ten on the shelf, a few beads fly to the "+N" count instead.
-  const extra = Math.min(3, state.isotopes - before - fresh.length);
-  const targets: HTMLElement[] = [...fresh, ...Array.from({ length: extra }, () => shelfMoreEl)];
-
+  const gain = state.isotopes - before;
+  const flights = Math.min(3, gain);
   const face = reactor.getBoundingClientRect();
   const core = coreEl.getBoundingClientRect();
+  const dial = isotopeDial.getBoundingClientRect();
   const fx = core.left - face.left + core.width / 2 - 4;
   const fy = core.top - face.top + core.height / 2 - 4;
+  const tx = dial.left - face.left + dial.width / 2 - 4;
+  const ty = dial.top - face.top + dial.height / 2 - 4;
+  const land = (count: number | null) => {
+    badgeHold = count;
+    renderShelf();
+    replay(isotopeDial, 'is-landed');
+  };
 
-  targets.forEach((target, i) => {
-    const to = target.getBoundingClientRect();
-    const tx = to.left - face.left + to.width / 2 - 4;
-    const ty = to.top - face.top + to.height / 2 - 4;
+  for (let i = 0; i < flights; i++) {
     const flyer = document.createElement('span');
     flyer.className = 'isotope-flyer';
     reactor.appendChild(flyer);
@@ -3009,13 +3047,15 @@ function flyIsotopes(before: number): number {
     );
     flight.onfinish = () => {
       flyer.remove();
-      if (target !== shelfMoreEl) {
-        target.classList.remove('is-pending');
-        replay(target, 'is-landed');
-      }
+      land(i === flights - 1 ? null : before + Math.round((gain * (i + 1)) / flights));
     };
-  });
-  return 150 + Math.max(0, targets.length - 1) * 90 + FLY_MS;
+  }
+  const total = 150 + Math.max(0, flights - 1) * 90 + FLY_MS;
+  // Should a flight never finish (a hidden tab), the count still catches up.
+  window.setTimeout(() => {
+    if (badgeHold !== null) land(null);
+  }, total + 400);
+  return total;
 }
 
 // Reset everything (top bar). Settings survive, as the dialog promises.

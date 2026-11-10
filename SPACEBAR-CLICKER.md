@@ -309,20 +309,34 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
 - **When a reset opens.** That is at 1M, which is also Unstable, so the stage
   toast carries it: "Reactor is now Unstable. You can reset the experiment."
   It is announced the same way, once a run.
-- **The isotope shelf**, over the face's top-left corner:
-  - One bead per isotope, up to ten, then "+N". Hover, focus or a tap shows a
-    tooltip: "3 isotopes", "+30% to all gains", that each adds 10% (13% with
-    Enrichment) and lasts through every reset, and the track's next unlock:
-    "Next at 4 isotopes: Night Lab." Past 12: "Every rung of the isotope track
-    is unlocked."
-  - Once a reset is open, a ring follows the beads. It shows the isotopes a
-    reset pays now ("+1") and fills toward the next one. When the count rises
-    it pops, and the fill starts again from empty.
-  - The ring's tooltip: "Reset now for 1 isotope", "+30% now, +40% after",
-    then what the reset unlocks, "Unlocks Lucky Find and a choice of Reroll or
-    Patience.", then where the next isotope comes. A click or tap opens the
-    Isotopes tab and scrolls it into view. From the keyboard,
-    focus follows to the tab.
+- **The isotope badge**, over the face's top-left corner (2026-11-10,
+  §8.5.17; it was a row of beads, shown only once isotopes were held or a
+  reset was open). It shows from a first run's first moment, so a new player
+  sees the goal:
+  - A ring with the isotopes held as a count; before the first, a dim bead
+    waits in it, and brightens once a reset would pay one. The ring fills
+    toward the next isotope (`isotopeFill`): before a reset opens, on a
+    cube-root scale toward 1M, so it keeps pace with the clock (half full
+    at 125K, 84% at 600K); once one is open, linearly from one isotope's
+    threshold to the next, starting again from empty at each.
+  - Beside it, two lines: "13 isotopes" over "next in 400K"; before any is
+    held, "First isotope" over "600K to go"; once a reset is open, "Reset for
+    +1" in the isotopes' blue. A "+1" tag hangs from the ring's foot, grows
+    in when the reset opens and pops at each isotope more, and the ring
+    glows.
+  - Hover or focus shows a tooltip. Before a reset opens: "3 isotopes" (or
+    "Isotopes"), "+30% to all gains" (or "Each adds 10% to all gains"), what
+    they're worth and how far off a reset is, "A reset opens at 1.00M
+    energy: 580K to go.", then the track's next unlock: "Next at 4 isotopes:
+    Night Lab." Past 12: "Every rung of the isotope track is unlocked." Once
+    one is open: "Reset now for 1 isotope", "+30% now, +40% after", what the
+    reset unlocks, then where the next isotope comes.
+  - A click or tap opens the Isotopes tab and scrolls it into view; from the
+    keyboard, focus follows to the tab. Touch has no tooltip: a tap opens
+    the tab.
+  - On a narrow face, when the perk shelf leaves no room for the lines, they
+    go and the ring stands alone (`fitShelves`): on a 390-wide phone with
+    six sockets, or on a 360-wide one with any perk.
   - Like the perk shelf, it sits beside the face in the markup, so a click or
     tap on it is never a press.
 - **The Isotopes tab**: three titled sections, the action first
@@ -377,7 +391,7 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
     phone it scrolls about 34px, from 1,616px. A rare reset that lands every
     rung at once still scrolls.
 - **After the reset.** The toast: "Experiment reset. 1 isotope gained: +40% to
-  all gains." Once the beads land, the unlock card over the core names each
+  all gains." Once the isotopes land in the badge, the unlock card over the core names each
   new rung, a fork as its pick, for 5 seconds. A kept perk is on the shelf at
   level I. Stats shows isotopes with their bonus: "3, +30%".
 
@@ -671,9 +685,11 @@ the build plan are in §8.1.
 - **Running out.** Once the run's energy passes the window, the row fades and
   folds away, silently, and "Overtone is no longer on offer." is announced.
 - **The shelf** sits over the face's top-right corner, mirroring the isotope
-  beads: five sockets, six with Sixth Slot, a chip in the family hue for each
-  perk held, and three pips under it for its level. Empty sockets show as
-  dashed outlines.
+  badge top-left: five sockets, six with Sixth Slot, a chip in the family hue
+  for each perk held, and three pips under it for its level. Empty sockets
+  show as dashed outlines. It fills from the corner inward: the first perk
+  takes the rightmost socket, the next the one to its left, and Sixth Slot's
+  socket opens on the far left (§8.5.17).
   - A bought perk flies from its offer tile to its socket and lands with a
     pop; an upgrade flies to the chip it raises and fills a pip.
   - **Tooltips**: the perk's name and level, rarity and family in words
@@ -685,7 +701,7 @@ the build plan are in §8.1.
     of focus so Space keeps pressing the reactor.
   - The shelf sits beside the face in the markup, not inside it, so its
     buttons aren't nested in the face's `role="button"`. Tab goes from the
-    reactor to the chips.
+    reactor to the chips, first perk first, so from the corner leftward.
 - **The Perks panel**, a tab between Achievements and Isotopes:
   - This run: "N of 5 slots" (6 with Sixth Slot), and a card per perk held
     with its rarity and family, level and effect.
@@ -728,10 +744,10 @@ the build plan are in §8.1.
     share bar (§4.2): "You 52%", the bar, "48% auto-tappers", 360px wide like
     the combo meter. Its row is always laid out, so nothing moves when it
     fades in.
-  - Isotope shelf in the top-left, perk shelf in the top-right. Both sit
-    beside the face in the markup, positioned over its corners. The isotope
-    shelf's buttons are padded to 24px targets, and the beads sit 16px in from
-    the face's outer edge, where they always have.
+  - Isotope badge in the top-left, perk shelf in the top-right. Both sit
+    beside the face in the markup, positioned over its corners. The badge's
+    button is padded, and its 30px ring sits 16px in from the face's outer
+    edge, level with the perk chips.
   - The core: a progress dial with six state lights, a turning dashed bezel,
     motes, the core heart, and the readout inside.
   - State name and surge label.
@@ -746,25 +762,23 @@ the build plan are in §8.1.
   are paid for by the one-line hint, the face's gap (12px to 10) and the
   energy number's leading (1 to 0.9). The face is 572px before
   Synchronisation and 587 after, against 588 before, and a browser check
-  holds it. With the isotope shelf showing, the narrow-face rule below steps
-  the readout down 14px at 1440 too, so the face is 601px there (602 before);
-  see §8.5.11.
+  holds it. The isotope badge's lines end 16px short of the energy number at
+  1440, so the readout no longer steps down for it there: until the badge,
+  the isotope shelf stepped it down 14px and the face was 601px (§8.5.11).
 - **Narrow words.** Where the face's content is 400px or less, as on a phone,
   "auto-tappers" shortens to "auto" on the share bar and the combo meter.
-- **Narrow faces.** A container query on the face, `reactor / inline-size`,
-  steps the energy readout down clear of the isotope shelf. It holds on phones
-  and on a laptop with the shop beside the reactor.
-- **The perk shelf** answers to `reactor-wrap`, a container around the face.
-  At 566px of face (1440 and 1280 wide) it clears the readout as it is. Below
-  530px the readout steps down to clear it, measured from the face's padding
-  token, `--face-pad`, so it holds on phones too.
-- **When the shelves would meet.** If the isotope row's last bead, "+N" or
-  ring would come within 12px of the perk shelf, the perk shelf drops below
-  the isotopes, and the readout with it. The script measures this
-  (`fitShelves`), on every shelf change and on resize, since the row's length
-  depends on its contents. On a 390-wide phone that is 10 isotopes with the
-  ring showing, or 12 without it. Until 2026-10-26 a fixed rule did this, at
-  six beads below 340px of face.
+- **Narrow faces.** Both shelves answer to `reactor-wrap`, a container
+  around the face. At 566px of face (1440 and 1280 wide) the readout clears
+  them as it is. Below 550px it steps down under both, measured from the
+  face's padding token, `--face-pad`, so it holds on phones and on a laptop
+  with the shop beside the reactor. The badge always shows, so the readout
+  keeps one place through a run.
+- **When the shelves would meet.** `fitShelves` measures from the badge's
+  ring, which never moves, on every shelf change and on resize. When the
+  badge's lines (a fixed 5.5rem) wouldn't end 12px short of the perk shelf,
+  they go and the ring stands alone. When even the ring wouldn't, the perk
+  shelf drops below the badge, and the readout with it; no phone width gets
+  there.
 
 ### 5.2 Color
 
@@ -772,7 +786,7 @@ the build plan are in §8.1.
   motes, dial and lights, gains, the rhythm scope, the state name, and the
   player's part of the share bar, against the track's grey for the machines.
   Isotopes are blue-white on Cherenkov blue at every stage, on and off the
-  face: the beads, the ring for the next reset, the isotope tooltip, the
+  face: the badge's ring, bead, tag and "Reset for +1", the isotope tooltip, the
   meter in the Isotopes tab, and the isotope track: its sockets
   and rows in that tab, the line by the reset button naming what a reset
   unlocks, the picks in the reset dialog, the unlock card, and the credits
@@ -823,8 +837,10 @@ The visuals were built in three passes, all shipped 2026-10-22.
     stays still with no income.
   - Motes: two more per stage, twelve at most.
   - Reset sequence: the core implodes for 0.5 s while the face dims, then
-    blooms back as Dormant over 0.9 s, while new isotope beads fly to the shelf
-    over 0.7 s. The shelf shows up to 10 beads, then "+N".
+    blooms back as Dormant over 0.9 s, while the isotopes just earned fly
+    from the core into the badge as beads over 0.7 s, up to three for any
+    number. The badge keeps its old count until they land, steps up as each
+    does, and pops.
   - Time away (2026-11-09, §4.8): the energy counts in over 0.9 s. The core
     and dial fade with the run-down, a fault greys and stills them, the
     restart's marks land one by one, and the restart swells the ring and
@@ -870,15 +886,19 @@ The visuals were built in three passes, all shipped 2026-10-22.
   was, or to the reactor when nothing was focused. Shop buttons use `aria-disabled` so they stay focusable while
   unaffordable.
 - Tabs follow the ARIA tab pattern, with arrow keys.
-- The isotope shelf is two buttons. The beads are named like "3 isotopes,
-  +30% to all gains, kept through every reset. Next unlock at 4 isotopes:
-  Night Lab." The ring is named like "Reset the experiment now for 1 isotope,
-  taking all gains to +30% and unlocking a choice of Sixth Slot or Prodigy.
-  The next isotope comes at 4.00M energy." Their tooltips are visual only, like the perk
-  shelf's. Tab goes from the reactor to the beads, the ring, then the perk
-  chips. Opening the tab from the ring by keyboard moves focus to the tab.
+- The isotope badge is one button, named like "3 isotopes, +30% to all
+  gains, kept through every reset. A reset opens at 1.00M energy. Next unlock
+  at 4 isotopes: Night Lab." Before any is held it begins "No isotopes yet.
+  Resetting the experiment pays them, and they last through every reset."
+  Once a reset is open the name goes on: "Reset the experiment now for 1
+  isotope, taking all gains to +30% and unlocking a choice of Sixth Slot or
+  Prodigy. The next isotope comes at 3.00M energy." It names thresholds, not
+  the energy to go, so it doesn't change with every press. Its lines and
+  tooltip are visual only, like the perk shelf's tooltip. Tab goes from the
+  reactor to the badge, then the perk chips. Opening the tab from the badge
+  by keyboard moves focus to the tab.
 - A reset opening is announced with the stage change. A rise in what a reset
-  pays is not announced; the ring's name carries it.
+  pays is not announced; the badge's name carries it.
 - A perk offer row reads as one button: its name and level ("level 2", not the
   numeral), its effect ("now 40%, then 55%" on an upgrade), any note, how much
   of its window is left in tens of percent, the price and the rarity.
@@ -975,7 +995,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  79 as of 2026-11-10, in about nine minutes.
+  78 as of 2026-11-10, in about nine minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
@@ -992,15 +1012,17 @@ The visuals were built in three passes, all shipped 2026-10-22.
     pips and the flight to it; tooltips on hover, focus, Escape and a tap,
     with no press; the Perks panel and codex, through a prestige; the drop,
     expiry and away-dialog wording; the shelf clearing the readout and the
-    isotope beads on a phone.
-  - **Isotopes** (`spacebar-clicker-isotopes.e2e.ts`): the beads' tooltip on
-    hover, focus and Escape, with no press; a reset opening, with its one
-    notice, the ring and its way into the tab by mouse and keyboard; the ring
-    counting up; the tab locked and open, the dialog, the toast and plurals;
-    a tap on the beads and on the ring; the ring, beads and perk shelf on a
-    phone with 4, 9 and 12 isotopes.
-  - **The track** (`spacebar-clicker-track.e2e.ts`): the tooltips' unlock
-    lines; the track in the Isotopes tab, its rows and the unlock line, and the
+    isotope badge on a phone.
+  - **Isotopes** (`spacebar-clicker-isotopes.e2e.ts`): the badge's name,
+    lines and tooltip on hover, focus and Escape, its click opening the tab
+    with no press; a new player's badge, its cube-root fill and the tab's
+    meter on the same scale, and its lines clear of the readout at 1440 with
+    the face within 588px; a reset opening, with its one notice, the tag and
+    the way into the tab by mouse and keyboard; the tag counting up; the tab
+    locked and open, the dialog, the toast, the count landing, and plurals; a
+    tap on the badge; the badge, its lines and the perk shelf on a phone.
+  - **The track** (`spacebar-clicker-track.e2e.ts`): the badge tooltip's
+    unlock line, before a reset opens and once one is; the track in the Isotopes tab, its rows and the unlock line, and the
     tab with every rung held; a new fork waiting for its pick, the
     unlock card and the saved pick; Heirloom and Cornerstone carrying a perk,
     and "Keep none" holding through a switch; the dialog late in a career
@@ -1009,7 +1031,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
     and the Twin Keystones swap; the credits on an offer, and none without
     the track; Night Lab's toast on return; Perfect Pitch's float on a fake
     clock; the unlock card under reduced motion; the dialog with every fork
-    opening at the top with its buttons pinned, six sockets with twelve beads, and a reset that lands every rung, its
+    opening at the top with its buttons pinned, six sockets beside the badge's lone ring, and a reset that lands every rung, its
     card listing three and the rest, on a phone.
   - **The run-down** (`spacebar-clicker-rundown.e2e.ts`): a return to a
     run-down reactor and a press bringing it back; a return to a fault, the
@@ -2061,7 +2083,8 @@ discussed the same day; its ideas 1 and 2, isotopes quickening the drop
 clock and an early first drop every run, are decided and built (§8.5.14).
 Finding 7 was measured again and parked (§8.5.15). For finding 8, five
 endgame achievements and two records are built (§8.5.16). Every finding has
-now been discussed. A UI polish pass began the same day (§8.5.17).
+now been discussed. A UI polish pass began the same day (§8.5.17): the reset
+dialog, the perk shelf filling from the right, and the isotope badge.
 
 #### 8.5.1 The review
 
@@ -2456,6 +2479,14 @@ drift):
   slot, at level I.", "Keep none", "Your picks" and "Switch at any reset". At
   1440 the Wiped line leaves "run's perks" on a second line, and on a phone
   the head start leaves "III" alone on its third.
+- **The isotope badge** (§8.5.17): "First isotope", "600K to go", "13
+  isotopes", "next in 400K", "Reset for +1"; its tooltip's "Isotopes", "Each
+  adds 10% to all gains", "Resetting the experiment pays them, and they last
+  through every reset. The first comes at 1.00M energy: 600K to go." and "A
+  reset opens at 1.00M energy: 580K to go."; and its name, "No isotopes yet."
+  The page still describes beads: "beads in the reactor's top-left corner: point
+  at them or tap them" (about line 135 of the MDX) and "isotope beads and the
+  Isotopes tab" (about 365).
 - **This doc's §6**, once the page changes.
 
 #### 8.5.10 Finding 5: presses and surges fade, 2026-11-10
@@ -2760,7 +2791,9 @@ Calls for review:
 5. **A save from before records** can't set the fastest million in the run it
    loads into: that run has no start time. The next run is timed.
 
-#### 8.5.17 UI polish: the reset dialog, 2026-11-10
+#### 8.5.17 UI polish pass, 2026-11-10
+
+**1. The reset dialog.**
 
 The maintainer started a UI polish pass with the reset dialog, which grew
 too tall late in a career. Measured with every fork and Heirloom's six
@@ -2798,6 +2831,51 @@ Calls for review:
 3. **A mouse resting where the reset button was** shows a tooltip as the
    dialog opens if a switch lands under it, as any hover would.
 4. **The words** are on the copy-audit list (§8.5.9).
+
+**2. The perk shelf fills from the right**, asked for by the maintainer the
+same day: the first perk takes the corner socket, and later ones fill
+leftward, mirroring the beads, which fill rightward from the top-left corner.
+The row is reversed in CSS only (`flex-direction: row-reverse`), so the
+script, the save's order, the screen reader's order and Tab are unchanged:
+Tab now moves right to left across the chips, from the corner. Sixth Slot's
+socket opens on the far left. A shelf check asserts the order.
+
+**3. The isotope badge.** The maintainer's problem: a new player who doesn't
+know what an isotope is gets no sense of how far off the next one is.
+Measured: the shelf was hidden for a whole first run, about 21 minutes, then
+showed a bare "+1" ring with no word for it; later runs showed beads with no
+progress until 1M; past ten, beads read "+3". Simulated, a linear bar to 1M
+would sit at 13% halfway through a first run and 41% at 16 of 21 minutes; a
+cube-root scale reads 51% and 74%, within a few points of the clock.
+
+Three layouts went to the maintainer: a bar under the beads, a count badge
+with a progress ring, and the next bead forming. **Decided 2026-11-10: the
+count badge, on the cube-root scale.** Built the same day (§4.7, §5.1, §5.3,
+§5.4): one button, a 30px ring around the count (a waiting bead before the
+first), "13 isotopes" over "next in 400K", a "+1" tag at the ring's foot once
+a reset is open, and the reset's isotopes flying into it. The Isotopes tab's
+meter fills on the same scale before a reset opens. 1 unit test; isotope
+checks rewritten, 78 browser checks in all (the three phone checks by bead
+count became one).
+
+Side effect: at 1440 the readout no longer steps down for the isotopes, so
+the face is 572px (587 with Synchronisation) whatever is held; with beads it
+was 586, and 601 in §8.5.11 item 8, which this resolves.
+
+Calls for review:
+
+1. **It shows from the first moment of a first run**, at 0 energy: "First
+   isotope / 1.00M to go", an empty ring. The goal is there from the start;
+   the cost is one more thing on a new player's first screen.
+2. **Two scales.** Cube root before a reset opens; linear between isotopes
+   after, where each step is 2 to 3 minutes and the run's growth is gentler.
+3. **Touch has no tooltip.** A tap opens the Isotopes tab, which says it all;
+   the beads used to pin a tooltip on a tap.
+4. **The lines give way on narrow faces** with the perk shelf near (six
+   sockets at 390, any perk at 360): the ring and its count stay.
+5. **The readout steps down on every phone now**, perks or not, as the badge
+   is always there: it no longer jumps when the first perk arrives.
+6. **The words** go to the copy audit (§8.5.9).
 
 ### 8.6 Unassigned ideas
 
@@ -3024,3 +3102,13 @@ the maintainer asks.
   forks picked before as switches with a tooltip on hover or focus, the
   buttons pinned, and it opens at the top. Late in a career it fits 1440x900:
   824px, from 1,268. 1 browser check, 79 in all.
+- **2026-11-10.** UI polish (§8.5.17): the perk shelf fills from the right,
+  the first perk in the corner socket, as the beads fill from the left.
+- **2026-11-10.** UI polish (§8.5.17): the isotope beads become a badge, a
+  ring around the count with "13 isotopes" and "next in 400K" beside it,
+  shown from a first run's start, filling toward the next isotope on a
+  cube-root scale before a reset opens, with a "+1" tag once one is. The
+  tab's meter fills on the same scale. At 1440 the face is 572px whatever is
+  held. 1 unit test; 78 browser checks. The perks' time-away check records
+  its toasts (`recordToasts`), as the stage's toast after it could rotate it
+  out under the full suite.

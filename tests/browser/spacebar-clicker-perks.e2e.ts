@@ -12,7 +12,17 @@ import type { Page } from '@playwright/test';
 
 import type { PerkId } from '../../src/games/spacebar-clicker/config';
 import type { PerkOffer, PerkState } from '../../src/games/spacebar-clicker/save';
-import { SAVE_KEY, energy, expect, openGame, pressSteady, seedSave, test } from './fixtures';
+import {
+  SAVE_KEY,
+  energy,
+  expect,
+  openGame,
+  pressSteady,
+  recordToasts,
+  seedSave,
+  test,
+  toastsSeen,
+} from './fixtures';
 
 /** The perks block as the page would save it now. */
 async function savedPerks(page: Page): Promise<PerkState> {
@@ -115,6 +125,10 @@ test('buying takes a slot, and an upgrade strikes out the value it replaces', as
   await expect(second.locator('.perk-chip')).toHaveClass(/is-landed/);
   await expect(second).not.toHaveClass(/is-pending/);
   await expect(page.locator('.perk-flyer')).toHaveCount(0);
+  // The shelf fills from the corner: the first perk rightmost, the second to its left.
+  const firstBox = (await page.locator('.perk-slot').first().boundingBox())!;
+  const secondBox = (await second.boundingBox())!;
+  expect(secondBox.x + secondBox.width).toBeLessThan(firstBox.x);
   expect((await savedPerks(page)).owned).toEqual([
     { id: 'metronome', level: 2 },
     { id: 'overtime', level: 1 },
@@ -231,11 +245,18 @@ test('time away never runs an offer down, but play does', async ({ page }) => {
     },
     600_000
   );
+  // The return's toast is followed by the stage's, so it is recorded as it
+  // shows: a slow load under the full suite could rotate it out first.
+  await recordToasts(page);
   await openGame(page);
 
   // Ten minutes of 30 a second came in, far past the window, and it still stands.
   // Loading adds a moment, so the last digits may run on a little.
-  await expect(page.locator('#sc-toast-text')).toHaveText(/^Untended 10m 0\ds: \+18,9\d\d energy$/);
+  await expect
+    .poll(async () =>
+      (await toastsSeen(page)).some((t) => /^\|Untended 10m 0\ds: \+18,9\d\d energy$/.test(t))
+    )
+    .toBe(true);
   const row = page.locator('#sc-offer-press');
   await page.waitForTimeout(500);
   await expect(row, 'thousands collected, and the offer is still there').toBeVisible();
@@ -409,8 +430,11 @@ test('the shelf shows the perks held this run, with a tooltip on hover and focus
   expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe('BUTTON');
   await page.mouse.move(5, 5);
 
-  // From the reactor, Tab reaches the chips; focus shows the tooltip, Escape dismisses it.
+  // From the reactor, Tab reaches the isotope badge, then the chips; focus
+  // shows the tooltip, Escape dismisses it.
   await page.focus('#sc-reactor');
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#sc-isotope-badge')).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(chip).toBeFocused();
   await expect(tip).toBeVisible();
@@ -544,7 +568,9 @@ test.describe('on a phone', () => {
   });
 
   for (const isotopes of [2, 8]) {
-    test(`the shelf clears the readout and ${isotopes} isotope beads`, async ({ page }) => {
+    test(`the shelf clears the readout and the isotope badge, with ${isotopes} isotopes`, async ({
+      page,
+    }) => {
       await seedSave(page, {
         energy: 99_999,
         runLifetime: 99_999,

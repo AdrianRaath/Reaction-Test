@@ -22,6 +22,7 @@ import {
   earn,
   energyPerPress,
   energyPerSecond,
+  isotopeFill,
   isotopeProgress,
   isotopeThreshold,
   markShopTabSeen,
@@ -291,6 +292,18 @@ describe('prestige', () => {
     expect(isotopeProgress(3e6)).toBe(0);
     expect(isotopeProgress(6e6)).toBe(0.5);
     expect(isotopeProgress(7.2e6)).toBeCloseTo(0.7);
+  });
+
+  it('fills the isotope ring on a cube-root scale before a reset opens, then linearly', () => {
+    // An eighth of a million is half the ring; 0.6M is 84%, not 60%.
+    expect(isotopeFill(0)).toBe(0);
+    expect(isotopeFill(125_000)).toBeCloseTo(0.5);
+    expect(isotopeFill(600_000)).toBeCloseTo(0.843, 3);
+    expect(isotopeFill(999_999)).toBeCloseTo(1, 5);
+    // A reset open: from one isotope's threshold to the next, as before.
+    expect(isotopeFill(1e6)).toBe(0);
+    expect(isotopeFill(2e6)).toBe(0.5);
+    expect(isotopeFill(6e6)).toBe(0.5);
   });
 
   it('wipes the run and keeps what the spec says survives', () => {

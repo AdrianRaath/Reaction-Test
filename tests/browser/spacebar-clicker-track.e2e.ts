@@ -8,6 +8,7 @@
 import type { PerkId } from '../../src/games/spacebar-clicker/config';
 import type { PerkOffer } from '../../src/games/spacebar-clicker/save';
 import {
+  editSave,
   expect,
   openGame,
   recordToasts,
@@ -43,11 +44,9 @@ test('the tooltips name the next unlock, and what a reset unlocks', async ({ pag
   await openGame(page);
   const unlock = page.locator('#sc-isotope-tip-unlock');
 
-  await page.hover('#sc-isotopes-held');
-  await expect(unlock).toHaveText('Next at 5 isotopes: Lucky Find.');
-  await page.hover('#sc-isotope-next');
+  // With a reset open, what it unlocks comes before the energy line.
+  await page.hover('#sc-isotope-badge');
   await expect(unlock).toHaveText('Unlocks Lucky Find and a choice of Reroll or Patience.');
-  // On the ring, what the reset unlocks comes before the energy line.
   const order = await page.evaluate(
     () =>
       document
@@ -56,6 +55,14 @@ test('the tooltips name the next unlock, and what a reset unlocks', async ({ pag
       Node.DOCUMENT_POSITION_FOLLOWING
   );
   expect(order).toBeTruthy();
+
+  // Before one opens, the next unlock comes after it.
+  await page.mouse.move(5, 5);
+  await editSave(page, (s) => {
+    s.runLifetime = 5000;
+  });
+  await page.hover('#sc-isotope-badge');
+  await expect(unlock).toHaveText('Next at 5 isotopes: Lucky Find.');
 });
 
 test('the Isotopes tab draws the track: held, picked, and the next two', async ({ page }) => {
@@ -591,7 +598,7 @@ test.describe('on a phone', () => {
     expect(fit).toEqual({ inside: true });
   });
 
-  test('six sockets, twelve beads and the ring keep clear of each other', async ({ page }) => {
+  test('six sockets and the isotope badge keep clear of each other', async ({ page }) => {
     await seedSave(page, {
       energy: 2000,
       runLifetime: 2_600_000,
@@ -618,11 +625,13 @@ test.describe('on a phone', () => {
       const perks = r('#sc-perk-shelf');
       const readout = r('.energy-row');
       return {
+        compact: document.querySelector('.reactor-wrap')!.classList.contains('is-compact'),
         apart: ring.right + 12 <= perks.left || ring.bottom <= perks.top,
         readout: readout.top >= Math.max(ring.bottom, perks.bottom),
         noScroll: document.documentElement.scrollWidth <= window.innerWidth,
       };
     });
-    expect(fit).toEqual({ apart: true, readout: true, noScroll: true });
+    // Six sockets leave no room for the lines: the ring stands alone.
+    expect(fit).toEqual({ compact: true, apart: true, readout: true, noScroll: true });
   });
 });

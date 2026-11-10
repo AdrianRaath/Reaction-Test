@@ -1,7 +1,7 @@
 /**
- * Spacebar Clicker: isotopes. The shelf and its tooltips, the ring for the
- * next reset and the notice when one opens, the Isotopes tab and
- * the reset dialog, and the two shelves sharing a narrow face.
+ * Spacebar Clicker: isotopes. The badge, its ring, lines and tooltip, the
+ * tag when a reset opens and the notice with it, the Isotopes tab and the
+ * reset dialog, and the badge sharing a narrow face with the perk shelf.
  */
 
 import { energy, expect, openGame, seedSave, test } from './fixtures';
@@ -9,42 +9,49 @@ import { energy, expect, openGame, seedSave, test } from './fixtures';
 /** Drops stay away, so nothing else lands in the shop or the announcer. */
 const noDrops = { rng: 7, activeS: 0, nextDropAtS: 99_999 };
 
-test('the beads say what they are worth, on hover and on focus, and never press', async ({
+test('the badge says what isotopes are worth, on hover and on focus, and never presses', async ({
   page,
 }) => {
   await seedSave(page, { energy: 100, runLifetime: 5000, isotopes: 3, perks: noDrops });
   await openGame(page);
 
-  const held = page.locator('#sc-isotopes-held');
-  await expect(held).toHaveAttribute(
+  const badge = page.locator('#sc-isotope-badge');
+  await expect(badge).toHaveAttribute(
     'aria-label',
-    '3 isotopes, +30% to all gains, kept through every reset. Next unlock at 4 isotopes: Night Lab.'
+    '3 isotopes, +30% to all gains, kept through every reset. A reset opens at 1.00M energy. Next unlock at 4 isotopes: Night Lab.'
   );
-  await expect(page.locator('#sc-isotope-next'), 'no reset open yet').toBeHidden();
+  await expect(page.locator('#sc-isotope-count')).toHaveText('3');
+  await expect(page.locator('#sc-isotope-name')).toHaveText('3 isotopes');
+  await expect(page.locator('#sc-isotope-progress')).toHaveText('next in 995K');
+  await expect(page.locator('#sc-isotope-tag'), 'no reset open yet').toBeHidden();
 
   // Hover shows it, and the pointer can cross onto it.
   const tip = page.locator('#sc-isotope-tip');
-  await held.hover();
+  await badge.hover();
   await expect(tip).toBeVisible();
   await expect(page.locator('#sc-isotope-tip-name')).toHaveText('3 isotopes');
   await expect(page.locator('#sc-isotope-tip-kind')).toHaveText('+30% to all gains');
+  await expect(page.locator('#sc-isotope-tip-detail')).toHaveText(
+    'Each one adds 10% to everything you earn, and they last through every reset. A reset opens at 1.00M energy: 995K to go.'
+  );
   await tip.hover();
   await expect(tip).toBeVisible();
   await page.mouse.move(5, 5);
   await expect(tip).toBeHidden();
 
-  // A click is never a press, and lets go of focus so Space keeps pressing.
+  // A click opens the Isotopes tab, is never a press, and lets go of focus
+  // so Space keeps pressing.
   const before = await energy(page);
-  await held.click();
-  await page.waitForTimeout(200);
+  await badge.click();
+  await expect(page.locator('#sc-tab-prestige')).toHaveAttribute('aria-selected', 'true');
   expect(await energy(page)).toBe(before);
   expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe('BUTTON');
   await page.mouse.move(5, 5);
 
-  // From the reactor, Tab reaches the beads; Escape dismisses the tooltip.
+  // From the reactor, Tab reaches the badge; Escape dismisses the tooltip.
   await page.focus('#sc-reactor');
   await page.keyboard.press('Tab');
-  await expect(held).toBeFocused();
+  await expect(badge).toBeFocused();
   await expect(tip).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(tip).toBeHidden();
@@ -53,7 +60,59 @@ test('the beads say what they are worth, on hover and on focus, and never press'
   await expect(page.locator('#sc-stat-isotopes')).toHaveText('3, +30%');
 });
 
-test('a reset opening: one notice, the ring, and its way into the tab', async ({ page }) => {
+test('a new player sees the first isotope coming, on a scale that keeps pace with the clock', async ({
+  page,
+}) => {
+  // An eighth of the way to a million is half the ring: the cube root.
+  await seedSave(page, { energy: 100, runLifetime: 125_000, isotopes: 0, perks: noDrops });
+  await openGame(page);
+
+  const badge = page.locator('#sc-isotope-badge');
+  await expect(badge).toBeVisible();
+  await expect(page.locator('#sc-isotope-seed'), 'a bead waits in the ring').toBeVisible();
+  await expect(page.locator('#sc-isotope-count')).toBeHidden();
+  await expect(page.locator('#sc-isotope-name')).toHaveText('First isotope');
+  await expect(page.locator('#sc-isotope-progress')).toHaveText('875K to go');
+  await expect(badge).toHaveAttribute(
+    'aria-label',
+    'No isotopes yet. Resetting the experiment pays them, and they last through every reset. A reset opens at 1.00M energy. Next unlock at 1 isotope: Warm Start.'
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        parseFloat(document.getElementById('sc-isotope-ring')!.style.strokeDashoffset)
+      )
+    )
+    .toBeCloseTo(50, 0);
+
+  await badge.hover();
+  await expect(page.locator('#sc-isotope-tip-name')).toHaveText('Isotopes');
+  await expect(page.locator('#sc-isotope-tip-kind')).toHaveText('Each adds 10% to all gains');
+  await expect(page.locator('#sc-isotope-tip-unlock')).toHaveText('Next at 1 isotope: Warm Start.');
+  await page.mouse.move(5, 5);
+
+  // The Isotopes tab's meter fills on the same scale.
+  await page.click('[data-tab="prestige"]');
+  const meter = await page.evaluate(
+    () => document.getElementById('sc-isotope-meter')!.style.transform
+  );
+  expect(meter).toMatch(/^scaleX\(0\.5/);
+
+  // At 1440x900 the badge's lines end clear of the readout, which stays put,
+  // and the face keeps above the fold.
+  const fit = await page.evaluate(() => {
+    const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+    const lines = r('.isotope-lines');
+    const readout = r('#sc-energy');
+    return {
+      apart: lines.right + 8 <= readout.left,
+      face: r('#sc-reactor').height <= 588,
+    };
+  });
+  expect(fit).toEqual({ apart: true, face: true });
+});
+
+test('a reset opening: one notice, the tag, and the way into the tab', async ({ page }) => {
   // Ten Particle Colliders cross a million within a second of loading.
   await seedSave(page, {
     runLifetime: 999_000,
@@ -64,23 +123,26 @@ test('a reset opening: one notice, the ring, and its way into the tab', async ({
   });
   await openGame(page);
 
-  const ring = page.locator('#sc-isotope-next');
-  await expect(ring).toBeVisible();
+  const badge = page.locator('#sc-isotope-badge');
+  const tag = page.locator('#sc-isotope-tag');
+  await expect(tag).toBeVisible();
   await expect(page.locator('#sc-toast')).toHaveText(
     'Reactor is now Unstable. You can reset the experiment.'
   );
-  await expect(page.locator('#sc-isotope-next-count')).toHaveText('+1');
-  await expect(ring).toHaveAttribute(
+  await expect(tag).toHaveText('+1');
+  await expect(page.locator('#sc-isotope-progress')).toHaveText('Reset for +1');
+  await expect(badge).toHaveClass(/is-open/);
+  await expect(badge).toHaveAttribute(
     'aria-label',
-    'Reset the experiment now for 1 isotope, taking all gains to +30% and unlocking a choice of Sixth Slot or Prodigy. The next isotope comes at 3.00M energy.'
+    '2 isotopes, +20% to all gains, kept through every reset. Reset the experiment now for 1 isotope, taking all gains to +30% and unlocking a choice of Sixth Slot or Prodigy. The next isotope comes at 3.00M energy.'
   );
 
-  await ring.hover();
+  await badge.hover();
   await expect(page.locator('#sc-isotope-tip-name')).toHaveText('Reset now for 1 isotope');
   await expect(page.locator('#sc-isotope-tip-kind')).toHaveText('+20% now, +30% after');
 
   // A click opens the tab and brings it into view, without taking focus.
-  await ring.click();
+  await badge.click();
   await expect(page.locator('#sc-tab-prestige')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#sc-prestige-btn')).toBeInViewport();
   await expect(page.locator('#sc-isotope-tip')).toBeHidden();
@@ -90,15 +152,14 @@ test('a reset opening: one notice, the ring, and its way into the tab', async ({
   await page.click('[data-tab="stats"]');
   await page.focus('#sc-reactor');
   await page.keyboard.press('Tab');
-  await page.keyboard.press('Tab');
-  await expect(ring).toBeFocused();
+  await expect(badge).toBeFocused();
   await expect(page.locator('#sc-isotope-tip-name')).toHaveText('Reset now for 1 isotope');
   await page.keyboard.press('Enter');
   await expect(page.locator('#sc-tab-prestige')).toBeFocused();
   await expect(page.locator('#sc-tab-prestige')).toHaveAttribute('aria-selected', 'true');
 });
 
-test('the ring counts up as the run passes the next isotope', async ({ page }) => {
+test('the tag counts up as the run passes the next isotope', async ({ page }) => {
   await seedSave(page, {
     runLifetime: 2_998_000,
     totalLifetime: 2_998_000,
@@ -106,8 +167,8 @@ test('the ring counts up as the run passes the next isotope', async ({ page }) =
     perks: noDrops,
   });
   await openGame(page);
-  await expect(page.locator('#sc-isotope-next-count')).toHaveText('+2');
-  await expect(page.locator('#sc-isotope-next')).toHaveClass(/is-up/);
+  await expect(page.locator('#sc-isotope-tag')).toHaveText('+2');
+  await expect(page.locator('#sc-isotope-tag')).toHaveClass(/is-up/);
   const offset = await page.evaluate(() =>
     parseFloat(document.getElementById('sc-isotope-ring')!.style.strokeDashoffset)
   );
@@ -168,34 +229,27 @@ test('resetting: the dialog, the toast and the shelf say what changed', async ({
   await expect(page.locator('#sc-toast')).toHaveText(
     'Experiment reset. 1 isotope gained: +20% to all gains.'
   );
-  await expect(page.locator('#sc-isotopes-held')).toHaveAttribute(
+  await expect(page.locator('#sc-isotope-badge')).toHaveAttribute(
     'aria-label',
-    '2 isotopes, +20% to all gains, kept through every reset. Next unlock at 3 isotopes: a choice of Sixth Slot or Prodigy.'
+    '2 isotopes, +20% to all gains, kept through every reset. A reset opens at 1.00M energy. Next unlock at 3 isotopes: a choice of Sixth Slot or Prodigy.'
   );
-  await expect(page.locator('#sc-isotope-next'), 'a new run has no reset open').toBeHidden();
+  // The isotope lands in the badge, and its count steps up.
+  await expect(page.locator('#sc-isotope-count')).toHaveText('2');
+  await expect(page.locator('#sc-isotope-tag'), 'a new run has no reset open').toBeHidden();
 });
 
 test.describe('on a touchscreen', () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
-  test('a tap on the beads pins their tooltip; a tap on the ring opens the tab', async ({
-    page,
-  }) => {
-    await seedSave(page, { energy: 100, runLifetime: 1_500_000, isotopes: 2, perks: noDrops });
+  test('a tap on the badge opens the Isotopes tab, and is never a press', async ({ page }) => {
+    await seedSave(page, { energy: 100, runLifetime: 5000, isotopes: 2, perks: noDrops });
     await openGame(page);
-    const tip = page.locator('#sc-isotope-tip');
     const before = await energy(page);
 
-    await page.locator('#sc-isotopes-held').tap();
-    await expect(tip).toBeVisible();
-    await expect(page.locator('#sc-isotope-tip-name')).toHaveText('2 isotopes');
-    expect(await energy(page), 'a tap on the shelf is never a press').toBe(before);
-    await page.locator('#sc-isotopes-held').tap();
-    await expect(tip, 'a second tap closes it').toBeHidden();
-
-    await page.locator('#sc-isotope-next').tap();
+    await page.locator('#sc-isotope-badge').tap();
     await expect(page.locator('#sc-tab-prestige')).toHaveAttribute('aria-selected', 'true');
-    await expect(tip).toBeHidden();
+    await expect(page.locator('#sc-isotope-tip')).toBeHidden();
+    expect(await energy(page), 'a tap on the badge is never a press').toBe(before);
   });
 });
 
@@ -210,29 +264,34 @@ test.describe('on a phone', () => {
     { id: 'self-replicator', level: 1 },
   ] as const;
 
-  for (const isotopes of [4, 9, 12]) {
-    test(`the ring, ${isotopes} beads and the perk shelf keep clear of each other and the readout`, async ({
-      page,
-    }) => {
-      await seedSave(page, {
-        energy: 2000,
-        runLifetime: 2_600_000,
-        isotopes,
-        perks: { ...noDrops, owned: perks.map((p) => ({ ...p })) },
-      });
-      await openGame(page);
-      const fit = await page.evaluate(() => {
-        const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
-        const ring = r('.isotope-ring');
-        const perks = r('#sc-perk-shelf');
-        const readout = r('.energy-row');
-        return {
-          apart: ring.right + 12 <= perks.left || ring.bottom <= perks.top,
-          readout: readout.top >= Math.max(ring.bottom, perks.bottom),
-          noScroll: document.documentElement.scrollWidth <= window.innerWidth,
-        };
-      });
-      expect(fit).toEqual({ apart: true, readout: true, noScroll: true });
+  test('the badge, its lines and the perk shelf keep clear of each other and the readout', async ({
+    page,
+  }) => {
+    await seedSave(page, {
+      energy: 2000,
+      runLifetime: 2_600_000,
+      isotopes: 12,
+      perks: { ...noDrops, owned: perks.map((p) => ({ ...p })) },
     });
-  }
+    await openGame(page);
+    const fit = await page.evaluate(() => {
+      const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+      const lines = r('.isotope-lines');
+      const badge = r('#sc-isotope-badge');
+      const perks = r('#sc-perk-shelf');
+      const readout = r('.energy-row');
+      return {
+        lines: lines.width > 0,
+        apart: lines.right + 12 <= perks.left,
+        readout: readout.top >= Math.max(badge.bottom, perks.bottom),
+        noScroll: document.documentElement.scrollWidth <= window.innerWidth,
+      };
+    });
+    expect(fit, 'five sockets leave room for the lines at 390').toEqual({
+      lines: true,
+      apart: true,
+      readout: true,
+      noScroll: true,
+    });
+  });
 });
