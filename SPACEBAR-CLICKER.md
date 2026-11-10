@@ -73,10 +73,10 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 | `src/games/spacebar-clicker/income.ts`                | `IncomeMeter`: energy per second actually earned over the last 10 s, presses and auto-tappers together, without a surge's or Afterglow's boost. Perk prices and windows are set in it. `ShareMeter`: the player's share of recent energy, for the share bar (§4.2).                                                                                                                                                                                                                                                               |
 | `src/games/spacebar-clicker/rundown.ts`               | The run-down (§8.5): the output share of a reactor left alone, the energy over a stretch of it, the fault, tending and the restart, and what a hidden or closed tab earned. Pure.                                                                                                                                                                                                                                                                                                                                                 |
 | `src/games/spacebar-clicker/save.ts`                  | `SaveState`, the defensive `parseSave`, and `prestigeReset`, which starts the new run with the track's head starts and any kept perk.                                                                                                                                                                                                                                                                                                                                                                                             |
-| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent; the records, `recordMillion` and `bestRun` (§4.9).                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                                                                                                                                                                                                                                                                                                                         |
-| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks, the run-down, the restart and the share meter included (89 as of 2026-11-10).                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks, the run-down, the restart, the share meter and the records included (94 as of 2026-11-10).                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12), and whole careers of runs and resets with the isotope track (§8.3.7).                                                                                                                                                                                                                                                                                                                                  |
 | `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `src/games/spacebar-clicker/career.test.ts`           | Holds careers to the isotope track's targets (§8.3.7): a first run unchanged, the two sides of each fork. About 20 s.                                                                                                                                                                                                                                                                                                                                                                                                             |
@@ -422,11 +422,29 @@ The rules are pure, in `rundown.ts`; the numbers are `RUNDOWN` in the config.
 
 ### 4.9 Achievements
 
-Fourteen cosmetic badges with no gameplay effect: First Press, Warmed Up (100
+Nineteen cosmetic badges with no gameplay effect: First Press, Warmed Up (100
 presses), Thousand Taps, Ten Thousand Taps, Steady Hands (25 combo), Resonance
 (50), Harmonic (100), Fast Fingers (8/s in a surge), Lightning (12/s), Staffed
 Up (10 Lab Assistants), Automated (one of every auto-tapper), Critical Mass,
 Fresh Start (1 prestige) and Veteran (5).
+
+**The endgame** (2026-11-10, §8.5.16): five more, for something to chase once
+the track is complete. Supercritical (reach the Supercritical state), Full
+Track (all twelve rungs), Big Bang (a reset paying 5 isotopes, a run to 81M),
+Collector (all 25 perks in the codex) and Quick Study (a million in one run
+in under 10 minutes). Collector is checked as each perk drops, Big Bang as a
+reset pays.
+
+**Records**, in the Stats panel beside the best combo and best surge:
+
+- **Best run**: the most energy one run has earned, the run under way
+  included (`bestRun`). A reset folds the run it ends into `bestRunEnergy`.
+- **Fastest million**: the wall-clock time from a run's start to its first
+  million (`recordMillion`), time away included, so leaving the tab can't
+  shorten it. A run that beats an earlier record says so in a toast and the
+  announcer, "New record: a million in 9m 08s"; a first million is recorded
+  quietly. A run begun before records were kept has no start time and sets
+  nothing.
 
 ### 4.10 Save and settings
 
@@ -438,8 +456,13 @@ Fresh Start (1 prestige) and Veteran (5).
   is pulled back to now. Owned tappers always count as revealed and seen.
 - **Fields**: `energy`, `runLifetime`, `totalLifetime`, `totalPresses`,
   `upgrades`, `tappers`, `revealed`, `seen`, `announced`, `isotopes`,
-  `forks`, `prestiges`, `bestCombo`, `bestSurgeCps`, `surges`, `achievements`,
-  `playedS`, `lastSeen`, `tendedAt`, `createdAt` and `perks`.
+  `forks`, `prestiges`, `bestCombo`, `bestSurgeCps`, `bestMillionS`,
+  `bestRunEnergy`, `surges`, `achievements`, `playedS`, `lastSeen`,
+  `tendedAt`, `runStartedAt`, `createdAt` and `perks`.
+- **The records** (§4.9): `bestMillionS`, null until a timed run reaches a
+  million, and `bestRunEnergy`; prestige keeps both. `runStartedAt` is when
+  the run began, set by a new save and by every reset, and `null` in a save
+  from before records, so that run can't set the fastest million.
 - **`tendedAt`**: when the reactor was last tended, by a press, a purchase or
   a restart; the run-down's clock runs from it (§8.5). A save from before it
   reads it as `lastSeen`. A reset sets it, which also clears a fault.
@@ -931,12 +954,12 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ## 7. Testing
 
-- `npm test` runs Vitest: the 89 clicker tests, the 63 perk tests, the 37
+- `npm test` runs Vitest: the 94 clicker tests, the 63 perk tests, the 37
   track tests, the pacing bands and the career bands.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  76 as of 2026-11-10, in about nine minutes.
+  78 as of 2026-11-10, in about nine minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
@@ -983,6 +1006,13 @@ The visuals were built in three passes, all shipped 2026-10-22.
     bought; a fault standing the bar down; the face at 1440x900 within 588px with both
     showing; and the short words on a phone, with nothing in the combo row
     wrapping.
+  - **Records** (`spacebar-clicker-records.e2e.ts`): a faster million told,
+    kept, and earning Quick Study; a first million recorded quietly; the best
+    run in Stats.
+  - **Toasts that queue.** `recordToasts` in `fixtures.ts` notes every toast
+    as it shows, from the page's first moment, so a check can't miss one that
+    rotated out while a cold dev server was slow to settle. The Night Lab
+    return check uses it.
   - **Staging a save.** The perk and isotope checks write a whole save before
     the page loads (`seedSave` in `fixtures.ts`), with seed 7 when they need a
     known draw: its first draw is under one in eight, so the first surge drops
@@ -2011,6 +2041,9 @@ Synchronisation's shop figure, is built too (§8.5.12). Idea 4, surge presses
 paying from the auto-tappers, is decided and built (§8.5.13). Finding 6 was
 discussed the same day; its ideas 1 and 2, isotopes quickening the drop
 clock and an early first drop every run, are decided and built (§8.5.14).
+Finding 7 was measured again and parked (§8.5.15). For finding 8, five
+endgame achievements and two records are built (§8.5.16). Every finding has
+now been discussed.
 
 #### 8.5.1 The review
 
@@ -2183,7 +2216,7 @@ phases 1 and 2.
 
 #### 8.5.5 Not yet discussed
 
-Findings 7 and 8. Finding 5 is §8.5.10, finding 6 §8.5.14.
+None: finding 5 is §8.5.10, 6 §8.5.14, 7 §8.5.15 and 8 §8.5.16.
 
 #### 8.5.6 Step 1: calls signed off, 2026-11-09
 
@@ -2643,6 +2676,66 @@ Calls for review:
    stack, and the copy audit can say so (§8.5.9). The 10-minute ceiling stays
    off the page (§6).
 
+#### 8.5.15 Finding 7: every run opens the same way, parked 2026-11-10
+
+Measured again after finding 6, for a steady player who buys perks. The
+opening is the climb to 100K.
+
+| Resetting at 1M         | Run      | Opening | Share | First drop | Runs buying a perk in it |
+| ----------------------- | -------- | ------- | ----- | ---------- | ------------------------ |
+| 1 to 3 isotopes, before | 17.6 min | 6.7 min | 39%   | 3.7 min    | 63%                      |
+| 1 to 3 isotopes, now    | 16.7 min | 6.9 min | 40%   | 2.1 min    | 96%                      |
+| 8 to 12, before         | 10.7 min | 4.5 min | 42%   | 3.7 min    | 63%                      |
+| 8 to 12, now            | 10.6 min | 4.6 min | 42%   | 1.9 min    | 100%                     |
+
+The early first drop (§8.5.14) puts a perk decision into nearly every
+opening, about two perks bought before 100K rather than one, so no two
+openings play quite alike. The opening's share of a run hasn't moved, since
+isotopes shorten it and the rest alike: about 40% resetting at 1M, a third at
+3M, a quarter at 9M. The climb itself, the stages and the first purchases, is
+the same every run; Warm Start and Hot Start trim its first minutes. A real
+fix would be a bigger head start that grows with isotopes, and it would press
+on the 8-minute floor (fastest million before the capstone: 7.9 minutes).
+
+**Decided 2026-11-10: parked.** Good enough for launch. Revisit after a
+playtest of the new drop rules, if openings still feel samey.
+
+#### 8.5.16 Finding 8: nothing to chase after the capstone, 2026-11-10
+
+Measured on the current rules. The twelfth rung comes after 99 to 168
+minutes of play. Past it, an isotope adds 10% to gains and unlocks nothing.
+From there a run reaches Critical (10M) in about 16 minutes and
+Supercritical (100M) in about 31, and holding pays: about 0.18 isotopes a
+minute for runs held to 10M to 81M, against 0.10 resetting at 1M. Players who
+reset by 9M never see the hot stages, and only Critical had a badge.
+
+Options put to the maintainer: leave it, as few players reach the capstone in
+a launch week; cosmetic endgame goals; or, after launch, a real post-capstone
+layer.
+
+**Decided 2026-11-10: the cosmetic goals.** Built the same day: five
+achievements and two records (§4.9). No balance change. 5 unit tests and 2
+browser checks.
+
+Calls for review:
+
+1. **The names** are the proposal's: Supercritical, Full Track, Big Bang,
+   Collector and Quick Study. In-game words, so the copy audit can rename
+   them; the page doesn't list achievements.
+2. **The fastest million runs on the wall clock**, time away included, so a
+   run left overnight is slow rather than fast, and leaving can't game it.
+   Quick Study's 10 minutes is a late-career time: about 8 to 10 minutes for
+   a steady player with 12 isotopes.
+3. **Told only when beaten.** A first million is recorded without a word,
+   since a first run's million already has its own notices; beating a record
+   gets a toast and the announcer. Best run has no notice.
+4. **Stats grew to 13 tiles**, the four bests now together in one row. That
+   leaves Time played alone on the last row of four (and of two on a phone).
+   Folding Experiments reset into the Isotopes tile ("12, +120%, 9 resets")
+   would bring it to an even 12.
+5. **A save from before records** can't set the fastest million in the run it
+   loads into: that run has no start time. The next run is timed.
+
 ### 8.6 Unassigned ideas
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
@@ -2857,3 +2950,9 @@ the maintainer asks.
   at every 1M now sees four or five drops in a late run rather than two or
   three. A first run is unchanged; every career band passes. §8.3.3's figures
   re-measured. 2 unit tests.
+- **2026-11-10.** Finding 7 measured again and parked (§8.5.15). Finding 8
+  (§8.5.16): five endgame achievements, Supercritical, Full Track, Big Bang,
+  Collector and Quick Study, and two records in Stats, the best run and the
+  fastest million, told when beaten. 19 achievements in all. 5 unit tests and
+  2 browser checks, 78 in all. The Night Lab return check records its toasts
+  as they show (`recordToasts`), as a cold dev server could make it miss them.

@@ -93,6 +93,32 @@ export async function pressSteady(page: Page, count: number, intervalMs: number)
   }
 }
 
+/**
+ * Record every toast as it shows, from the first moment the page runs, as
+ * "family|text" ("|text" with no family). Toasts queue and each stays 2.6 s,
+ * so a check that reads the one on screen can miss a boot toast when a cold
+ * dev server makes the page slow to settle. Call before the page loads; read
+ * with `toastsSeen`.
+ */
+export async function recordToasts(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const seen: string[] = [];
+    (window as unknown as { toastsSeen: string[] }).toastsSeen = seen;
+    setInterval(() => {
+      const box = document.getElementById('sc-toast');
+      const text = document.getElementById('sc-toast-text')?.textContent ?? '';
+      if (!box || box.hidden || !text) return;
+      const entry = `${box.dataset.family ?? ''}|${text}`;
+      if (seen[seen.length - 1] !== entry) seen.push(entry);
+    }, 25);
+  });
+}
+
+/** The toasts shown so far, in order, as `recordToasts` saw them. */
+export async function toastsSeen(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as { toastsSeen: string[] }).toastsSeen);
+}
+
 /** The energy readout as a number. Under 100K it is a whole number with separators. */
 export async function energy(page: Page): Promise<number> {
   return Number((await page.textContent('#sc-energy'))!.trim().replace(/,/g, ''));

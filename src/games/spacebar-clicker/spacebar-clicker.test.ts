@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkAchievements } from './achievements';
+import { bestRun, checkAchievements, recordMillion } from './achievements';
 import { ComboTracker, RestartTracker } from './combo';
 import {
   AUTO_TAPPERS,
   COMBO,
   COMBO_TIERS,
+  PERKS,
   PRESS_UPGRADES,
   REACTOR_STATES,
   RESTART_PRESSES,
@@ -648,6 +649,75 @@ describe('achievements', () => {
     s.runLifetime = 1e7;
     s.prestiges = 5;
     expect(checkAchievements(s)).toEqual(['critical-mass', 'fresh-start', 'veteran']);
+  });
+
+  it('awards the endgame: Supercritical, the whole track, a big reset, every perk, a quick million', () => {
+    const s = defaultSave(NOW);
+    s.runLifetime = 1e8;
+    s.isotopes = 11;
+    expect(checkAchievements(s)).toEqual(['critical-mass', 'supercritical']);
+    s.isotopes = 12;
+    expect(checkAchievements(s, { resetGain: 4 })).toEqual(['full-track']);
+    expect(checkAchievements(s, { resetGain: 5 })).toEqual(['big-bang']);
+    s.perks.codex = Object.fromEntries(PERKS.slice(1).map((p) => [p.id, 0]));
+    expect(checkAchievements(s)).toEqual([]);
+    s.perks.codex[PERKS[0]!.id] = 0;
+    expect(checkAchievements(s)).toEqual(['collector']);
+    s.bestMillionS = 600;
+    expect(checkAchievements(s)).toEqual([]);
+    s.bestMillionS = 599;
+    expect(checkAchievements(s)).toEqual(['quick-study']);
+  });
+});
+
+describe('records', () => {
+  it('time a run to a million from its start, keeping only the fastest', () => {
+    const s = defaultSave(NOW);
+    expect(recordMillion(s, NOW + 900_000)).toEqual({ seconds: 900, best: true, previous: null });
+    expect(s.bestMillionS).toBe(900);
+    expect(recordMillion(s, NOW + 950_000)).toEqual({ seconds: 950, best: false, previous: 900 });
+    expect(s.bestMillionS).toBe(900);
+    const next = prestigeReset(s, 1, NOW + 1_000_000);
+    expect(next.runStartedAt).toBe(NOW + 1_000_000);
+    expect(recordMillion(next, NOW + 1_540_000)).toEqual({
+      seconds: 540,
+      best: true,
+      previous: 900,
+    });
+  });
+
+  it('leave a run begun before records were kept untimed', () => {
+    const s = parseSave(JSON.stringify({ runLifetime: 9e5 }), NOW);
+    expect(s.runStartedAt).toBeNull();
+    expect(recordMillion(s, NOW + 60_000)).toBeNull();
+    expect(s.bestMillionS).toBeNull();
+    expect(parseSave(JSON.stringify({ runStartedAt: NOW - 5000 }), NOW).runStartedAt).toBe(
+      NOW - 5000
+    );
+    expect(parseSave(JSON.stringify({ runStartedAt: NOW + 1e9 }), NOW).runStartedAt).toBe(NOW);
+  });
+
+  it('count the biggest run, the run under way included, through a reset', () => {
+    const s = defaultSave(NOW);
+    earn(s, 3e6);
+    expect(bestRun(s)).toBe(3e6);
+    const next = prestigeReset(s, 2, NOW + 1);
+    expect(next.bestRunEnergy).toBe(3e6);
+    earn(next, 1e6);
+    expect(bestRun(next)).toBe(3e6);
+    earn(next, 4e6);
+    expect(bestRun(next)).toBeGreaterThan(3e6);
+  });
+
+  it('survive a save and a reload', () => {
+    const s = defaultSave(NOW);
+    s.bestMillionS = 512.5;
+    s.bestRunEnergy = 8e7;
+    const back = parseSave(serializeSave(s), NOW);
+    expect(back.bestMillionS).toBe(512.5);
+    expect(back.bestRunEnergy).toBe(8e7);
+    expect(back.runStartedAt).toBe(NOW);
+    expect(parseSave(JSON.stringify({ bestMillionS: -3 }), NOW).bestMillionS).toBeNull();
   });
 });
 

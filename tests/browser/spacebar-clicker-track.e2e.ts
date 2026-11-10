@@ -7,7 +7,15 @@
 
 import type { PerkId } from '../../src/games/spacebar-clicker/config';
 import type { PerkOffer } from '../../src/games/spacebar-clicker/save';
-import { expect, openGame, seedSave, test, type Staged } from './fixtures';
+import {
+  expect,
+  openGame,
+  recordToasts,
+  seedSave,
+  test,
+  toastsSeen,
+  type Staged,
+} from './fixtures';
 
 /** Drops stay away, so nothing else lands in the shop or the announcer. */
 const noDrops = { rng: 7, activeS: 0, nextDropAtS: 99_999 };
@@ -346,16 +354,22 @@ test('a return credits Night Lab where it held full output past the half hour', 
     },
     50 * 60 * 1000
   );
+  // The return's toasts queue behind one another (and a stage change's after
+  // them), so they are recorded as they show rather than read off the screen.
+  await recordToasts(page);
   await openGame(page);
-  // 50 minutes, all at full output with Night Lab: 2 a second, x1.05 Warming, x1.4 isotopes.
-  const toast = page.locator('#sc-toast-text');
-  // Loading adds a moment, so the last digits may run on a little.
-  await expect(toast).toHaveText(/^Untended 50m 0\ds: \+8,8[2-4]\d energy$/);
   await expect(page.locator('#sc-reactor'), 'still at full power').not.toHaveAttribute(
     'data-power'
   );
-  await expect(toast).toHaveText('Night Lab held full output for an hour', { timeout: 5000 });
-  await expect(page.locator('#sc-toast')).toHaveAttribute('data-family', 'track');
+  // 50 minutes, all at full output with Night Lab: 2 a second, x1.05 Warming, x1.4 isotopes.
+  // Loading adds a moment, so the last digits may run on a little. Night Lab's
+  // credit comes next, in the isotopes' blue.
+  await expect
+    .poll(async () => (await toastsSeen(page)).length, { timeout: 8000 })
+    .toBeGreaterThanOrEqual(2);
+  const [away, credit] = await toastsSeen(page);
+  expect(away).toMatch(/^\|Untended 50m 0\ds: \+8,8[2-4]\d energy$/);
+  expect(credit).toBe('track|Night Lab held full output for an hour');
 });
 
 test('Perfect Pitch: a press it catches floats its name', async ({ page }) => {

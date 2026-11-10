@@ -14,7 +14,12 @@
 
 import { browserAdapter, KEY_PREFIX } from '../engine/storage';
 import { createBeeper } from '../engine/sound';
-import { checkAchievements } from '../games/spacebar-clicker/achievements';
+import {
+  bestRun,
+  checkAchievements,
+  recordMillion,
+  type AchievementContext,
+} from '../games/spacebar-clicker/achievements';
 import { ComboTracker, RestartTracker, type PressResult } from '../games/spacebar-clicker/combo';
 import {
   ACHIEVEMENTS,
@@ -375,6 +380,8 @@ const statEls = {
   share: el('sc-stat-share'),
   bestCombo: el('sc-stat-best-combo'),
   bestSurge: el('sc-stat-best-surge'),
+  bestRun: el('sc-stat-best-run'),
+  fastestMillion: el('sc-stat-fastest-million'),
   isotopes: el('sc-stat-isotopes'),
   prestiges: el('sc-stat-prestiges'),
   played: el('sc-stat-played'),
@@ -1633,6 +1640,9 @@ function renderStats(): void {
   statEls.share.textContent = sharePct >= 0 && power !== 'fault' ? `${sharePct}%` : '—';
   statEls.bestCombo.textContent = String(state.bestCombo);
   statEls.bestSurge.textContent = state.surges ? state.bestSurgeCps.toFixed(1) : '—';
+  statEls.bestRun.textContent = formatEnergy(bestRun(state));
+  statEls.fastestMillion.textContent =
+    state.bestMillionS === null ? '—' : formatDuration(state.bestMillionS);
   statEls.isotopes.textContent = state.isotopes
     ? `${state.isotopes}, ${bonusText(state.isotopes)}`
     : '0';
@@ -2217,6 +2227,8 @@ function afterEarn(): void {
   // A reset opens at Unstable, so the two notices usually come as one.
   const opened = !resetOpen && prestigeUnlocked(state);
   if (opened) resetOpen = true;
+  // The fastest million (§8.5.16), noted as the run first gets there.
+  const record = opened ? recordMillion(state, Date.now()) : null;
   const resetNote = opened ? ' You can reset the experiment.' : '';
   if (idx !== reactorIdx) {
     const prevIdx = reactorIdx;
@@ -2233,13 +2245,22 @@ function afterEarn(): void {
     toast('You can now reset the experiment.');
     announce('You can now reset the experiment.');
   }
-  if (opened) renderShelf();
+  // Told only when it beats an earlier one: a first run's million is no record.
+  if (record?.best && record.previous !== null) {
+    const time = formatDuration(record.seconds);
+    toast(`New record: a million in ${time}`);
+    announce(`New record: a million in ${time}.`);
+  }
+  if (opened) {
+    renderShelf();
+    awardAchievements();
+  }
   for (const id of updateReveals(state)) {
     toast(`New in the shop: ${autoTapper(id).name}`);
   }
 }
 
-function awardAchievements(ctx: { combo?: number; surgeCps?: number } = {}): void {
+function awardAchievements(ctx: AchievementContext = {}): void {
   const earned = checkAchievements(state, ctx);
   if (earned.length === 0) return;
   const names = earned.map((id) => ACHIEVEMENTS.find((a) => a.id === id)!.name);
@@ -2544,7 +2565,10 @@ function onPerkDropped(offer: PerkOffer, fromSurge = false): void {
   renderPerksPanel(); // the codex has found it
   if (fromSurge) {
     // The surge's own end chord and announcement come first; it adds the drop to them.
-    window.setTimeout(() => SOUND.perkDrop(def.rarity), 450);
+    window.setTimeout(() => {
+      SOUND.perkDrop(def.rarity);
+      awardAchievements(); // Collector, on the codex's last perk
+    }, 450);
   } else {
     SOUND.perkDrop(def.rarity);
     toast(
@@ -2552,6 +2576,7 @@ function onPerkDropped(offer: PerkOffer, fromSurge = false): void {
       def.family
     );
     announce(dropAnnouncement(offer));
+    awardAchievements(); // Collector, on the codex's last perk
   }
   dirty = true;
 }
@@ -3218,7 +3243,7 @@ prestigeConfirm.addEventListener('click', () => {
       (kept ? ` ${perk(kept.id).name} stays with you, at level I.` : '')
   );
   SOUND.prestige();
-  awardAchievements();
+  awardAchievements({ resetGain: gain });
   save();
 });
 

@@ -80,7 +80,12 @@ export type AchievementId =
   | 'automated'
   | 'critical-mass'
   | 'fresh-start'
-  | 'veteran';
+  | 'veteran'
+  | 'supercritical'
+  | 'full-track'
+  | 'big-bang'
+  | 'collector'
+  | 'quick-study';
 
 export interface PressUpgradeDef {
   id: PressUpgradeId;
@@ -905,7 +910,11 @@ export const TRACK_EFFECT = {
   enrichmentRate: 0.13,
 } as const;
 
-/** Spec §10. Cosmetic; the checks live in achievements.ts. */
+/**
+ * Spec §10. Cosmetic; the checks live in achievements.ts. The last five are
+ * the endgame's (SPACEBAR-CLICKER.md §8.5.16): something to chase once the
+ * isotope track is complete.
+ */
 export const ACHIEVEMENTS: readonly AchievementDef[] = [
   { id: 'first-press', name: 'First Press', detail: 'Press the spacebar once' },
   { id: 'warmed-up', name: 'Warmed Up', detail: '100 presses' },
@@ -921,4 +930,17 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   { id: 'critical-mass', name: 'Critical Mass', detail: 'Reach the Critical reactor state' },
   { id: 'fresh-start', name: 'Fresh Start', detail: 'Reset the experiment once' },
   { id: 'veteran', name: 'Veteran', detail: 'Reset the experiment five times' },
+  { id: 'supercritical', name: 'Supercritical', detail: 'Reach the Supercritical reactor state' },
+  {
+    id: 'full-track',
+    name: 'Full Track',
+    detail: `Unlock all ${ISOTOPE_TRACK.length} rungs of the isotope track`,
+  },
+  { id: 'big-bang', name: 'Big Bang', detail: 'Reset the experiment for 5 isotopes at once' },
+  { id: 'collector', name: 'Collector', detail: `Find all ${PERKS.length} perks` },
+  {
+    id: 'quick-study',
+    name: 'Quick Study',
+    detail: 'Reach a million in one run in under 10 minutes',
+  },
 ];

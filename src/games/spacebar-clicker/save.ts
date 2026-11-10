@@ -103,6 +103,13 @@ export interface SaveState {
   prestiges: number;
   bestCombo: number;
   bestSurgeCps: number;
+  /**
+   * The fastest run to a million, in seconds from the run's start
+   * (SPACEBAR-CLICKER.md §8.5.16); null until a timed run gets there.
+   */
+  bestMillionS: number | null;
+  /** The most energy a finished run earned. The run under way counts on top (`bestRun`). */
+  bestRunEnergy: number;
   surges: number;
   achievements: AchievementId[];
   /** Seconds with the page visible. */
@@ -114,6 +121,11 @@ export interface SaveState {
    * The run-down's clock runs from it (rundown.ts).
    */
   tendedAt: number;
+  /**
+   * Epoch ms the run began, for the fastest million. Null for a run begun
+   * before records were kept, which can't set one.
+   */
+  runStartedAt: number | null;
   createdAt: number;
   perks: PerkState;
 }
@@ -163,11 +175,14 @@ export function defaultSave(now: number): SaveState {
     prestiges: 0,
     bestCombo: 0,
     bestSurgeCps: 0,
+    bestMillionS: null,
+    bestRunEnergy: 0,
     surges: 0,
     achievements: [],
     playedS: 0,
     lastSeen: now,
     tendedAt: now,
+    runStartedAt: now,
     createdAt: now,
     perks: freshRun({ rng: seedFrom(now), codex: {} }),
   };
@@ -361,12 +376,16 @@ export function parseSave(raw: string | null, now: number): SaveState {
     prestiges: Math.floor(num(d.prestiges, 0)),
     bestCombo: Math.floor(num(d.bestCombo, 0)),
     bestSurgeCps: num(d.bestSurgeCps, 0),
+    bestMillionS: num(d.bestMillionS, -1, 1) > 0 ? (d.bestMillionS as number) : null,
+    bestRunEnergy: num(d.bestRunEnergy, 0),
     surges: Math.floor(num(d.surges, 0)),
     achievements: idList<AchievementId>(d.achievements, (id) => ACHIEVEMENT_IDS.has(id)),
     playedS: num(d.playedS, 0),
     lastSeen,
     // A save from before the run-down counts as tended at its last visit.
     tendedAt: Math.min(num(d.tendedAt, lastSeen, 1), now),
+    // A run from before records were kept has no start, so it can't set the fastest million.
+    runStartedAt: num(d.runStartedAt, -1, 1) > 0 ? Math.min(d.runStartedAt as number, now) : null,
     createdAt: Math.min(num(d.createdAt, now, 1), now),
     perks: parsePerks(d.perks, now, rules),
   };
@@ -404,7 +423,8 @@ export function keepable(owned: readonly OwnedPerk[], rungs: readonly RungId[]):
 
 /**
  * Prestige (spec §9). Wipes the run — energy, shop, reactor state, perks and
- * offers — and keeps isotopes, achievements, lifetime stats and best records.
+ * offers — and keeps isotopes, achievements, lifetime stats and best records,
+ * the run just ended counted into the best run.
  * The shop's revealed list survives too: a player on their second run knows
  * the shop. So do the perk codex, the drop generator's state and the fork
  * picks.
@@ -434,9 +454,11 @@ export function prestigeReset(
     isotopes,
     forks,
     prestiges: state.prestiges + 1,
+    bestRunEnergy: Math.max(state.bestRunEnergy, state.runLifetime),
     lastSeen: now,
     // A fresh reactor: a reset tends it, and clears a fault.
     tendedAt: now,
+    runStartedAt: now,
     perks: freshRun(state.perks),
   };
 
