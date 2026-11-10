@@ -57,3 +57,71 @@ export class IncomeMeter {
     this.startSec = null;
   }
 }
+
+/**
+ * The player's share of recent energy (SPACEBAR-CLICKER.md §8.5.10): their
+ * presses, surges, and what their combo adds to the auto-tappers, against
+ * what the auto-tappers make alone. The face draws it as a bar.
+ *
+ * Both sums fade exponentially over `fadeS`, so a broken combo or a stop
+ * shows over a few seconds rather than in one jump. A press lands as a lump
+ * between frames of steady machine output, so the share read out is eased
+ * again over `easeS`, which keeps single presses from making it flicker.
+ * Energy from time away is never fed in. Timestamps come from the caller.
+ */
+export class ShareMeter {
+  private you = 0;
+  private machines = 0;
+  private at: number | null = null;
+  private shown: number | null = null;
+  private shownAt = 0;
+
+  constructor(
+    private readonly fadeS = 4,
+    private readonly easeS = 0.8
+  ) {}
+
+  /** Fade both sums to `nowMs`. Fading in steps is the same as fading once. */
+  private fade(nowMs: number): void {
+    if (this.at !== null && nowMs > this.at) {
+      const keep = Math.exp(-(nowMs - this.at) / 1000 / this.fadeS);
+      this.you *= keep;
+      this.machines *= keep;
+    }
+    if (this.at === null || nowMs > this.at) this.at = nowMs;
+  }
+
+  add(nowMs: number, you: number, machines: number): void {
+    this.fade(nowMs);
+    if (you > 0) this.you += you;
+    if (machines > 0) this.machines += machines;
+  }
+
+  /** The player's share at `nowMs`, 0 to 1, as earned; null before anything is. */
+  raw(nowMs: number): number | null {
+    this.fade(nowMs);
+    const all = this.you + this.machines;
+    return all > 0 ? this.you / all : null;
+  }
+
+  /** The share for display: it follows `raw`, eased over about `easeS`. */
+  share(nowMs: number): number | null {
+    const target = this.raw(nowMs);
+    if (target === null || this.shown === null) {
+      this.shown = target;
+    } else if (nowMs > this.shownAt) {
+      const follow = 1 - Math.exp(-(nowMs - this.shownAt) / 1000 / this.easeS);
+      this.shown += (target - this.shown) * follow;
+    }
+    this.shownAt = Math.max(this.shownAt, nowMs);
+    return this.shown;
+  }
+
+  reset(): void {
+    this.you = 0;
+    this.machines = 0;
+    this.at = null;
+    this.shown = null;
+    this.shownAt = 0;
+  }
+}

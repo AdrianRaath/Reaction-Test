@@ -162,6 +162,24 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
                 <span><span class="readout" id="sc-eps">0.0</span> per second</span>
                 <span><span class="readout" id="sc-epp">1</span> per press</span>
               </p>
+              <!-- Where the energy comes from (§8.5.10): the player's presses,
+                 surges and what their combo adds to the auto-tappers, against
+                 the auto-tappers alone, over the last few seconds. It shows
+                 once the run has auto-tappers; its row is always there, so
+                 nothing moves when it does. -->
+              <p class="share" id="sc-share">
+                <span class="share-side"
+                  >You <span class="readout share-pct" id="sc-share-you">100%</span></span
+                >
+                <span class="share-bar" aria-hidden="true"
+                  ><span class="share-fill" id="sc-share-fill"></span></span
+                >
+                <span class="share-side share-side-end"
+                  ><span class="readout share-pct" id="sc-share-machines">0%</span>{' '}<span
+                    class="word-long">auto-tappers</span
+                  ><span class="word-short">auto</span></span
+                >
+              </p>
             </div>
 
             <div class="core-wrap">
@@ -285,7 +303,18 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
                 <span class="combo-count readout" id="sc-combo">0</span>
                 <span class="combo-tier" id="sc-combo-tier">combo</span>
                 <span class="combo-next" id="sc-combo-next">10 to Steady</span>
-                <span class="combo-mult readout" id="sc-combo-mult">x1</span>
+                <!-- The tier's multiplier on presses and, once Synchronisation
+                   shares it (§8.5.10), on the auto-tappers, under it. -->
+                <span class="combo-mults">
+                  <span class="combo-mult readout" id="sc-combo-mult">x1</span>
+                  <span class="combo-sync" id="sc-combo-sync">
+                    <span class="combo-sync-line"
+                      ><span class="word-long">auto-tappers</span><span class="word-short"
+                        >auto</span
+                      >{' '}<span class="readout" id="sc-combo-sync-mult">x1</span></span
+                    >
+                  </span>
+                </span>
               </div>
               <div class="combo-track" role="presentation">
                 <div class="combo-fill" id="sc-combo-fill"></div>
@@ -622,6 +651,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
             <div><dt>Energy all time</dt><dd class="readout" id="sc-stat-lifetime">0</dd></div>
             <div><dt>Energy per second</dt><dd class="readout" id="sc-stat-eps">0.0</dd></div>
             <div><dt>Energy per press</dt><dd class="readout" id="sc-stat-epp">1</dd></div>
+            <div><dt>Energy from you</dt><dd class="readout" id="sc-stat-share">—</dd></div>
             <div><dt>Best combo</dt><dd class="readout" id="sc-stat-best-combo">0</dd></div>
             <div>
               <dt>Best surge, per second</dt><dd class="readout" id="sc-stat-best-surge">—</dd>
@@ -1084,7 +1114,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: 0.625rem;
     /* The face's padding, and where the energy readout must start to clear
        the perk shelf: its 47px plus a gap, from inside the 2px border. */
     --face-pad: var(--space-lg);
@@ -1107,7 +1137,8 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   }
 
   /* On first paint the saved stage applies without fading up from Dormant. */
-  .reactor-face.is-booting {
+  .reactor-face.is-booting,
+  .reactor-face.is-booting .combo-sync {
     transition: none;
   }
 
@@ -1206,6 +1237,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   .energy-block {
     z-index: 1;
+    width: 100%;
     text-align: center;
   }
 
@@ -1214,7 +1246,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     align-items: baseline;
     justify-content: center;
     gap: var(--space-sm);
-    line-height: 1;
+    line-height: 0.9;
   }
 
   .energy-value {
@@ -1244,6 +1276,94 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   .energy-rates .readout {
     color: var(--ink-primary);
+  }
+
+  /* --- Where the energy comes from (SPACEBAR-CLICKER.md §8.5.10) ------------
+
+     The player's share of the last few seconds' energy against the
+     auto-tappers' own: the stage color for the player, the track's grey for
+     the machines. The script eases the share, so the edge glides rather than
+     jumps, and a broken combo or a stop drains it over a few seconds. The row
+     is always laid out and fades in once the run has auto-tappers, so nothing
+     around it moves. */
+  .share {
+    --share: 1;
+
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    width: min(360px, 100%);
+    margin: 4px auto 0;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: var(--ink-muted);
+    opacity: 0;
+    transition: opacity 600ms var(--ease);
+  }
+
+  .share.is-shown {
+    opacity: 1;
+  }
+
+  .share-side {
+    white-space: nowrap;
+  }
+
+  /* Room for 100%, so the bar keeps its length as the numbers change; each
+     number sits against the bar. */
+  .share-pct {
+    display: inline-block;
+    min-width: 4ch;
+    color: var(--ink-secondary);
+    text-align: end;
+  }
+
+  .share-side-end .share-pct {
+    text-align: start;
+  }
+
+  .share-bar {
+    position: relative;
+    flex: 1;
+    height: 3px;
+    border-radius: var(--radius-full);
+    background-color: color-mix(in srgb, var(--ink-muted) 28%, transparent);
+  }
+
+  /* Clipped rather than scaled, so its rounded end stays round. */
+  .share-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-color: var(--stage);
+    clip-path: inset(0 calc((1 - var(--share)) * 100%) 0 0 round 2px);
+  }
+
+  /* Run down, the fill fades and greys with the core; a fault earns nothing,
+     so the row stands down until the restart. */
+  .reactor-face[data-power] .share-fill {
+    opacity: calc(0.3 + 0.7 * var(--power));
+    filter: saturate(calc(0.15 + 0.85 * var(--power)));
+  }
+
+  .reactor-face[data-power='fault'] .share {
+    opacity: 0;
+  }
+
+  /* On a narrow face, "auto-tappers" shortens to "auto", here and on the
+     combo meter. */
+  .word-short {
+    display: none;
+  }
+
+  @container reactor (max-width: 400px) {
+    .word-long {
+      display: none;
+    }
+
+    .word-short {
+      display: inline;
+    }
   }
 
   /* The core: a disc of light inside two rings. Depth is tonal; the only
@@ -2519,9 +2639,47 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     color: var(--ink-muted);
   }
 
-  .combo-mult {
+  /* The tier's multiplier, and under it what the tier gives the auto-tappers
+     once Synchronisation shares it. The first line keeps the row's baseline;
+     the second opens when the sharing starts, with a purchase or a perk, and
+     closes with a reset. */
+  .combo-mults {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
     margin-inline-start: auto;
+  }
+
+  .combo-mult {
     font-size: var(--text-title-size);
+    font-weight: 700;
+    color: var(--ink-secondary);
+  }
+
+  .combo-sync {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition:
+      grid-template-rows 420ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 420ms ease;
+  }
+
+  .combo.is-synced .combo-sync {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  .combo-sync-line {
+    min-height: 0;
+    overflow: hidden;
+    font-size: 0.75rem;
+    line-height: 0.875rem;
+    color: var(--ink-muted);
+    white-space: nowrap;
+  }
+
+  .combo-sync .readout {
     font-weight: 700;
     color: var(--ink-secondary);
   }
@@ -2547,7 +2705,8 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   /* Brute Force: there is no combo to build, so the meter stands down. */
   .combo.is-off .combo-count,
-  .combo.is-off .combo-mult {
+  .combo.is-off .combo-mult,
+  .combo.is-off .combo-sync .readout {
     color: var(--ink-muted);
   }
 
@@ -2558,6 +2717,14 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     font-style: italic;
     color: var(--ink-muted);
     text-align: center;
+  }
+
+  /* On a wide face the hint takes one line, which pays for the share row
+     under the readouts: the face still fits a 1440x900 screen. */
+  @container reactor (min-width: 460px) {
+    .test-hint {
+      max-width: none;
+    }
   }
 
   .keycap {
@@ -4327,7 +4494,9 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     .restart-mark.is-igniting,
     .restart-ring.is-complete,
     .restart-ring.is-complete .restart-mark,
-    .power-name.is-settling {
+    .power-name.is-settling,
+    .share,
+    .combo-sync {
       animation: none;
       transition: none;
     }

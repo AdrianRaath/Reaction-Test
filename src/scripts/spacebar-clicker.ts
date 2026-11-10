@@ -65,7 +65,9 @@ import {
   reactorIndex,
   reactorProgress,
   shopTabHasNews,
+  syncMultiplier,
   tapperCost,
+  tapperSplit,
   updateReveals,
   upgradeCost,
   upgradeSwitchedOff,
@@ -77,7 +79,7 @@ import {
   formatMultiplier,
   formatRate,
 } from '../games/spacebar-clicker/format';
-import { IncomeMeter } from '../games/spacebar-clicker/income';
+import { IncomeMeter, ShareMeter } from '../games/spacebar-clicker/income';
 import { modsOf } from '../games/spacebar-clicker/mods';
 import {
   buyPerk,
@@ -197,8 +199,13 @@ const comboEl = el('sc-combo');
 const comboTierEl = el('sc-combo-tier');
 const comboNextEl = el('sc-combo-next');
 const comboMultEl = el('sc-combo-mult');
+const comboSyncMultEl = el('sc-combo-sync-mult');
 const comboFill = el('sc-combo-fill');
 const floats = el('sc-floats');
+// Where the energy comes from (SPACEBAR-CLICKER.md §8.5.10).
+const shareRow = el('sc-share');
+const shareYouEl = el('sc-share-you');
+const shareMachinesEl = el('sc-share-machines');
 const announceEl = el('sc-announce');
 
 const stateLabelEl = el('sc-state-label');
@@ -361,6 +368,7 @@ const statEls = {
   lifetime: el('sc-stat-lifetime'),
   eps: el('sc-stat-eps'),
   epp: el('sc-stat-epp'),
+  share: el('sc-stat-share'),
   bestCombo: el('sc-stat-best-combo'),
   bestSurge: el('sc-stat-best-surge'),
   isotopes: el('sc-stat-isotopes'),
@@ -532,6 +540,11 @@ const combo = new ComboTracker(
 );
 /** Energy per second actually being earned; perk prices are set in it. */
 const income = new IncomeMeter();
+/** The player's share of recent energy, for the bar under the readouts (§8.5.10). */
+const share = new ShareMeter();
+/** The share as last drawn: whole percent for the numbers, and the bar's fraction. */
+let sharePct = -1;
+let shareFraction = '';
 let lastPressAt = -Infinity; // performance.now()
 let lastTierMultiplier = 1;
 let reactorIdx = reactorIndex(state.runLifetime);
@@ -765,6 +778,32 @@ function renderReadouts(): void {
   eppEl.textContent = formatEnergy(power === 'fault' ? 0 : energyPerPress(state, play));
 }
 
+/**
+ * The bar under the readouts (§8.5.10): the player's share of the last few
+ * seconds' energy, their presses, surges and what their combo adds to the
+ * auto-tappers, against the auto-tappers' own. It shows once the run has
+ * auto-tappers; on a fault, when nothing earns, the stylesheet stands it down.
+ */
+function renderShare(now = performance.now()): void {
+  const value = share.share(now);
+  shareRow.classList.toggle(
+    'is-shown',
+    value !== null && AUTO_TAPPERS.some((t) => state.tappers[t.id] > 0)
+  );
+  if (value === null) return;
+  const pct = Math.round(value * 100);
+  if (pct !== sharePct) {
+    sharePct = pct;
+    shareYouEl.textContent = `${pct}%`;
+    shareMachinesEl.textContent = `${100 - pct}%`;
+  }
+  const fraction = value.toFixed(3);
+  if (fraction !== shareFraction) {
+    shareFraction = fraction;
+    shareRow.style.setProperty('--share', fraction);
+  }
+}
+
 function renderReactor(): void {
   const def = REACTOR_STATES[reactorIdx]!;
   reactor.dataset.state = def.id;
@@ -845,7 +884,11 @@ function washFromCore(): void {
 }
 
 function renderCombo(now: number): void {
-  const { tiers, comboOff } = modsOf(state);
+  const mods = modsOf(state);
+  const { tiers, comboOff } = mods;
+  // Synchronisation, or Full Sync, shares the tier with the auto-tappers: a
+  // line under the multiplier says what it gives them (§8.5.10).
+  comboMeter.classList.toggle('is-synced', mods.syncShare > 0 && !comboOff);
   // Brute Force: the beat still draws on the scope, but the combo stands down.
   // So it does on a faulted reactor until the restart.
   const standDown = comboOff || power === 'fault';
@@ -856,6 +899,7 @@ function renderCombo(now: number): void {
     comboTierEl.classList.remove('is-tiered');
     setText(comboNextEl, comboOff ? `off with ${perk('brute-force').name}` : 'after the restart');
     setText(comboMultEl, 'x1');
+    setText(comboSyncMultEl, 'x1');
     comboFill.style.transform = 'scaleX(0)';
     return;
   }
@@ -866,6 +910,7 @@ function renderCombo(now: number): void {
   comboTierEl.classList.toggle('is-tiered', tier.multiplier > 1);
   comboNextEl.textContent = next ? `${next.min - combo.combo} to ${next.label}` : 'top tier';
   comboMultEl.textContent = formatMultiplier(tier.multiplier);
+  setText(comboSyncMultEl, formatMultiplier(syncMultiplier(combo.combo, mods)));
   comboFill.style.transform = `scaleX(${combo.graceRemaining(now)})`;
 }
 
@@ -1555,6 +1600,7 @@ function renderStats(): void {
   statEls.lifetime.textContent = formatEnergy(state.totalLifetime);
   statEls.eps.textContent = formatRate(energyPerSecond(state, play));
   statEls.epp.textContent = formatEnergy(energyPerPress(state, play));
+  statEls.share.textContent = sharePct >= 0 && power !== 'fault' ? `${sharePct}%` : '—';
   statEls.bestCombo.textContent = String(state.bestCombo);
   statEls.bestSurge.textContent = state.surges ? state.bestSurgeCps.toFixed(1) : '—';
   statEls.isotopes.textContent = state.isotopes
@@ -2211,6 +2257,7 @@ function press(e?: Event): void {
 
   earn(state, value);
   income.add(now, value / pressBoost(play, mods));
+  share.add(now, value, 0);
   state.totalPresses++;
   if (counted > state.bestCombo) state.bestCombo = counted;
   if (play.surging) {
@@ -2577,7 +2624,10 @@ function frame(now: number): void {
 
   const play = playContext(now);
   // Left alone, the reactor runs down: its output falls to nothing at a fault.
-  const eps = energyPerSecond(state, play, mods) * powerShare(wall);
+  const output = powerShare(wall);
+  // The machines' own output, and what the combo and a surge add: the share bar's two sides.
+  const split = tapperSplit(state, play, mods);
+  const eps = (split.machines + split.lift) * output;
   // Idle Hands at work: the per-second readout says so.
   epsEl.classList.toggle(
     'is-boosted',
@@ -2585,6 +2635,7 @@ function frame(now: number): void {
   );
   if (eps > 0) {
     earn(state, eps * dt);
+    share.add(now, split.lift * output * dt, split.machines * output * dt);
     // As for presses, a surge reaching the auto-tappers (Surge Lines) stays out of the pace.
     income.add(
       now,
@@ -2616,6 +2667,7 @@ function frame(now: number): void {
   renderAfterglow(now);
 
   renderReadouts();
+  renderShare(now);
   renderCombo(now);
   if (!reducedMotion()) drawScope(now);
   // The dial is a clock during a surge, so it updates every frame then.
@@ -2755,6 +2807,8 @@ function restartRun(): void {
   idleAccum = 0;
   idleTimer = 0;
   income.reset();
+  share.reset();
+  sharePct = -1;
   afterglowUntil = 0;
   replicateClock = 0;
   reactor.classList.remove('is-afterglow');

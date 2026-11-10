@@ -36,7 +36,7 @@ import {
   type ShopItemId,
   type ShopTab,
 } from './config';
-import { modsOf } from './mods';
+import { modsOf, type Mods } from './mods';
 import type { PerkOffer, SaveState } from './save';
 
 /** What is happening in play at the moment a gain is worked out. */
@@ -209,7 +209,6 @@ export function energyPerSecond(
     owned += state.tappers[t.id];
     raw += t.eps * state.tappers[t.id] * mods.tapperMultById[t.id];
   }
-  const comboBonus = comboTier(comboOf(ctx, mods), mods.tiers).multiplier - 1;
   const idle = (ctx.idleS ?? 0) >= mods.idleBoostAfterS ? mods.idleBoostMult : 1;
   const surge = ctx.surging && mods.surgeHitsTappers ? mods.surge.multiplier : 1;
   return (
@@ -217,13 +216,41 @@ export function energyPerSecond(
     (1 + mods.tapperPerOwned * owned) *
     (1 + mods.tapperPerState * reactorIndex(state.runLifetime)) *
     (1 + mods.tapperDoubleTapShare * doubleTapChance(state, mods)) *
-    (1 + comboBonus * mods.syncShare) *
+    syncMultiplier(ctx.combo ?? 0, mods) *
     mods.tapperMult *
     idle *
     surge *
     milestoneBonus(state.runLifetime) *
     isotopeBonus(state.isotopes, mods.isotopeRate)
   );
+}
+
+/**
+ * What a combo does for the auto-tappers: x1 without Synchronisation, and
+ * with it half the tier's bonus, so Harmonic's x3 gives them x2. Full Sync
+ * sets its own share; under Brute Force there is no combo to share.
+ */
+export function syncMultiplier(combo: number, mods: Mods): number {
+  if (mods.comboOff) return 1;
+  return 1 + (comboTier(combo, mods.tiers).multiplier - 1) * mods.syncShare;
+}
+
+/**
+ * The auto-tappers' output in two parts (SPACEBAR-CLICKER.md §8.5.10): what
+ * they make on their own, and what the player's play adds to it, the combo
+ * through Synchronisation and a surge through Surge Lines. The face's share
+ * bar counts the second part as the player's, with their presses: it is what
+ * stops when they do. Idle Hands rewards not pressing, so it stays with the
+ * machines.
+ */
+export function tapperSplit(
+  state: SaveState,
+  ctx: PlayContext = {},
+  mods = modsOf(state)
+): { machines: number; lift: number } {
+  const all = energyPerSecond(state, ctx, mods);
+  const machines = energyPerSecond(state, { ...ctx, combo: 0, surging: false }, mods);
+  return { machines, lift: Math.max(0, all - machines) };
 }
 
 /**

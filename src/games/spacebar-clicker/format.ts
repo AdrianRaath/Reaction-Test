@@ -32,9 +32,13 @@ export function formatRate(value: number): string {
   return formatEnergy(value);
 }
 
-/** A combo multiplier: x1, x1.5, x2, x2.5, x3. */
+/**
+ * A multiplier: x1, x1.5, x2.5, and to two places where it needs them, so the
+ * auto-tappers' share of a tier reads x1.25 or x1.75, and Glass Rhythm's
+ * tiers x3.75, rather than rounded.
+ */
 export function formatMultiplier(value: number): string {
-  return `x${Number.isInteger(value) ? value : value.toFixed(1)}`;
+  return `x${Number(value.toFixed(2))}`;
 }
 
 /** Elapsed time: 45s, 12m 05s, 4h 12m. */

@@ -31,12 +31,14 @@ import {
   reactorProgress,
   reactorState,
   shopTabHasNews,
+  syncMultiplier,
   tapperCost,
+  tapperSplit,
   updateReveals,
   upgradeCost,
 } from './economy';
 import { formatDuration, formatEnergy, formatMultiplier, formatRate } from './format';
-import { IncomeMeter } from './income';
+import { IncomeMeter, ShareMeter } from './income';
 import { BASE_MODS, modsOf, type Mods } from './mods';
 import { newSeed, nextRandom } from './rng';
 import {
@@ -714,6 +716,10 @@ describe('format', () => {
     expect(formatRate(1_234_567)).toBe('1.23M');
     expect(formatMultiplier(1)).toBe('x1');
     expect(formatMultiplier(2.5)).toBe('x2.5');
+    expect(formatMultiplier(1.25)).toBe('x1.25');
+    expect(formatMultiplier(1.75)).toBe('x1.75');
+    expect(formatMultiplier(3.75)).toBe('x3.75');
+    expect(formatMultiplier(1 + 2 * 1.05)).toBe('x3.1');
   });
 
   it('formats durations', () => {
@@ -827,6 +833,32 @@ describe('run modifiers', () => {
     s.tappers.pneumatic = 2;
     expect(energyPerSecond(s, { surging: true })).toBe(6);
     expect(energyPerSecond(s, { surging: true }, bent({ surgeHitsTappers: true }))).toBe(60);
+  });
+
+  it('give auto-tappers a share of the tier, or none under Brute Force', () => {
+    const s = defaultSave(NOW);
+    expect(syncMultiplier(100, modsOf(s))).toBe(1);
+    s.upgrades.sync = 1;
+    expect(syncMultiplier(100, modsOf(s))).toBe(2);
+    expect(syncMultiplier(50, modsOf(s))).toBe(1.75);
+    expect(syncMultiplier(10, modsOf(s))).toBe(1.25);
+    expect(syncMultiplier(9, modsOf(s))).toBe(1);
+    expect(syncMultiplier(100, bent({ syncShare: 1.05 }))).toBeCloseTo(3.1);
+    expect(syncMultiplier(100, { ...modsOf(s), comboOff: true })).toBe(1);
+  });
+
+  it('split auto-tapper output into the machines’ own and what play adds', () => {
+    const s = defaultSave(NOW);
+    s.tappers.pneumatic = 2; // 6
+    expect(tapperSplit(s, { combo: 100 })).toEqual({ machines: 6, lift: 0 });
+    s.upgrades.sync = 1;
+    expect(tapperSplit(s, { combo: 100 })).toEqual({ machines: 6, lift: 6 });
+    // Surge Lines: the surge is the player's too.
+    const lines = bent({ surgeHitsTappers: true });
+    expect(tapperSplit(s, { surging: true }, lines)).toEqual({ machines: 6, lift: 54 });
+    // Idle Hands rewards not pressing: it stays with the machines.
+    const idle = bent({ idleBoostMult: 2.5, idleBoostAfterS: 10 });
+    expect(tapperSplit(s, { idleS: 12 }, idle)).toEqual({ machines: 15, lift: 0 });
   });
 
   it('discount auto-tappers, rounded to a whole price', () => {
@@ -947,5 +979,75 @@ describe('income meter', () => {
     m.add(0, 100);
     m.reset();
     expect(m.rate(0)).toBe(0);
+  });
+});
+
+describe('share meter', () => {
+  /**
+   * Machines at `machines` a second in 60 fps frames, and presses at `rate`
+   * a second worth `press` each. Reads the displayed share every frame from
+   * `watchFromMs`, and returns those reads.
+   */
+  function play(
+    m: ShareMeter,
+    fromMs: number,
+    toMs: number,
+    machines: number,
+    rate = 0,
+    press = 0,
+    watchFromMs = Infinity
+  ): number[] {
+    const reads: number[] = [];
+    let nextPress = fromMs;
+    for (let t = fromMs; t < toMs; t += 1000 / 60) {
+      m.add(t, 0, machines / 60);
+      while (rate > 0 && nextPress <= t) {
+        m.add(nextPress, press, 0);
+        nextPress += 1000 / rate;
+      }
+      const shown = m.share(t);
+      if (t >= watchFromMs && shown !== null) reads.push(shown);
+    }
+    return reads;
+  }
+
+  it('reads nothing before anything is earned', () => {
+    const m = new ShareMeter();
+    expect(m.raw(5000)).toBeNull();
+    expect(m.share(5000)).toBeNull();
+  });
+
+  it('settles on the player’s share of a steady income', () => {
+    const m = new ShareMeter();
+    play(m, 0, 30_000, 100, 5, 20); // 100 a second each
+    expect(m.raw(30_000)).toBeCloseTo(0.5, 1);
+    expect(m.share(30_000)).toBeCloseTo(0.5, 1);
+  });
+
+  it('holds steady press by press rather than flickering', () => {
+    const m = new ShareMeter();
+    const shares = play(m, 0, 32_000, 100, 5, 20, 30_000);
+    expect(shares.length).toBeGreaterThan(100);
+    expect(Math.max(...shares) - Math.min(...shares)).toBeLessThan(0.01);
+  });
+
+  it('falls away over a few seconds once the presses stop', () => {
+    const m = new ShareMeter();
+    play(m, 0, 30_000, 100, 5, 20);
+    play(m, 30_000, 31_000, 100);
+    const soon = m.share(31_000)!;
+    expect(soon).toBeLessThan(0.5);
+    expect(soon).toBeGreaterThan(0.35);
+    play(m, 31_000, 45_000, 100);
+    expect(m.share(45_000)!).toBeLessThan(0.05);
+  });
+
+  it('keeps the last share while nothing is earned, and starts over on reset', () => {
+    const m = new ShareMeter();
+    play(m, 0, 30_000, 100, 5, 20);
+    const last = m.share(30_000)!;
+    expect(m.share(40_000)).toBeCloseTo(last, 1);
+    m.reset();
+    expect(m.share(40_000)).toBeNull();
   });
 });
