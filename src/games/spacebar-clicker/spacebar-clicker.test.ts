@@ -31,6 +31,7 @@ import {
   reactorProgress,
   reactorState,
   shopTabHasNews,
+  surgePay,
   syncGain,
   syncMultiplier,
   tapperCost,
@@ -125,6 +126,21 @@ describe('energy per press', () => {
     s.isotopes = 3; // × 1.3
     const expected = 5 * 2.25 * 2 * 10 * 1.1 * 1.3; // combo x2, surging
     expect(energyPerPress(s, { combo: 25, surging: true })).toBeCloseTo(expected, 6);
+  });
+
+  it('pays a share of auto-tapper output on a surge press, more under Storm Front', () => {
+    const s = defaultSave(NOW);
+    s.tappers.pneumatic = 2; // 6 a second
+    expect(surgePay(s, {})).toBe(0);
+    expect(surgePay(s, { surging: true })).toBe(3); // half a second's
+    expect(energyPerPress(s, { surging: true })).toBe(10 + 3);
+    // Storm Front's x25 pays two and a half times as much.
+    const storm = bent({ surge: { ...SURGE, multiplier: 25 } });
+    expect(surgePay(s, { surging: true }, storm)).toBeCloseTo(7.5);
+    // The combo's lift through Synchronisation counts; Surge Lines' boost doesn't compound.
+    s.upgrades.sync = 1;
+    expect(surgePay(s, { surging: true, combo: 100 })).toBe(6);
+    expect(surgePay(s, { surging: true }, bent({ surgeHitsTappers: true }))).toBe(3);
   });
 
   it('caps the Double Tap chance at 50%', () => {

@@ -152,6 +152,13 @@ export interface SurgeRules {
   warningS: number;
   durationS: number;
   multiplier: number;
+  /**
+   * Seconds of auto-tapper output each press in a surge also pays, at the
+   * usual multiplier; a stronger surge (Storm Front) pays in proportion
+   * (SPACEBAR-CLICKER.md §8.5.13). It keeps a surge worth half a minute or so
+   * of output late in a run, once the auto-tappers outearn the presses.
+   */
+  paysS: number;
   /** Seconds since the last press before play counts as idle. */
   idleAfterS: number;
 }
@@ -316,6 +323,7 @@ export const SURGE: Readonly<SurgeRules> = {
   warningS: 3,
   durationS: 5,
   multiplier: 10,
+  paysS: 0.5,
   idleAfterS: 60,
 };
 

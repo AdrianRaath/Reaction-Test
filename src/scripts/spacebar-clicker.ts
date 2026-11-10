@@ -66,6 +66,7 @@ import {
   reactorProgress,
   shopTabHasNews,
   syncGain,
+  surgePay,
   syncMultiplier,
   tapperCost,
   tapperSplit,
@@ -598,8 +599,9 @@ function playContext(now = performance.now()): PlayContext {
 
 /**
  * The passing boosts on a press: a surge, and Afterglow after one. The income
- * meter takes them back out, so a perk dropping during or just after a surge
- * is priced at the player's own pace, not ten times it.
+ * meter takes them back out, with what a surge pays from the auto-tappers, so
+ * a perk dropping during or just after a surge is priced at the player's own
+ * pace, not ten times it.
  */
 function pressBoost(play: PlayContext, mods = modsOf(state)): number {
   return (play.surging ? mods.surge.multiplier : 1) * (play.afterglow ? mods.afterglowMult : 1);
@@ -2284,7 +2286,7 @@ function press(e?: Event): void {
   const value = energyPerPress(state, play, mods) * lucky;
 
   earn(state, value);
-  income.add(now, value / pressBoost(play, mods));
+  income.add(now, (value - surgePay(state, play, mods) * lucky) / pressBoost(play, mods));
   share.add(now, value, 0);
   state.totalPresses++;
   if (counted > state.bestCombo) state.bestCombo = counted;

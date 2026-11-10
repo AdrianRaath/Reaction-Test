@@ -36,6 +36,7 @@ import {
   offerOn,
   perk,
   prestigeGain,
+  surgePay,
   tapperCost,
   updateReveals,
   upgradeCost,
@@ -260,14 +261,16 @@ export function simulateRun(
     const r = combo.press(at * 1000);
     const surging = phase === 'active';
     const play = { combo: r.combo, surging, afterglow: at < afterglowUntil };
-    const value = energyPerPress(state, play, mods) * luckyMultiplier(state, hands.next, mods);
+    const lucky = luckyMultiplier(state, hands.next, mods);
+    const value = energyPerPress(state, play, mods) * lucky;
     earn(state, value);
     earned[surging ? 'surges' : 'presses'] += value;
     minute(at)[surging ? 'surges' : 'presses'] += value;
     state.totalPresses++;
-    // The meter reads the player's own pace, without a surge's or an afterglow's boost.
+    // The meter reads the player's own pace, without a surge's or an afterglow's
+    // boost, or what a surge pays from the auto-tappers.
     const boost = (surging ? mods.surge.multiplier : 1) * (play.afterglow ? mods.afterglowMult : 1);
-    income.add(at * 1000, value / boost);
+    income.add(at * 1000, (value - surgePay(state, play, mods) * lucky) / boost);
     lastPress = at;
     comboAvg += (r.combo - comboAvg) * 0.01;
   }

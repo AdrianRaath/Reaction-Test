@@ -5,6 +5,8 @@
  *
  *   EPP = (1 + Finger Strength) × 1.5^Spring Keys × combo × surge × milestone × isotope
  *
+ * and in a surge, a share of a second's auto-tapper output on top (§8.5.13).
+ *
  * Double Tap is a per-press roll, applied by the caller with `doubleTapChance`
  * so the formula here stays deterministic and testable.
  *
@@ -24,6 +26,7 @@ import {
   PRESS_UPGRADES,
   PRESTIGE_UNLOCK,
   REACTOR_STATES,
+  SURGE,
   REVEAL_FRACTION,
   type AutoTapperDef,
   type AutoTapperId,
@@ -167,7 +170,21 @@ export function energyPerPress(
   // Feedback Loop: each press also pays a share of a second's income.
   const feedback =
     mods.pressPaysEps > 0 ? mods.pressPaysEps * energyPerSecond(state, ctx, mods) : 0;
-  return press + feedback;
+  return press + feedback + surgePay(state, ctx, mods);
+}
+
+/**
+ * What a press in a surge also pays (SPACEBAR-CLICKER.md §8.5.13): a share of
+ * a second's auto-tapper output, half a second at the usual x10, and more
+ * under Storm Front, in proportion to its multiplier. The output is the
+ * auto-tappers' own with the combo's lift, not Surge Lines' boost, so the two
+ * don't compound. Nothing outside a surge. A Double Tap, rolled on the whole
+ * press, doubles it too.
+ */
+export function surgePay(state: SaveState, ctx: PlayContext = {}, mods = modsOf(state)): number {
+  if (!ctx.surging || mods.surge.paysS <= 0) return 0;
+  const share = mods.surge.paysS * (mods.surge.multiplier / SURGE.multiplier);
+  return share * energyPerSecond(state, { ...ctx, surging: false }, mods);
 }
 
 /** Probability a press counts twice: 5% per Double Tap level, capped at 50%. */
