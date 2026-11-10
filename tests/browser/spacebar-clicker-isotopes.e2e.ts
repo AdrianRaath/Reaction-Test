@@ -159,9 +159,11 @@ test('resetting: the dialog, the toast and the shelf say what changed', async ({
   expect(meter, 'from 1M to 3M, the run is four fifths along').toMatch(/^scaleX\(0\.8/);
 
   await page.click('#sc-prestige-btn');
-  await expect(page.locator('#sc-prestige-modal-message')).toHaveText(
-    "Your energy, upgrades, auto-tappers, reactor state and this run's perks are wiped. You gain 1 isotope, taking all gains from +10% to +20%, and keep your achievements, records and perk codex. Warm Start begins the new run with 500 energy and a Lab Assistant."
-  );
+  await expect(page.locator('#sc-reset-sum-gain')).toHaveText('+1');
+  await expect(page.locator('#sc-reset-sum-to')).toHaveText('isotope, to 2');
+  await expect(page.locator('#sc-reset-sum-bonus')).toHaveText('+20%');
+  await expect(page.locator('#sc-reset-sum-from')).toHaveText('from +10%');
+  await expect(page.locator('#sc-reset-head')).toHaveText('500 energy and a Lab Assistant');
   await page.click('#sc-prestige-confirm');
   await expect(page.locator('#sc-toast')).toHaveText(
     'Experiment reset. 1 isotope gained: +20% to all gains.'

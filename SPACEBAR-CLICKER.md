@@ -347,22 +347,35 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
     to pick one at the next reset. A group with no rows hides.
   - **What a reset does.** The paragraph, then Wiped and Kept as two short
     lists side by side, stacked on a phone.
-- **The dialog** names what's wiped, the isotopes gained, the bonus before and
-  after, and any head start: "Warm Start begins the new run with 500 energy
-  and a Lab Assistant." Then the track's part:
+- **The dialog** (made compact 2026-11-10, §8.5.17) opens at the top, its
+  buttons pinned under a body that scrolls on a short screen:
+  - Two tiles like the Isotopes tab's: "A reset pays", +1, "isotope, to 13";
+    and "All gains", +169%, "from +156%". The bonus follows the capstone
+    pick: Enrichment counts 13% an isotope.
+  - Three short lines: Wiped, Kept, and the head start, "500 energy and a Lab
+    Assistant", with a Pneumatic Key and Finger Strength III from Hot Start.
   - "This reset unlocks", the plain rungs the reset reaches, each with what
     it does.
-  - Every fork the new count reaches, as two option cards with a radio's dot,
-    the last pick chosen. A fork reached for the first time has nothing
-    chosen, and Reset and collect waits for a pick, with an amber hint: "Pick
-    one at 3 isotopes to reset: Sixth Slot or Prodigy."
-  - With Heirloom or Cornerstone picked, the perks it may carry, best first
-    and chosen, then "Keep none". The list follows the fork-9 pick as it
-    changes.
-  - The bonus after follows the capstone pick: Enrichment counts 13% an
-    isotope.
+  - A fork reached for the first time, as two option cards with a radio's
+    dot and what each does, nothing chosen. Reset and collect waits for a
+    pick, with an amber hint over the buttons: "Pick one at 3 isotopes to
+    reset: Sixth Slot or Prodigy."
+  - With Heirloom or Cornerstone picked, the perks it may carry as chips, each
+    with its glyph and level, best first and chosen, the rule said once ("It
+    starts the next run in its slot, at level I.") and "Keep none" beside the
+    heading. The chips follow the fork-9 pick as it changes; "Keep none" holds
+    through a switch.
+  - "Your picks", last and quieter, with "Switch at any reset": each fork
+    picked before as a two-way switch, "At 3", the names only, the pick lit
+    with a dot. Hovering a half, or focusing it from the keyboard, shows what
+    that rung does in a tooltip in the isotopes' blue, over the switch. Touch
+    shows none, as a tap makes the pick; the Isotopes tab lists every rung.
   - If the run earns another isotope while the dialog is open, Reset and
     collect rebuilds it for the new count first.
+  - Late in a career, with every fork and six perks, it is 824px tall at
+    1440x900, so it fits without scrolling; it was 1,268px. On a 390x844
+    phone it scrolls about 34px, from 1,616px. A rare reset that lands every
+    rung at once still scrolls.
 - **After the reset.** The toast: "Experiment reset. 1 isotope gained: +40% to
   all gains." Once the beads land, the unlock card over the core names each
   new rung, a fork as its pick, for 5 seconds. A kept perk is on the shelf at
@@ -887,9 +900,12 @@ The visuals were built in three passes, all shipped 2026-10-22.
   starts with hidden words saying where it sits: "At 3 isotopes: Prodigy or
   Sixth Slot". In the reset
   dialog each fork and the keeping rung's perks are a fieldset of radios with
-  a legend ("At 3 isotopes: pick one"), the inputs over their cards so focus
-  and arrow keys work, with a focus ring on the card. The pick hint is an
-  alert, and focus goes to the fork that needs a pick. The unlock card is
+  a legend ("At 3 isotopes: pick one"), the inputs over their cards, chips or
+  switch halves so focus and arrow keys work, with a focus ring on each. A
+  past pick's legend reads "At 3 isotopes" though it shows "At 3", and each
+  half's radio is described by what the rung does; its tooltip is visual
+  only, stays while hovered, and Escape closes it before the dialog. The pick
+  hint is an alert, and focus goes to the fork that needs a pick. The unlock card is
   visual; the reset's announcement names each rung unlocked and any perk
   kept: "Unlocked Prodigy: Perks you don't hold drop at level II, for their
   level I price." The reroll pill is a button named "Reroll: swap this offer
@@ -959,7 +975,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  78 as of 2026-11-10, in about nine minutes.
+  79 as of 2026-11-10, in about nine minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
@@ -986,12 +1002,14 @@ The visuals were built in three passes, all shipped 2026-10-22.
   - **The track** (`spacebar-clicker-track.e2e.ts`): the tooltips' unlock
     lines; the track in the Isotopes tab, its rows and the unlock line, and the
     tab with every rung held; a new fork waiting for its pick, the
-    unlock card and the saved pick; Heirloom and Cornerstone carrying a perk;
-    a reroll, and none without the rung; Prodigy's level II offer; six sockets
+    unlock card and the saved pick; Heirloom and Cornerstone carrying a perk,
+    and "Keep none" holding through a switch; the dialog late in a career
+    fitting 1440x900, its switches, and their tooltip on hover, on focus and
+    with Escape; a reroll, and none without the rung; Prodigy's level II offer; six sockets
     and the Twin Keystones swap; the credits on an offer, and none without
     the track; Night Lab's toast on return; Perfect Pitch's float on a fake
-    clock; the unlock card under reduced motion; the dialog with every fork,
-    six sockets with twelve beads, and a reset that lands every rung, its
+    clock; the unlock card under reduced motion; the dialog with every fork
+    opening at the top with its buttons pinned, six sockets with twelve beads, and a reset that lands every rung, its
     card listing three and the rest, on a phone.
   - **The run-down** (`spacebar-clicker-rundown.e2e.ts`): a return to a
     run-down reactor and a press bringing it back; a return to a fault, the
@@ -2043,7 +2061,7 @@ discussed the same day; its ideas 1 and 2, isotopes quickening the drop
 clock and an early first drop every run, are decided and built (§8.5.14).
 Finding 7 was measured again and parked (§8.5.15). For finding 8, five
 endgame achievements and two records are built (§8.5.16). Every finding has
-now been discussed.
+now been discussed. A UI polish pass began the same day (§8.5.17).
 
 #### 8.5.1 The review
 
@@ -2432,6 +2450,12 @@ drift):
   "auto-tappers" and "auto" on the bar and the combo meter, "Energy from
   you" in the Stats panel, and Synchronisation's "+291 per second at
   Resonance" in the shop.
+- **The reset dialog** (§8.5.17): its new words are the mockup's, approved
+  for layout, not as final copy: "All gains", "isotope, to 13", "from
+  +156%", the Wiped, Kept and Head start lines, "It starts the next run in its
+  slot, at level I.", "Keep none", "Your picks" and "Switch at any reset". At
+  1440 the Wiped line leaves "run's perks" on a second line, and on a phone
+  the head start leaves "III" alone on its third.
 - **This doc's §6**, once the page changes.
 
 #### 8.5.10 Finding 5: presses and surges fade, 2026-11-10
@@ -2736,6 +2760,45 @@ Calls for review:
 5. **A save from before records** can't set the fastest million in the run it
    loads into: that run has no start time. The next run is timed.
 
+#### 8.5.17 UI polish: the reset dialog, 2026-11-10
+
+The maintainer started a UI polish pass with the reset dialog, which grew
+too tall late in a career. Measured with every fork and Heirloom's six
+perks: 1,268px at 1440x900, where 852px fit, and 1,616px on a 390x844 phone.
+It opened scrolled to the bottom, as focus went to Keep going, so the title
+and the numbers were out of view. Every fork picked before came back as two
+full cards on each reset, and Heirloom's list repeated one sentence on seven
+cards.
+
+Ideas went to the maintainer, then a mockup on the late-career save, injected
+into the page. **Approved 2026-11-10, with one change: past picks get a
+tooltip on hover.** Built the same day (§4.7, §5.4):
+
+1. The numbers as two tiles, and what a reset does in three short lines,
+   in place of a 53-word sentence.
+2. Forks picked before as two-way switches, names only, with a tooltip on
+   hover or keyboard focus. A new fork keeps its cards.
+3. Heirloom's and Cornerstone's perks as chips with their glyphs, the rule
+   said once, "Keep none" beside the heading.
+4. In decision order: unlocks, a new fork, the perk to keep, then the past
+   picks, quieter.
+5. The buttons pinned under a scrolling body; on a phone both on one row.
+   The dialog opens at the top.
+
+Late in a career it is now 824px at 1440x900, with no scroll, and on a phone
+about 34px of scroll. No new colors: picks keep the isotopes' blue, chips
+their perks' family hues. 1 browser check, 79 in all, and three updated.
+
+Calls for review:
+
+1. **No tooltip on touch.** A tap on a switch makes the pick, so it can't
+   also open a tooltip. Touch players read rungs in the Isotopes tab.
+2. **"Keep none" holds** when a fork is switched. Before, any fork change
+   put the best perk back.
+3. **A mouse resting where the reset button was** shows a tooltip as the
+   dialog opens if a switch lands under it, as any hover would.
+4. **The words** are on the copy-audit list (§8.5.9).
+
 ### 8.6 Unassigned ideas
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
@@ -2956,3 +3019,8 @@ the maintainer asks.
   fastest million, told when beaten. 19 achievements in all. 5 unit tests and
   2 browser checks, 78 in all. The Night Lab return check records its toasts
   as they show (`recordToasts`), as a cold dev server could make it miss them.
+- **2026-11-10.** UI polish, the reset dialog (§8.5.17): the numbers as
+  tiles, Wiped, Kept and the head start as three lines, a kept perk as chips,
+  forks picked before as switches with a tooltip on hover or focus, the
+  buttons pinned, and it opens at the top. Late in a career it fits 1440x900:
+  824px, from 1,268. 1 browser check, 79 in all.

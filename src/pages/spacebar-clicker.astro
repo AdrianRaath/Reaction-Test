@@ -883,21 +883,67 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
       aria-labelledby="sc-prestige-modal-title"
       hidden
     >
+      <!-- The body scrolls on a short screen; the buttons stay pinned under
+           it (SPACEBAR-CLICKER.md §8.5.17). -->
       <div class="modal reset-dialog">
-        <h3 class="modal-title" id="sc-prestige-modal-title">Reset the experiment?</h3>
-        <!-- The script writes this, with the isotopes and the bonus before and after. -->
-        <p class="modal-message" id="sc-prestige-modal-message"></p>
-        <!-- The isotope track's part, filled by the script: the rungs this
-             reset unlocks, a pick at each fork reached, and the perk Heirloom
-             or Cornerstone carries. A new fork must be picked to reset. -->
-        <div class="reset-choices" id="sc-reset-choices"></div>
-        <p class="reset-pick-hint" id="sc-reset-pick-hint" role="alert" hidden></p>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" id="sc-prestige-cancel" type="button">Keep going</button
-          >
-          <button class="btn btn-primary" id="sc-prestige-confirm" type="button"
-            >Reset and collect</button
-          >
+        <div class="reset-body" id="sc-reset-body">
+          <h3 class="modal-title" id="sc-prestige-modal-title">Reset the experiment?</h3>
+          <!-- What the reset pays, as tiles like the Isotopes tab's. The script
+               writes the numbers. -->
+          <dl class="reset-sum">
+            <div class="reset-tile">
+              <dt>A reset pays</dt>
+              <dd>
+                <span class="readout reset-tile-value" id="sc-reset-sum-gain"></span>
+                <span class="reset-tile-sub" id="sc-reset-sum-to"></span>
+              </dd>
+            </div>
+            <div class="reset-tile">
+              <dt>All gains</dt>
+              <dd>
+                <span class="readout reset-tile-value" id="sc-reset-sum-bonus"></span>
+                <span class="reset-tile-sub" id="sc-reset-sum-from"></span>
+              </dd>
+            </div>
+          </dl>
+          <dl class="reset-terms">
+            <div>
+              <dt>Wiped</dt>
+              <dd>Energy, upgrades, auto-tappers, reactor state and this run's perks</dd>
+            </div>
+            <div>
+              <dt>Kept</dt>
+              <dd>Isotopes, achievements, records and the perk codex</dd>
+            </div>
+            <div id="sc-reset-head-row">
+              <dt>Head start</dt>
+              <dd id="sc-reset-head"></dd>
+            </div>
+          </dl>
+          <!-- The isotope track's part, filled by the script: the rungs this
+               reset unlocks, a new fork's pick, the perk Heirloom or
+               Cornerstone carries, then the forks picked before as switches.
+               A new fork must be picked to reset. -->
+          <div class="reset-choices" id="sc-reset-choices"></div>
+        </div>
+        <div class="reset-foot">
+          <p class="reset-pick-hint" id="sc-reset-pick-hint" role="alert" hidden></p>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" id="sc-prestige-cancel" type="button"
+              >Keep going</button
+            >
+            <button class="btn btn-primary" id="sc-prestige-confirm" type="button"
+              >Reset and collect</button
+            >
+          </div>
+        </div>
+      </div>
+      <!-- A past pick's tooltip, on hover or keyboard focus: what the rung does.
+           Visual only; each switch's radio is described by the same words. -->
+      <div class="pick-tip" id="sc-pick-tip" aria-hidden="true" hidden>
+        <div class="pick-tip-box">
+          <p class="pick-tip-name" id="sc-pick-tip-name"></p>
+          <p class="pick-tip-detail" id="sc-pick-tip-detail"></p>
         </div>
       </div>
     </div>
@@ -4207,28 +4253,82 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     gap: var(--space-md);
   }
 
-  /* The reset dialog grows with the isotope track: the rungs a reset
-     unlocks, a pick at each fork, the perk a keeping rung carries. It
-     scrolls inside itself on a short screen. */
+  /* The reset dialog grows with the isotope track, so it is built to stay
+     short (SPACEBAR-CLICKER.md §8.5.17): the numbers as tiles, what a reset
+     does in three lines, a new fork's pick as cards, a kept perk as chips,
+     and the forks picked before as switches. The body scrolls inside itself
+     on a short screen while the buttons stay pinned under it. */
   .reset-dialog {
+    display: flex;
+    flex-direction: column;
     max-width: 480px;
     max-height: calc(100dvh - 2 * var(--space-lg));
+    padding: 0;
+    overflow: hidden;
+    text-align: start;
+  }
+
+  .reset-body {
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-xl) var(--space-xl) var(--space-lg);
     overflow-y: auto;
   }
 
-  .reset-dialog:has(.reset-choices:not(:empty)) .modal-message {
-    margin-block-end: var(--space-lg);
+  .reset-body .modal-title {
+    text-align: center;
+  }
+
+  .reset-foot {
+    padding: var(--space-md) var(--space-xl) var(--space-lg);
+    border-block-start: 1px solid var(--line);
+  }
+
+  .reset-sum {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-sm);
+    margin: 0;
+  }
+
+  .reset-sum .readout {
+    color: var(--ink-primary);
+  }
+
+  /* Wiped, Kept and the head start: a label column and a value column. */
+  .reset-terms {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin: var(--space-md) 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+
+  .reset-terms > div {
+    display: grid;
+    grid-template-columns: 5rem minmax(0, 1fr);
+    gap: var(--space-sm);
+  }
+
+  .reset-terms dt {
+    color: var(--ink-muted);
+  }
+
+  .reset-terms dd {
+    margin: 0;
+    color: var(--ink-secondary);
   }
 
   .reset-choices {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
-    margin-block-end: var(--space-lg);
-    text-align: start;
+    gap: var(--space-lg);
+    margin-block-start: var(--space-lg);
   }
 
-  .reset-choices:empty {
+  .reset-choices:empty,
+  .reset-choices :global(#sc-reset-keep:empty) {
     display: none;
   }
 
@@ -4249,6 +4349,23 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     color: var(--ramp-blue);
   }
 
+  /* The forks picked before are a quieter group than a pick to make. */
+  .reset-choices :global(.reset-group.is-quiet .reset-group-title) {
+    color: var(--ink-muted);
+  }
+
+  .reset-choices :global(.reset-group-head) {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-sm);
+  }
+
+  .reset-choices :global(.reset-group-note) {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
   .reset-choices :global(.reset-unlocks) {
     display: flex;
     flex-direction: column;
@@ -4258,18 +4375,21 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     list-style: none;
   }
 
+  /* Set at the detail's size, so a wrapped line keeps the detail's leading. */
+  .reset-choices :global(.reset-unlocks li) {
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
   .reset-choices :global(.reset-options) {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
   }
 
-  .reset-choices :global(.reset-options.is-list) {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   /* An option is a card with a radio's dot top-right: filled when picked,
-     so the pick never rests on color alone. */
+     so the pick never rests on color alone. The chips and the switches below
+     follow the same rule. */
   .reset-choices :global(.reset-option) {
     position: relative;
     display: flex;
@@ -4285,38 +4405,55 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
       background-color var(--duration-fast) var(--ease);
   }
 
-  .reset-choices :global(.reset-option::after) {
+  .reset-choices :global(.reset-option::after),
+  .reset-choices :global(.reset-chip::after),
+  .reset-choices :global(.reset-keep-none::before) {
     content: '';
-    position: absolute;
-    inset-block-start: 10px;
-    inset-inline-end: 10px;
     width: 10px;
     height: 10px;
     border: 1px solid var(--ink-muted);
     border-radius: var(--radius-full);
   }
 
-  .reset-choices :global(.reset-option:hover) {
+  .reset-choices :global(.reset-option::after) {
+    position: absolute;
+    inset-block-start: 10px;
+    inset-inline-end: 10px;
+  }
+
+  .reset-choices :global(.reset-option:hover),
+  .reset-choices :global(.reset-chip:hover),
+  .reset-choices :global(.reset-keep-none:hover) {
     border-color: var(--ink-muted);
   }
 
-  .reset-choices :global(.reset-option:has(input:checked)) {
+  .reset-choices :global(.reset-option:has(input:checked)),
+  .reset-choices :global(.reset-chip:has(input:checked)),
+  .reset-choices :global(.reset-keep-none:has(input:checked)) {
     border-color: var(--ramp-blue);
     background-color: color-mix(in srgb, var(--ramp-blue) 8%, var(--panel-03));
   }
 
-  .reset-choices :global(.reset-option:has(input:checked)::after) {
+  .reset-choices :global(.reset-option:has(input:checked)::after),
+  .reset-choices :global(.reset-chip:has(input:checked)::after),
+  .reset-choices :global(.reset-keep-none:has(input:checked)::before) {
     border-color: var(--ramp-blue);
     background-color: var(--ramp-blue);
     box-shadow: inset 0 0 0 2px var(--panel-03);
   }
 
-  .reset-choices :global(.reset-option:has(input:focus-visible)) {
+  .reset-choices :global(.reset-option:has(input:focus-visible)),
+  .reset-choices :global(.reset-chip:has(input:focus-visible)),
+  .reset-choices :global(.reset-keep-none:has(input:focus-visible)),
+  .reset-choices :global(.reset-seg-option:has(input:focus-visible)) {
     outline: 2px solid var(--ramp-blue);
     outline-offset: 2px;
   }
 
-  .reset-choices :global(.reset-option input) {
+  .reset-choices :global(.reset-option input),
+  .reset-choices :global(.reset-chip input),
+  .reset-choices :global(.reset-keep-none input),
+  .reset-choices :global(.reset-seg-option input) {
     position: absolute;
     inset: 0;
     margin: 0;
@@ -4336,16 +4473,295 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     color: var(--ink-secondary);
   }
 
-  .reset-pick-hint {
-    margin-block: calc(-1 * var(--space-sm)) var(--space-md);
+  /* The perk Heirloom or Cornerstone keeps. The legend and "Keep none" float
+     on one line, as a legend can't be a flex item in every browser. */
+  .reset-choices :global(.reset-keep-group > legend) {
+    float: inline-start;
+    margin-block: 6px 0;
+  }
+
+  .reset-choices :global(.reset-keep-none) {
+    position: relative;
+    display: flex;
+    float: inline-end;
+    align-items: center;
+    gap: 6px;
+    min-height: 26px;
+    padding: 0 10px 0 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    color: var(--ink-secondary);
+    cursor: pointer;
+  }
+
+  .reset-choices :global(.reset-keep-note) {
+    clear: both;
+    padding-block: 4px var(--space-sm);
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--ink-secondary);
+  }
+
+  .reset-choices :global(.reset-chips) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .reset-choices :global(.reset-chip) {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 5px 28px 5px 5px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+    cursor: pointer;
+    transition:
+      border-color var(--duration-fast) var(--ease),
+      background-color var(--duration-fast) var(--ease);
+  }
+
+  .reset-choices :global(.reset-chip::after) {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 10px;
+    translate: 0 -50%;
+  }
+
+  .reset-choices :global(.reset-chip .perk-tile) {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+  }
+
+  .reset-choices :global(.reset-chip .perk-tile svg) {
+    width: 18px;
+    height: 18px;
+  }
+
+  .reset-choices :global(.reset-chip-name) {
+    overflow: hidden;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--ink-primary);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .reset-choices :global(.reset-chip-level) {
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  /* The forks picked before: "At 3", then a two-way switch, the names only.
+     What each rung does shows in a tooltip on hover or keyboard focus. */
+  .reset-choices :global(.reset-picks) {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .reset-choices :global(.reset-pick) {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .reset-choices :global(.reset-pick > legend) {
+    float: inline-start;
+    width: 2.75rem;
+    padding: 0;
+    font-size: 0.75rem;
+    line-height: 36px;
+    color: var(--ink-muted);
+  }
+
+  .reset-choices :global(.reset-pick > legend b) {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--ink-secondary);
+  }
+
+  .reset-choices :global(.reset-seg) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px;
+    margin-inline-start: calc(2.75rem + var(--space-sm));
+    padding: 3px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-01);
+  }
+
+  .reset-choices :global(.reset-seg-option) {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 6px;
+    border-radius: calc(var(--radius-md) - 2px);
+    font-size: 0.8125rem;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition:
+      color var(--duration-fast) var(--ease),
+      background-color var(--duration-fast) var(--ease);
+  }
+
+  .reset-choices :global(.reset-seg-option:hover) {
+    background-color: var(--panel-hover);
+    color: var(--ink-secondary);
+  }
+
+  .reset-choices :global(.reset-seg-option:has(input:checked)) {
+    background-color: color-mix(in srgb, var(--ramp-blue) 14%, var(--panel-03));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ramp-blue) 55%, transparent);
+    color: var(--ink-primary);
+    font-weight: 600;
+  }
+
+  /* The picked half's dot, so the pick never rests on color alone. */
+  .reset-choices :global(.reset-seg-option:has(input:checked)::before) {
+    content: '';
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background-color: var(--ramp-blue);
+  }
+
+  .reset-choices :global(.reset-seg-name) {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* Over the dialog, above the switch it describes (below it if there is no
+     room), in the isotopes' blue like their tooltips. Its padding bridges the
+     gap, so the pointer can cross onto it. */
+  .pick-tip {
+    position: absolute;
+    z-index: 1;
+    width: max-content;
+    max-width: min(260px, calc(100vw - 32px));
+    padding-block-end: 8px;
+  }
+
+  .pick-tip.is-below {
+    padding-block: 8px 0;
+  }
+
+  .pick-tip-box {
+    position: relative;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid color-mix(in srgb, var(--ramp-blue) 55%, var(--line));
+    border-radius: var(--radius-md);
+    background-color: var(--panel-01);
+    box-shadow:
+      0 10px 15px -3px rgb(0 0 0 / 40%),
+      0 4px 6px -4px rgb(0 0 0 / 30%);
+  }
+
+  .pick-tip-box::after {
+    content: '';
+    position: absolute;
+    inset-block-end: -5px;
+    inset-inline-start: calc(var(--caret, 50%) - 5px);
+    width: 8px;
+    height: 8px;
+    border-block-end: 1px solid color-mix(in srgb, var(--ramp-blue) 55%, var(--line));
+    border-inline-end: 1px solid color-mix(in srgb, var(--ramp-blue) 55%, var(--line));
+    background-color: var(--panel-01);
+    transform: rotate(45deg);
+  }
+
+  .pick-tip.is-below .pick-tip-box::after {
+    inset-block: -5px auto;
+    transform: rotate(225deg);
+  }
+
+  .pick-tip-name {
     font-size: var(--text-label-size);
     font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  .pick-tip-detail {
+    margin-block-start: 2px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
+  .reset-pick-hint {
+    margin-block-end: var(--space-sm);
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    text-align: center;
     color: var(--caution-amber);
   }
 
+  /* On a phone: narrower margins, a new fork's cards stacked, chip names on
+     up to two lines, and both buttons on one row, Reset and collect taking
+     the rest of it. */
   @media (max-width: 480px) {
+    .reset-body {
+      padding: var(--space-lg) 1.25rem var(--space-md);
+    }
+
+    .reset-foot {
+      padding: var(--space-md) 1.25rem;
+    }
+
+    .reset-foot .modal-actions {
+      gap: var(--space-sm);
+    }
+
+    .reset-foot .btn {
+      padding-inline: var(--space-md);
+    }
+
+    .reset-foot .btn-primary {
+      flex: 1;
+    }
+
     .reset-choices :global(.reset-options) {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .reset-choices :global(.reset-chip) {
+      gap: 8px;
+      padding-inline-end: 22px;
+    }
+
+    .reset-choices :global(.reset-chip::after) {
+      inset-inline-end: 8px;
+    }
+
+    .reset-choices :global(.reset-chip .perk-tile) {
+      width: 26px;
+      height: 26px;
+    }
+
+    .reset-choices :global(.reset-chip .perk-tile svg) {
+      width: 16px;
+      height: 16px;
+    }
+
+    .reset-choices :global(.reset-chip-name) {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      white-space: normal;
     }
   }
 

@@ -416,11 +416,20 @@ const trackSockets = Array.from(document.querySelectorAll<HTMLElement>('.track-s
 );
 
 const prestigeModal = el('sc-prestige-modal');
-const prestigeModalMessage = el('sc-prestige-modal-message');
 const prestigeCancel = el('sc-prestige-cancel');
 const prestigeConfirm = el('sc-prestige-confirm');
+const resetBody = el('sc-reset-body');
+const resetSumGain = el('sc-reset-sum-gain');
+const resetSumTo = el('sc-reset-sum-to');
+const resetSumBonus = el('sc-reset-sum-bonus');
+const resetSumFrom = el('sc-reset-sum-from');
+const resetHeadRow = el('sc-reset-head-row');
+const resetHead = el('sc-reset-head');
 const resetChoices = el('sc-reset-choices');
 const resetPickHint = el('sc-reset-pick-hint');
+const pickTip = el('sc-pick-tip');
+const pickTipName = el('sc-pick-tip-name');
+const pickTipDetail = el('sc-pick-tip-detail');
 
 const swapModal = el('sc-swap-modal');
 const swapTitle = el('sc-swap-title');
@@ -2837,6 +2846,11 @@ for (const modal of [resetModal, prestigeModal, swapModal]) {
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
+  // A past pick's tooltip goes first, so dismissing it leaves the dialog open.
+  if (!pickTip.hidden) {
+    hidePickTip();
+    return;
+  }
   if (!resetModal.hidden) closeDialog(resetModal);
   if (!prestigeModal.hidden) closeDialog(prestigeModal);
   if (!swapModal.hidden) closeDialog(swapModal);
@@ -3037,16 +3051,21 @@ function dialogPicks(): ForkPicks {
   return picks;
 }
 
-/** A radio as an option card: its name, then what it does. */
-function resetOption(name: string, value: string, label: string, detail: string): HTMLLabelElement {
-  const option = document.createElement('label');
-  option.className = 'reset-option';
+/** A radio for one of the dialog's choices; it fills the label it sits in. */
+function radio(name: string, value: string): HTMLInputElement {
   const input = document.createElement('input');
   input.type = 'radio';
   input.name = name;
   input.value = value;
+  return input;
+}
+
+/** A radio as an option card: its name, then what it does. */
+function resetOption(name: string, value: string, label: string, detail: string): HTMLLabelElement {
+  const option = document.createElement('label');
+  option.className = 'reset-option';
   option.append(
-    input,
+    radio(name, value),
     cardLine('reset-option-name', label),
     cardLine('reset-option-detail', detail)
   );
@@ -3065,11 +3084,44 @@ function resetGroup(title: string, choice: boolean): HTMLElement {
 }
 
 /**
+ * A fork picked before, as a two-way switch: "At 3", then both rungs by
+ * name, the pick lit. What each does is its radio's description, and the
+ * tooltip's words on hover or focus.
+ */
+function pickSwitch(step: TrackStep, picked: RungId | null): HTMLFieldSetElement {
+  const pick = document.createElement('fieldset');
+  pick.className = 'reset-pick';
+  pick.dataset.fork = String(step.isotopes);
+  const legend = document.createElement('legend');
+  const count = document.createElement('b');
+  count.textContent = String(step.isotopes);
+  legend.append(text('At '), count, cardLine('visually-hidden', ` ${isotopeNoun(step.isotopes)}`));
+  const seg = document.createElement('div');
+  seg.className = 'reset-seg';
+  for (const r of step.rungs) {
+    const option = document.createElement('label');
+    option.className = 'reset-seg-option';
+    option.dataset.rung = r.id;
+    const input = radio(`fork-${step.isotopes}`, r.id);
+    input.checked = r.id === picked;
+    const detail = cardLine('visually-hidden', rungSentence(r.id));
+    detail.id = `sc-pick-detail-${r.id}`;
+    input.setAttribute('aria-describedby', detail.id);
+    option.append(input, cardLine('reset-seg-name', r.name), detail);
+    seg.append(option);
+  }
+  pick.append(legend, seg);
+  return pick;
+}
+
+/**
  * Build the dialog's track part for a reset to `resetTo`: the rungs it
- * unlocks, then each fork reached with `chosen` picked, then the keeping
- * rung's perks.
+ * unlocks, then each fork reached for the first time as cards, then the
+ * keeping rung's perks, then the forks picked before as switches, each with
+ * `chosen`'s pick.
  */
 function buildResetChoices(chosen: ForkPicks): void {
+  hidePickTip();
   const groups: HTMLElement[] = [];
   const fresh = stepsReached(state.isotopes, resetTo).filter((s) => !isFork(s));
   if (fresh.length > 0) {
@@ -3090,19 +3142,19 @@ function buildResetChoices(chosen: ForkPicks): void {
     groups.push(group);
   }
 
-  for (const step of ISOTOPE_TRACK.filter((s) => isFork(s) && s.isotopes <= resetTo)) {
-    const picked = isPickFor(step.isotopes, chosen[step.isotopes]) ? chosen[step.isotopes] : null;
-    const isNew = !isPickFor(step.isotopes, state.forks[step.isotopes]);
-    const group = resetGroup(
-      `At ${isotopeCount(step.isotopes)}: ${isNew ? 'pick one' : 'your pick'}`,
-      true
-    );
+  const forks = ISOTOPE_TRACK.filter((s) => isFork(s) && s.isotopes <= resetTo);
+  const isNew = (step: TrackStep): boolean => !isPickFor(step.isotopes, state.forks[step.isotopes]);
+  const pickOf = (step: TrackStep): RungId | null =>
+    isPickFor(step.isotopes, chosen[step.isotopes]) ? chosen[step.isotopes]! : null;
+
+  for (const step of forks.filter(isNew)) {
+    const group = resetGroup(`At ${isotopeCount(step.isotopes)}: pick one`, true);
     group.dataset.fork = String(step.isotopes);
     const options = document.createElement('div');
     options.className = 'reset-options';
     for (const r of step.rungs) {
       const option = resetOption(`fork-${step.isotopes}`, r.id, r.name, rungSentence(r.id));
-      option.querySelector('input')!.checked = r.id === picked;
+      option.querySelector('input')!.checked = r.id === pickOf(step);
       options.append(option);
     }
     group.append(options);
@@ -3112,14 +3164,37 @@ function buildResetChoices(chosen: ForkPicks): void {
   const keep = document.createElement('div');
   keep.id = 'sc-reset-keep';
   groups.push(keep);
+
+  // The forks picked before come last and quieter: most resets keep them.
+  const past = forks.filter((step) => !isNew(step));
+  if (past.length > 0) {
+    const group = document.createElement('div');
+    group.className = 'reset-group is-quiet';
+    const head = document.createElement('div');
+    head.className = 'reset-group-head';
+    const title = document.createElement('p');
+    title.className = 'reset-group-title';
+    title.textContent = 'Your picks';
+    const note = document.createElement('p');
+    note.className = 'reset-group-note';
+    note.textContent = 'Switch at any reset';
+    head.append(title, note);
+    const list = document.createElement('div');
+    list.className = 'reset-picks';
+    for (const step of past) list.append(pickSwitch(step, pickOf(step)));
+    group.append(head, list);
+    groups.push(group);
+  }
+
   resetChoices.replaceChildren(...groups);
   renderKeep();
 }
 
 /**
  * The keeping rung's perks, for the picks the dialog shows: Heirloom offers
- * the perks held that aren't keystones, Cornerstone the keystones. The best
- * comes chosen, or the one chosen before if it is still on offer.
+ * the perks held that aren't keystones, Cornerstone the keystones. Each is a
+ * chip with its glyph, then "Keep none" beside the heading. The best comes
+ * chosen, or the choice made before if it is still on offer.
  */
 function renderKeep(): void {
   const keep = resetChoices.querySelector<HTMLElement>('#sc-reset-keep');
@@ -3136,65 +3211,130 @@ function renderKeep(): void {
     cornerstone ? 'Cornerstone: keep your keystone' : 'Heirloom: keep a perk',
     true
   );
-  const options = document.createElement('div');
-  options.className = 'reset-options is-list';
+  group.classList.add('reset-keep-group');
+  const none = document.createElement('label');
+  none.className = 'reset-keep-none';
+  none.append(radio('keep', ''), text('Keep none'));
+  const note = document.createElement('p');
+  note.className = 'reset-keep-note';
+  note.textContent = 'It starts the next run in its slot, at level I.';
+  const chips = document.createElement('div');
+  chips.className = 'reset-chips';
   for (const held of perks) {
-    options.append(
-      resetOption(
-        'keep',
-        held.id,
-        perkTitle(held.id, held.level),
-        'Starts the next run in its slot, at level I.'
-      )
-    );
+    const def = perk(held.id);
+    const chip = document.createElement('label');
+    chip.className = 'reset-chip';
+    chip.dataset.family = def.family;
+    chip.dataset.rarity = def.rarity;
+    const tile = document.createElement('span');
+    tile.className = 'perk-tile';
+    tile.append(perkGlyph(held.id));
+    const name = cardLine('reset-chip-name', def.name);
+    if (held.level > 1) name.append(text(' '), cardLine('reset-chip-level', ROMAN[held.level]!));
+    chip.append(radio('keep', held.id), tile, name);
+    chips.append(chip);
   }
-  options.append(resetOption('keep', '', 'Keep none', 'Start the next run with no perks.'));
-  group.append(options);
+  group.append(none, note, chips);
   keep.replaceChildren(group);
-  const chosen = perks.some((o) => o.id === before) ? before : perks[0]!.id;
-  for (const input of options.querySelectorAll('input')) input.checked = input.value === chosen;
+  const chosen = before === '' || perks.some((o) => o.id === before) ? before : perks[0]!.id;
+  for (const input of group.querySelectorAll('input')) input.checked = input.value === chosen;
 }
 
-/** The dialog's sentence: what goes, what comes, and the new run's head start. */
-function renderResetMessage(): void {
+/** The dialog's numbers, and the head start the new run begins with. */
+function renderResetSummary(): void {
   const held = state.isotopes;
   const gain = resetTo - held;
   const picks = dialogPicks();
   const rungs = activeRungs(resetTo, picks);
-  const warm = rungs.includes('warm-start');
-  const hot = rungs.includes('hot-start');
-  const energy = TRACK_EFFECT.warmStartEnergy.toLocaleString('en-US');
+  resetSumGain.textContent = `+${gain}`;
+  resetSumTo.textContent = `${isotopeNoun(gain)}, to ${resetTo}`;
+  resetSumBonus.textContent = bonusText(resetTo, picks);
+  resetSumFrom.textContent = `from ${bonusText(held)}`;
+  const energy = `${TRACK_EFFECT.warmStartEnergy.toLocaleString('en-US')} energy`;
   const finger = `Finger Strength ${ROMAN[TRACK_EFFECT.hotStartFinger]}`;
-  const headStart =
-    warm && hot
-      ? ` Warm Start and Hot Start begin the new run with ${energy} energy, a Lab Assistant, a Pneumatic Key and ${finger}.`
-      : warm
-        ? ` Warm Start begins the new run with ${energy} energy and a Lab Assistant.`
-        : '';
-  setSentence(
-    prestigeModalMessage,
-    "Your energy, upgrades, auto-tappers, reactor state and this run's perks are wiped. You gain ",
-    [String(gain)],
-    ` ${isotopeNoun(gain)}, taking all gains from `,
-    [bonusText(held)],
-    ' to ',
-    [bonusText(resetTo, picks)],
-    `, and keep your achievements, records and perk codex.${headStart}`
-  );
+  resetHeadRow.hidden = !rungs.includes('warm-start');
+  resetHead.textContent = rungs.includes('hot-start')
+    ? `${energy}, a Lab Assistant, a Pneumatic Key and ${finger}`
+    : `${energy} and a Lab Assistant`;
 }
+
+// A past pick's tooltip: what the rung does, on hover or keyboard focus.
+// Touch has no hover, and a tap there makes the pick, so it shows none; the
+// Isotopes tab lists every rung.
+let pickTipFor: HTMLElement | null = null;
+let pickTipBy: 'hover' | 'focus' = 'hover';
+
+function showPickTip(option: HTMLElement, by: 'hover' | 'focus'): void {
+  const id = option.dataset.rung as RungId;
+  pickTipName.textContent = rung(id).name;
+  pickTipDetail.textContent = rungSentence(id);
+  pickTip.hidden = false;
+  pickTipFor = option;
+  pickTipBy = by;
+  placePickTip(option);
+}
+
+/** Over the switch's half, or under it with no room above, kept on screen. */
+function placePickTip(option: HTMLElement): void {
+  const at = option.getBoundingClientRect();
+  const tip = pickTip.getBoundingClientRect();
+  const below = at.top - tip.height < 8;
+  pickTip.classList.toggle('is-below', below);
+  const centre = at.left + at.width / 2;
+  const left = Math.min(Math.max(8, centre - tip.width / 2), window.innerWidth - tip.width - 8);
+  pickTip.style.left = `${left}px`;
+  pickTip.style.top = `${below ? at.bottom : at.top - tip.height}px`;
+  pickTip.style.setProperty('--caret', `${centre - left}px`);
+}
+
+function hidePickTip(): void {
+  pickTip.hidden = true;
+  pickTipFor = null;
+}
+
+resetChoices.addEventListener('pointerover', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  const option = (e.target as Element).closest<HTMLElement>('.reset-seg-option');
+  if (option && option !== pickTipFor) showPickTip(option, 'hover');
+});
+// Leaving the half hides it, unless the pointer crossed onto the tooltip.
+resetChoices.addEventListener('pointerout', (e) => {
+  if (e.pointerType !== 'mouse' || !pickTipFor || pickTipBy !== 'hover') return;
+  const to = e.relatedTarget as Node | null;
+  if (to && (pickTipFor.contains(to) || pickTip.contains(to))) return;
+  hidePickTip();
+});
+pickTip.addEventListener('pointerleave', (e) => {
+  const to = e.relatedTarget as Node | null;
+  if (to && pickTipFor?.contains(to)) return;
+  hidePickTip();
+});
+resetChoices.addEventListener('focusin', (e) => {
+  const input = e.target as HTMLElement;
+  const option = input.closest<HTMLElement>('.reset-seg-option');
+  if (option && input.matches(':focus-visible')) showPickTip(option, 'focus');
+});
+resetChoices.addEventListener('focusout', () => {
+  if (pickTipBy === 'focus') hidePickTip();
+});
+resetBody.addEventListener('scroll', hidePickTip, { passive: true });
 
 prestigeBtn.addEventListener('click', () => {
   resetTo = state.isotopes + prestigeGain(state.runLifetime);
   buildResetChoices(state.forks);
-  renderResetMessage();
+  renderResetSummary();
   resetPickHint.hidden = true;
   openDialog(prestigeModal, prestigeCancel);
+  // It opens at the top, so the numbers come first however long it runs.
+  resetBody.scrollTop = 0;
 });
 resetChoices.addEventListener('change', (e) => {
   // A fork pick can change which perks a keeping rung offers, and the bonus.
   if ((e.target as HTMLInputElement).name !== 'keep') renderKeep();
-  renderResetMessage();
+  renderResetSummary();
   if (unpickedForks(resetTo, dialogPicks()).length === 0) resetPickHint.hidden = true;
+  // The keep group above may have grown or shrunk under a tooltip.
+  if (pickTipFor) placePickTip(pickTipFor);
 });
 prestigeCancel.addEventListener('click', () => closeDialog(prestigeModal));
 prestigeConfirm.addEventListener('click', () => {
@@ -3209,7 +3349,7 @@ prestigeConfirm.addEventListener('click', () => {
   if (isotopesBefore + gain !== resetTo) {
     resetTo = isotopesBefore + gain;
     buildResetChoices(dialogPicks());
-    renderResetMessage();
+    renderResetSummary();
   }
   const picks = dialogPicks();
   const missing = unpickedForks(resetTo, picks)[0];

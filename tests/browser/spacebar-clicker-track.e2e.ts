@@ -127,9 +127,7 @@ test('a new fork waits for a pick, and the reset unlocks it with a card', async 
   const fork = page.locator('[data-fork="3"]');
   await expect(fork.locator('legend')).toHaveText('At 3 isotopes: pick one');
   await expect(fork.locator('input:checked')).toHaveCount(0);
-  await expect(page.locator('#sc-prestige-modal-message')).toContainText(
-    'Warm Start begins the new run with 500 energy and a Lab Assistant.'
-  );
+  await expect(page.locator('#sc-reset-head')).toHaveText('500 energy and a Lab Assistant');
 
   // No pick yet: the reset waits, and says why.
   await page.click('#sc-prestige-confirm');
@@ -181,17 +179,19 @@ test('Heirloom and Cornerstone carry a perk through the reset, at level I', asyn
   await expect(keep).toBeEmpty();
   await page.locator('input[value="heirloom"]').check();
   await expect(keep.locator('legend')).toHaveText('Heirloom: keep a perk');
-  await expect(keep.locator('.reset-option-name')).toHaveText([
-    'Self-Replicator III',
-    'Overtone',
-    'Keep none',
-  ]);
+  await expect(keep.locator('.reset-chip-name')).toHaveText(['Self-Replicator III', 'Overtone']);
+  await expect(keep.locator('.reset-keep-none')).toHaveText('Keep none');
   await expect(keep.locator('input[value="self-replicator"]')).toBeChecked();
 
   // Cornerstone offers the keystone instead.
   await page.locator('input[value="cornerstone"]').check();
   await expect(keep.locator('legend')).toHaveText('Cornerstone: keep your keystone');
-  await expect(keep.locator('.reset-option-name')).toHaveText(['Glass Rhythm II', 'Keep none']);
+  await expect(keep.locator('.reset-chip-name')).toHaveText(['Glass Rhythm II']);
+
+  // "Keep none" holds through a switch of a fork picked before.
+  await keep.locator('input[value=""]').check();
+  await page.locator('[data-fork="3"] input[value="sixth-slot"]').check();
+  await expect(keep.locator('input[value=""]')).toBeChecked();
 
   await page.locator('input[value="heirloom"]').check();
   await keep.locator('input[value="overtone"]').check();
@@ -203,6 +203,99 @@ test('Heirloom and Cornerstone carry a perk through the reset, at level I', asyn
     /^Overtone, level 1/
   );
   await expect(page.locator('#sc-announce')).toContainText('Overtone stays with you, at level I.');
+});
+
+test('late in a career the reset dialog fits the screen, past picks as switches with tooltips', async ({
+  page,
+}) => {
+  const held = [
+    'overtone',
+    'coiled-spring',
+    'loaded-dice',
+    'afterglow',
+    'overtime',
+    'assembly-line',
+  ] as const;
+  await seedSave(page, {
+    ...resetFor(1),
+    isotopes: 12,
+    forks: { 3: 'sixth-slot', 6: 'reroll', 9: 'heirloom', 12: 'enrichment' },
+    perks: {
+      ...noDrops,
+      owned: held.map((id) => ({ id, level: 2 })),
+      codex: Object.fromEntries(held.map((id) => [id, 2])),
+    },
+  });
+  await openGame(page);
+  await page.click('[data-tab="prestige"]');
+  await page.click('#sc-prestige-btn');
+
+  await expect(page.locator('#sc-reset-sum-gain')).toHaveText('+1');
+  await expect(page.locator('#sc-reset-sum-to')).toHaveText('isotope, to 13');
+  await expect(page.locator('#sc-reset-sum-bonus'), 'at Enrichment’s 13%').toHaveText('+169%');
+  await expect(page.locator('#sc-reset-sum-from')).toHaveText('from +156%');
+  await expect(page.locator('#sc-reset-head')).toHaveText(
+    '500 energy, a Lab Assistant, a Pneumatic Key and Finger Strength III'
+  );
+  await expect(page.locator('#sc-reset-keep .reset-chip')).toHaveCount(6);
+  const picks = await page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLInputElement>('.reset-pick input:checked')).map(
+      (input) => input.value
+    )
+  );
+  expect(picks).toEqual(['sixth-slot', 'reroll', 'heirloom', 'enrichment']);
+  const fit = await page.evaluate(() => {
+    const modal = document.querySelector('#sc-prestige-modal .modal')!.getBoundingClientRect();
+    const body = document.getElementById('sc-reset-body')!;
+    return {
+      inside: modal.top >= 0 && modal.bottom <= innerHeight,
+      scrolls: body.scrollHeight > body.clientHeight,
+    };
+  });
+  expect(fit, 'at 1440x900, with every fork and six perks').toEqual({
+    inside: true,
+    scrolls: false,
+  });
+
+  // A hover shows what a rung does, over its half of the switch.
+  const tip = page.locator('#sc-pick-tip');
+  await page.mouse.move(5, 5);
+  await expect(tip).toBeHidden();
+  const prodigy = page.locator('.reset-seg-option[data-rung="prodigy"]');
+  await prodigy.hover();
+  await expect(tip).toBeVisible();
+  await expect(page.locator('#sc-pick-tip-name')).toHaveText('Prodigy');
+  await expect(page.locator('#sc-pick-tip-detail')).toHaveText(
+    "Perks you don't hold drop at level II, for their level I price."
+  );
+  const tipBox = (await tip.boundingBox())!;
+  const halfBox = (await prodigy.boundingBox())!;
+  expect(tipBox.y + tipBox.height).toBeLessThanOrEqual(halfBox.y + 1);
+  await page.mouse.move(5, 5);
+  await expect(tip).toBeHidden();
+
+  // A switch makes the pick: Cornerstone has no keystone to keep, and Twin
+  // Keystones takes the bonus back to 10% an isotope.
+  await page.click('.reset-seg-option[data-rung="cornerstone"]');
+  await expect(page.locator('#sc-reset-keep')).toBeEmpty();
+  await page.click('.reset-seg-option[data-rung="twin-keystones"]');
+  await expect(page.locator('#sc-reset-sum-bonus')).toHaveText('+130%');
+
+  // From the keyboard, the arrows switch, and focus shows the tooltip.
+  await page.focus('[data-fork="6"] input[value="reroll"]');
+  await page.keyboard.press('ArrowRight');
+  const patience = page.locator('[data-fork="6"] input[value="patience"]');
+  await expect(patience).toBeChecked();
+  await expect(patience).toHaveAccessibleDescription('Perks stay on offer twice as long.');
+  await expect(tip).toBeVisible();
+  await expect(page.locator('#sc-pick-tip-name')).toHaveText('Patience');
+
+  // Escape closes the tooltip first, then the dialog.
+  await page.keyboard.press('Escape');
+  await expect(tip).toBeHidden();
+  await expect(page.locator('#sc-prestige-modal')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#sc-prestige-modal')).toBeHidden();
 });
 
 test('Reroll swaps an offer for another perk, once a run', async ({ page }) => {
@@ -416,29 +509,45 @@ test.describe('with reduced motion', () => {
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('the reset dialog with every fork fits the width and scrolls inside', async ({ page }) => {
+  test('the reset dialog with every fork fits the width, opens at the top, and pins its buttons', async ({
+    page,
+  }) => {
+    const held = ['overtone', 'coiled-spring', 'loaded-dice', 'afterglow', 'overtime'] as const;
     await seedSave(page, {
       ...resetFor(2),
       isotopes: 11,
       forks: { 3: 'prodigy', 6: 'reroll', 9: 'heirloom' },
-      perks: { ...noDrops, owned: [{ id: 'overtone', level: 2 }], codex: { overtone: 2 } },
+      perks: {
+        ...noDrops,
+        owned: held.map((id) => ({ id, level: 2 })),
+        codex: Object.fromEntries(held.map((id) => [id, 2])),
+      },
     });
     await openGame(page);
     await page.click('[data-tab="prestige"]');
     await page.click('#sc-prestige-btn');
+    // Three forks picked before, the capstone's new one, and Heirloom's.
     await expect(page.locator('#sc-reset-choices fieldset')).toHaveCount(5);
     const fit = await page.evaluate(() => {
-      const modal = document.querySelector('#sc-prestige-modal .modal')!;
-      const box = modal.getBoundingClientRect();
+      const modal = document.querySelector('#sc-prestige-modal .modal')!.getBoundingClientRect();
+      const confirm = document.getElementById('sc-prestige-confirm')!.getBoundingClientRect();
+      const body = document.getElementById('sc-reset-body')!;
       return {
-        inside: box.left >= 0 && box.right <= window.innerWidth && box.bottom <= window.innerHeight,
-        scrolls: modal.scrollHeight > modal.clientHeight,
-        noScroll: document.documentElement.scrollWidth <= window.innerWidth,
+        inside: modal.left >= 0 && modal.right <= innerWidth && modal.bottom <= innerHeight,
+        scrolls: body.scrollHeight > body.clientHeight,
+        atTop: body.scrollTop === 0,
+        buttonsInView: confirm.top >= modal.top && confirm.bottom <= modal.bottom,
+        noScroll: document.documentElement.scrollWidth <= innerWidth,
       };
     });
-    expect(fit).toEqual({ inside: true, scrolls: true, noScroll: true });
+    expect(fit).toEqual({
+      inside: true,
+      scrolls: true,
+      atTop: true,
+      buttonsInView: true,
+      noScroll: true,
+    });
     await page.locator('input[value="twin-keystones"]').check();
-    await page.locator('#sc-prestige-confirm').scrollIntoViewIfNeeded();
     await page.click('#sc-prestige-confirm');
     // From 11 to 13 isotopes, the capstone is the only rung reached.
     await expect(page.locator('#sc-unlock-card .unlock-name')).toHaveText(['Twin Keystones']);
