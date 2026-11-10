@@ -339,33 +339,41 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
     six sockets, or on a 360-wide one with any perk.
   - Like the perk shelf, it sits beside the face in the markup, so a click or
     tap on it is never a press.
-- **The Isotopes tab**: three titled sections, the action first
-  and the reference last (redesigned 2026-10-28, §8.4). The content spans the
-  panel; only its prose keeps to the 72ch cap.
-  - **Next reset.** Tiles like the Stats tab's, each with the same three
-    rows so they line up at any width: "Isotopes held", 4, "+40% to all
-    gains" ("each adds 10%" with none held); "A reset pays", +1, "+50%
-    after"; and "Next isotope at 4.00M", the meter, "1.50M to go". Until a
-    reset opens, the middle tile is hidden and the third reads "Reset opens
-    at 1.00M", "580K to go". Then the button, and beside it after a bead
-    what the reset unlocks, the rungs in the isotopes' blue: "Unlocks Lucky
-    Find." Past twelve isotopes there is no unlock line.
+- **The Isotopes tab**: three titled sections, the action first and the
+  reference last (redesigned 2026-10-28, §8.4; rebuilt 2026-11-10,
+  §8.5.17). Everything spans the panel.
+  - **Next reset.** Until the player's first reset, the paragraph saying what
+    a reset is: it starts the run over, and each isotope adds 10% to every
+    gain and unlocks the next rung. Then one card. Until a reset opens:
+    "Isotopes held", 4, "+40% to all gains" ("each adds 10%" with none
+    held), and "Reset opens at 1.00M", the meter, "580K to go"; under them,
+    "The next reset unlocks Lucky Find." Once one is open, as the reset
+    dialog has it: "A reset pays", +2, "isotopes, to 6"; "All gains", +60%,
+    "from +40%" ("each adds 10%" with none held, never "+0%"); "Next isotope
+    at 9.00M", the meter, "5.90M to go"; the button beside them; and under
+    them "Unlocks Lucky Find and a choice of Reroll or Patience.", the rungs
+    in the isotopes' blue. Past twelve isotopes there is no unlock line. The
+    meter fills on the badge's scale (`isotopeFill`). On a narrow panel the
+    figures go two a row, the meter across, the button full width.
   - **Isotope track, 7 of 12 unlocked.** One line says each isotope unlocks
-    a rung for good and that forks can be switched at any reset. Twelve
-    sockets on a rail, numbered, forks drawn larger in two halves: held ones
-    lit like beads, a held fork with its picked half lit, the next two with
-    a blue rim, the rest dashed. Then rows, "Next" first and "Unlocked"
-    after, each with the socket and number it has on the rail, the name and
-    what it does. A held fork reads "Prodigy or Sixth Slot"; a fork to come
-    names both options and what each does; a fork reached with no pick says
-    to pick one at the next reset. A group with no rows hides.
-  - **What a reset does.** The paragraph, then Wiped and Kept as two short
-    lists side by side, stacked on a phone.
+    a rung for good and that forks can be switched at any reset. Then a card
+    per rung, in order, in rows of three as the track runs, every third a
+    fork twice as wide. A rung's card has its socket, number and name on one
+    line, then what it does: lit like a bead when held; with a blue rim and
+    "Next" for the next two. A fork's card has its socket and number down the
+    side and its two options side by side, the pick lit with a dot, the other
+    still readable; a fork reached with no pick says to pick one at the next
+    reset. Rungs further on are small dashed sockets with only their number,
+    packed in a row after the rest, so the track keeps the rule that only
+    the next two are revealed. On a narrow panel each revealed rung takes the
+    width, the sockets six to a row.
+  - **What a reset does.** Wiped and Kept as two lines, the label beside the
+    list, as in the reset dialog.
 - **The dialog** (made compact 2026-11-10, §8.5.17) opens at the top, its
   buttons pinned under a body that scrolls on a short screen:
-  - Two tiles like the Isotopes tab's: "A reset pays", +1, "isotope, to 13";
-    and "All gains", +169%, "from +156%". The bonus follows the capstone
-    pick: Enrichment counts 13% an isotope.
+  - Two tiles: "A reset pays", +1, "isotope, to 13"; and "All gains", +169%,
+    "from +156%" ("each adds 10%" with none held). The bonus follows the
+    capstone pick: Enrichment counts 13% an isotope.
   - Three short lines: Wiped, Kept, and the head start, "500 energy and a Lab
     Assistant", with a Pneumatic Key and Finger Strength III from Hot Start.
   - "This reset unlocks", the plain rungs the reset reaches, each with what
@@ -786,10 +794,10 @@ the build plan are in §8.1.
   motes, dial and lights, gains, the rhythm scope, the state name, and the
   player's part of the share bar, against the track's grey for the machines.
   Isotopes are blue-white on Cherenkov blue at every stage, on and off the
-  face: the badge's ring, bead, tag and "Reset for +1", the isotope tooltip, the
-  meter in the Isotopes tab, and the isotope track: its sockets
-  and rows in that tab, the line by the reset button naming what a reset
-  unlocks, the picks in the reset dialog, the unlock card, and the credits
+  face: the badge's ring, bead, tag and "Reset for +1", the isotope tooltip,
+  the meter in the Isotopes tab, and the isotope track: its cards and sockets
+  in that tab, the line in the Next reset card naming what a reset unlocks,
+  the picks in the reset dialog, the unlock card, and the credits
   where a rung acts (an offer's lines, the surge card's line, Perfect Pitch's
   float and its beads on the scope).
   The ramp's tokens live on
@@ -912,13 +920,13 @@ The visuals were built in three passes, all shipped 2026-10-22.
   stays while hovered, and Escape dismisses it.
 - The codex board's sockets are images with names such as "Overtone, held up
   to level 2" or "Undiscovered rare perk".
-- **The Isotopes tab** has three sections, each a heading. Its tiles are a
-  description list, like Stats.
-- **The isotope track.** In the Isotopes tab the sockets are hidden from screen
-  readers; the rows under them carry the same facts, as two lists labelled
-  "Next" and "Unlocked". Each row's socket and number are hidden too, and it
-  starts with hidden words saying where it sits: "At 3 isotopes: Prodigy or
-  Sixth Slot". In the reset
+- **The Isotopes tab** has three sections, each a heading. Its card's
+  figures are a description list, like Stats, and so are Wiped and Kept.
+- **The isotope track.** In the Isotopes tab it is one ordered list labelled
+  by its heading. Each card's socket, number and "Next" are hidden from
+  screen readers; it starts with hidden words saying where it sits and its
+  state, "At 3 isotopes, unlocked: Prodigy, your pick, …", "At 8 isotopes,
+  next: Hot Start …", or "At 10 isotopes: not revealed yet." In the reset
   dialog each fork and the keeping rung's perks are a fieldset of radios with
   a legend ("At 3 isotopes: pick one"), the inputs over their cards, chips or
   switch halves so focus and arrow keys work, with a focus ring on each. A
@@ -995,7 +1003,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  78 as of 2026-11-10, in about nine minutes.
+  79 as of 2026-11-10, in about nine minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
@@ -1018,12 +1026,14 @@ The visuals were built in three passes, all shipped 2026-10-22.
     with no press; a new player's badge, its cube-root fill and the tab's
     meter on the same scale, and its lines clear of the readout at 1440 with
     the face within 588px; a reset opening, with its one notice, the tag and
-    the way into the tab by mouse and keyboard; the tag counting up; the tab
-    locked and open, the dialog, the toast, the count landing, and plurals; a
+    the way into the tab by mouse and keyboard; the tag counting up; the
+    tab's card closed and open, its unlock line and meter, the dialog, the
+    toast, the count landing, and plurals; a
     tap on the badge; the badge, its lines and the perk shelf on a phone.
   - **The track** (`spacebar-clicker-track.e2e.ts`): the badge tooltip's
-    unlock line, before a reset opens and once one is; the track in the Isotopes tab, its rows and the unlock line, and the
-    tab with every rung held; a new fork waiting for its pick, the
+    unlock line, before a reset opens and once one is; the track in the
+    Isotopes tab as cards, held, picked, next and hidden, and the tab with
+    every rung held; a new fork waiting for its pick, the
     unlock card and the saved pick; Heirloom and Cornerstone carrying a perk,
     and "Keep none" holding through a switch; the dialog late in a career
     fitting 1440x900, its switches, and their tooltip on hover, on focus and
@@ -1031,7 +1041,8 @@ The visuals were built in three passes, all shipped 2026-10-22.
     and the Twin Keystones swap; the credits on an offer, and none without
     the track; Night Lab's toast on return; Perfect Pitch's float on a fake
     clock; the unlock card under reduced motion; the dialog with every fork
-    opening at the top with its buttons pinned, six sockets beside the badge's lone ring, and a reset that lands every rung, its
+    opening at the top with its buttons pinned, the Isotopes tab a rung a row
+    with the hidden ones as sockets, six sockets beside the badge's lone ring, and a reset that lands every rung, its
     card listing three and the rest, on a phone.
   - **The run-down** (`spacebar-clicker-rundown.e2e.ts`): a return to a
     run-down reactor and a press bringing it back; a return to a fault, the
@@ -2084,7 +2095,8 @@ clock and an early first drop every run, are decided and built (§8.5.14).
 Finding 7 was measured again and parked (§8.5.15). For finding 8, five
 endgame achievements and two records are built (§8.5.16). Every finding has
 now been discussed. A UI polish pass began the same day (§8.5.17): the reset
-dialog, the perk shelf filling from the right, and the isotope badge.
+dialog, the perk shelf filling from the right, the isotope badge, and the
+Isotopes tab.
 
 #### 8.5.1 The review
 
@@ -2487,6 +2499,11 @@ drift):
   The page still describes beads: "beads in the reactor's top-left corner: point
   at them or tap them" (about line 135 of the MDX) and "isotope beads and the
   Isotopes tab" (about 365).
+- **The Isotopes tab** (§8.5.17): "The next reset unlocks Lucky Find.",
+  "isotopes, to 6", "from +40%", "each adds 10%", "Next" on the track's
+  cards, and Wiped and Kept as one line each ("Energy, upgrades and
+  auto-tappers, the reactor's state, and this run's perks and offers"). Its
+  explanation still says 10% an isotope where Enrichment makes it 13%.
 - **This doc's §6**, once the page changes.
 
 #### 8.5.10 Finding 5: presses and surges fade, 2026-11-10
@@ -2877,6 +2894,39 @@ Calls for review:
    is always there: it no longer jumps when the first perk arrives.
 6. **The words** go to the copy audit (§8.5.9).
 
+**4. The Isotopes tab.** The maintainer found it "a total mess". Measured:
+1,004px at 1440 with 4 isotopes and 1,164px with 13; 1,618px and 1,865px on
+a 390 phone. The track was drawn twice, as a rail of sockets and as rows,
+in two orders (the rail 1 to 12, the rows "Next" then "Unlocked"); the rail
+was small and stranded, forks half-circles; the rows read like a table; the
+tiles had uneven widths; the unlock line's bead read as a stray bullet once
+the face's beads went; prose, tiles and lists had three widths; a new
+player met "Isotopes held 0" before any word of what an isotope is.
+
+Four suggestions went to the maintainer. **Approved 2026-11-10, built
+without a mockup** (§4.7, §5.4): one Next reset card, its button beside the
+figures; the track as cards in rows of three, in order, with the hidden
+rungs as sockets; the explanation at the top and Wiped and Kept as two
+lines; one width. Now 736px for a new player, 785px with 4 isotopes and
+880px with 13 at 1440; 1,174px, 1,480px and 1,889px on a phone. 1 browser
+check, 79 in all; three updated.
+
+Calls for review:
+
+1. **The explanation shows until the first reset only** (a save holding
+   isotopes counts). The approved plan put it at the top "for new players";
+   veterans don't need it on every visit.
+2. **This revisits two calls of §8.4** (2026-10-28): the track is cards, not
+   rows, and the next two no longer come first; they sit in order with a
+   blue rim and "Next". The explanation stays visible, as §8.4 decided, in
+   two lines.
+3. **A phone late in a career is no shorter** (1,889px against 1,865): every
+   rung's card keeps what it does, one to a row. Desktop is 284px shorter.
+4. **Never "+0%".** With none held, the gains figure reads "each adds 10%"
+   in the tab and now in the reset dialog too, as §8.4 decided for the tab.
+5. **A fork's "Next" runs down its side,** turned, as the side is narrow.
+6. **The words** go to the copy audit (§8.5.9).
+
 ### 8.6 Unassigned ideas
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
@@ -3112,3 +3162,10 @@ the maintainer asks.
   held. 1 unit test; 78 browser checks. The perks' time-away check records
   its toasts (`recordToasts`), as the stage's toast after it could rotate it
   out under the full suite.
+- **2026-11-10.** UI polish (§8.5.17): the Isotopes tab rebuilt. One Next
+  reset card with the button beside its figures; the track as a card per
+  rung in rows of three, in order, forks with both options side by side and
+  the hidden rungs as sockets, replacing the rail and the rows; what a reset
+  is at the top until the first reset; Wiped and Kept as two lines. 880px
+  late in a career at 1440, from 1,164. The reset dialog says "each adds
+  10%" rather than "from +0%". 1 browser check, 79 in all.

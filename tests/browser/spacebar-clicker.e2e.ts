@@ -185,12 +185,13 @@ test('reset the experiment: isotopes paid, the run wiped', async ({ page }) => {
   await expect(page.locator('#sc-reactor')).toHaveAttribute('data-state', 'unstable');
 
   await page.click('[data-tab="prestige"]');
-  await expect(page.locator('#sc-prestige-held')).toHaveText('0');
-  await expect(page.locator('#sc-prestige-bonus'), 'none held: what one is worth').toHaveText(
+  await expect(page.locator('#sc-reset-intro'), 'what a reset is, before the first').toBeVisible();
+  await expect(page.locator('#sc-prestige-gain')).toHaveText('+2');
+  await expect(page.locator('#sc-prestige-to')).toHaveText('isotopes, to 2');
+  await expect(page.locator('#sc-prestige-after')).toHaveText('+20%');
+  await expect(page.locator('#sc-prestige-from'), 'none held: what one is worth').toHaveText(
     'each adds 10%'
   );
-  await expect(page.locator('#sc-prestige-gain')).toHaveText('+2');
-  await expect(page.locator('#sc-prestige-after')).toHaveText('+20% after');
   await expect(page.locator('#sc-reset-unlocks')).toHaveText('Unlocks Warm Start and Capacitor.');
   await page.click('#sc-prestige-btn');
   await expect(page.locator('#sc-prestige-modal')).toBeVisible();
@@ -199,6 +200,7 @@ test('reset the experiment: isotopes paid, the run wiped', async ({ page }) => {
 
   await expect(page.locator('#sc-prestige-held')).toHaveText('2');
   await expect(page.locator('#sc-prestige-bonus')).toHaveText('+20% to all gains');
+  await expect(page.locator('#sc-reset-intro')).toBeHidden();
   // Two isotopes hold Warm Start: the new run begins Warming, with 500 energy
   // and a Lab Assistant, which has earned a little since.
   expect(await energy(page)).toBeGreaterThanOrEqual(500);

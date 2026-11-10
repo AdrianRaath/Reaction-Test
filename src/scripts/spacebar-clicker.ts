@@ -391,12 +391,17 @@ const statEls = {
 
 const achCount = el('sc-ach-count');
 const prestigeTab = el('sc-tab-prestige');
+const resetIntro = el('sc-reset-intro');
 const prestigeTiles = el('sc-reset-tiles');
+const prestigeHeldFig = el('sc-prestige-held-fig');
 const prestigeHeld = el('sc-prestige-held');
 const prestigeBonus = el('sc-prestige-bonus');
 const prestigePays = el('sc-prestige-pays');
 const prestigeGainValue = el('sc-prestige-gain');
+const prestigeTo = el('sc-prestige-to');
+const prestigeGains = el('sc-prestige-gains');
 const prestigeAfter = el('sc-prestige-after');
+const prestigeFrom = el('sc-prestige-from');
 const prestigeNext = el('sc-prestige-next');
 const isotopeMeter = el('sc-isotope-meter');
 const prestigeProgress = el('sc-prestige-progress');
@@ -404,18 +409,7 @@ const prestigeAction = el('sc-reset-action');
 const prestigeUnlocks = el('sc-reset-unlocks');
 const prestigeBtn = el<HTMLButtonElement>('sc-prestige-btn');
 const trackCount = el('sc-track-count');
-const trackNextGroup = el('sc-track-next-group');
-const trackNext = el('sc-track-next');
-const trackHeldGroup = el('sc-track-held-group');
-const trackHeld = el('sc-track-held');
-/** The track's sockets in the Isotopes tab, a fork's two halves in each of those. */
-const trackSockets = Array.from(document.querySelectorAll<HTMLElement>('.track-socket')).map(
-  (li) => ({
-    li,
-    isotopes: Number(li.dataset.isotopes),
-    halves: Array.from(li.querySelectorAll<HTMLElement>('.track-half')),
-  })
-);
+const trackGrid = el('sc-track');
 
 const prestigeModal = el('sc-prestige-modal');
 const prestigeCancel = el('sc-prestige-cancel');
@@ -1762,15 +1756,31 @@ function setSentence(target: HTMLElement, ...parts: SentencePart[]): void {
   );
 }
 
+/** "+10%", or with none held, what one is worth: "each adds 10%", never "+0%". */
+function bonusFrom(held: number): string {
+  return held > 0
+    ? `from ${bonusText(held)}`
+    : `each adds ${Math.round(isotopeRate(held, state.forks) * 100)}%`;
+}
+
 /**
- * The Isotopes tab's tiles: the isotopes held, what a reset pays, and the way to
- * the next isotope; then the button and what the reset unlocks. Until a
- * reset opens, the meter tracks the way to the first isotope it pays.
+ * The Isotopes tab's card. Until a reset opens: the isotopes held and the way
+ * to the first isotope, and what the next reset unlocks. Once one is open:
+ * what it pays, the gains after, the way to the next isotope, then what it
+ * unlocks beside the button.
  */
 function renderPrestige(): void {
   const held = state.isotopes;
   const gain = prestigeGain(state.runLifetime);
   const ready = prestigeUnlocked(state);
+  // What a reset is, until the player has made one.
+  resetIntro.hidden = state.prestiges > 0 || held > 0;
+  prestigeTiles.classList.toggle('is-open', ready);
+  prestigeHeldFig.hidden = ready;
+  prestigePays.hidden = !ready;
+  prestigeGains.hidden = !ready;
+  prestigeBtn.hidden = !ready;
+
   setText(prestigeHeld, String(held));
   // With none held, what one is worth, rather than "+0%".
   if (held) setSentence(prestigeBonus, [bonusText(held)], ' to all gains');
@@ -1779,20 +1789,22 @@ function renderPrestige(): void {
       `${Math.round(isotopeRate(held, state.forks) * 100)}%`,
     ]);
 
-  prestigeTiles.classList.toggle('is-open', ready);
-  prestigePays.hidden = !ready;
-  prestigeAction.hidden = !ready;
   if (ready) {
     const next = nextIsotopeAt(state.runLifetime);
     setText(prestigeGainValue, `+${gain}`);
-    setSentence(prestigeAfter, [bonusText(held + gain)], ' after');
+    setText(prestigeTo, `${isotopeNoun(gain)}, to ${held + gain}`);
+    setText(prestigeAfter, bonusText(held + gain));
+    setText(prestigeFrom, bonusFrom(held));
     setSentence(prestigeNext, 'Next isotope at ', [formatEnergy(next)]);
     setSentence(prestigeProgress, [formatEnergy(next - state.runLifetime)], ' to go');
   } else {
     setSentence(prestigeNext, 'Reset opens at ', [formatEnergy(PRESTIGE_UNLOCK)]);
     setSentence(prestigeProgress, [formatEnergy(PRESTIGE_UNLOCK - state.runLifetime)], ' to go');
   }
-  renderResetUnlocks(ready ? stepsReached(held, held + gain) : []);
+  // Open, what this reset unlocks; closed, what any reset would: the next rung.
+  const steps = ready ? stepsReached(held, held + gain) : nextSteps(held, 1);
+  renderResetUnlocks(steps, ready);
+  prestigeAction.hidden = !ready && steps.length === 0;
   isotopeMeter.style.transform = `scaleX(${isotopeFill(state.runLifetime)})`;
   renderTrack();
 }
@@ -1800,16 +1812,19 @@ function renderPrestige(): void {
 /** The steps the unlock line names, so it is rebuilt only when they change. */
 let unlocksShown = '';
 
-/** Beside the button, what resetting now unlocks: the ring tooltip's hook. */
-function renderResetUnlocks(steps: readonly TrackStep[]): void {
-  const key = steps.map((s) => s.isotopes).join();
+/**
+ * Under the figures, what a reset unlocks, its rungs named in the isotopes'
+ * blue: "Unlocks Lucky Find." once one is open, "The next reset unlocks
+ * Lucky Find." before.
+ */
+function renderResetUnlocks(steps: readonly TrackStep[], open: boolean): void {
+  const key = `${open}:${steps.map((s) => s.isotopes).join()}`;
   if (key === unlocksShown) return;
   unlocksShown = key;
   prestigeUnlocks.hidden = steps.length === 0;
+  const lead = open ? 'Unlocks ' : 'The next reset unlocks ';
   prestigeUnlocks.replaceChildren(
-    ...(steps.length > 0
-      ? [cardLine('reset-unlocks-text', [text('Unlocks '), ...unlockNodes(steps), text('.')])]
-      : [])
+    ...(steps.length > 0 ? [text(lead), ...unlockNodes(steps), text('.')] : [])
   );
 }
 
@@ -1817,9 +1832,9 @@ function renderResetUnlocks(steps: readonly TrackStep[]): void {
 let trackShown = '';
 
 /**
- * The isotope track in the Isotopes tab: the sockets lit to the isotopes held,
- * each fork's picked half, a rim on the next two; then a row for each of the
- * next two, and one for each rung held. A group with no rows hides.
+ * The isotope track in the Isotopes tab: a card per rung, in order, lit to
+ * the isotopes held, the next two named with a blue rim, the rest dashed
+ * with only their number.
  */
 function renderTrack(): void {
   const held = state.isotopes;
@@ -1827,79 +1842,85 @@ function renderTrack(): void {
   if (key === trackShown) return;
   trackShown = key;
 
-  const reached = ISOTOPE_TRACK.filter((s) => s.isotopes <= held);
   const next = nextSteps(held);
-  trackCount.textContent = `${reached.length} of ${ISOTOPE_TRACK.length}`;
-  for (const socket of trackSockets) {
-    const lit = socket.isotopes <= held;
-    socket.li.classList.toggle('is-lit', lit);
-    socket.li.classList.toggle(
-      'is-next',
-      next.some((s) => s.isotopes === socket.isotopes)
-    );
-    for (const half of socket.halves) {
-      half.classList.toggle('is-picked', lit && half.dataset.rung === state.forks[socket.isotopes]);
-    }
-  }
-  trackNext.replaceChildren(...next.map((s) => trackRow(s, true)));
-  trackHeld.replaceChildren(...reached.map((s) => trackRow(s, false)));
-  trackNextGroup.hidden = next.length === 0;
-  trackHeldGroup.hidden = reached.length === 0;
+  trackCount.textContent = `${ISOTOPE_TRACK.filter((s) => s.isotopes <= held).length} of ${ISOTOPE_TRACK.length}`;
+  trackGrid.replaceChildren(
+    ...ISOTOPE_TRACK.map((step) =>
+      trackCard(step, step.isotopes <= held ? 'lit' : next.includes(step) ? 'next' : 'hidden')
+    )
+  );
 }
 
 /**
- * A rung on the track as a row: the socket and number it has on the rail,
- * its name, what it does. A fork held names its pick, then the other option.
- * Screen readers hear where it sits first: "At 3 isotopes: Prodigy, or …".
+ * A rung on the track as a card: its socket, number and name on one line,
+ * then what it does. A fork has its socket and number at the side and its
+ * two options side by side, the pick lit. A rung not yet revealed shows only
+ * its socket and number. Screen readers hear where it sits and its state
+ * first: "At 3 isotopes, unlocked: Prodigy, your pick, …".
  */
-function trackRow(step: TrackStep, upcoming: boolean): HTMLLIElement {
+function trackCard(step: TrackStep, status: 'lit' | 'next' | 'hidden'): HTMLLIElement {
   const item = document.createElement('li');
-  item.className = upcoming ? 'track-row is-next' : 'track-row is-lit';
-  const pick = state.forks[step.isotopes];
-  const picked = !upcoming && pick && isPickFor(step.isotopes, pick) ? pick : undefined;
-  const halves = isFork(step)
+  item.className = `track-card is-${status}`;
+  item.dataset.isotopes = String(step.isotopes);
+  const fork = isFork(step);
+  if (fork) item.dataset.fork = '';
+  const saved = state.forks[step.isotopes];
+  const pick = status === 'lit' && saved && isPickFor(step.isotopes, saved) ? saved : undefined;
+
+  /** Parts only the eye needs: the socket, the number, the "Next" tag. */
+  const visual = (node: HTMLElement): HTMLElement => {
+    node.setAttribute('aria-hidden', 'true');
+    return node;
+  };
+  const halves = fork
     ? step.rungs.map((r) => {
         const half = cardLine('track-half', '');
-        half.classList.toggle('is-picked', r.id === picked);
+        half.dataset.rung = r.id;
+        half.classList.toggle('is-picked', r.id === pick);
         return half;
       })
     : [];
-  if (halves.length > 0) item.dataset.fork = '';
-  const mark = cardLine('track-row-mark', [cardLine('track-gem', halves)]);
-  const num = cardLine('track-row-num', String(step.isotopes));
-  mark.setAttribute('aria-hidden', 'true');
-  num.setAttribute('aria-hidden', 'true');
-  item.append(cardLine('visually-hidden', `At ${isotopeCount(step.isotopes)}: `), mark, num);
+  const gem = visual(cardLine('track-gem', halves));
+  const num = visual(cardLine('track-card-num', String(step.isotopes)));
+  const tag = status === 'next' ? [visual(cardLine('track-card-tag', 'Next'))] : [];
+  const where = `At ${isotopeCount(step.isotopes)}`;
 
-  if (!isFork(step)) {
+  if (status === 'hidden') {
+    item.append(
+      cardLine('visually-hidden', `${where}: not revealed yet.`),
+      cardLine('track-card-head', [gem, num])
+    );
+    return item;
+  }
+  const lead = cardLine('visually-hidden', `${where}, ${status === 'lit' ? 'unlocked' : 'next'}: `);
+
+  if (!fork) {
     const r = step.rungs[0];
     item.append(
-      cardLine('track-row-name', r.name),
-      cardLine('track-row-detail', rungSentence(r.id))
+      lead,
+      cardLine('track-card-head', [gem, num, cardLine('track-card-name', r.name), ...tag]),
+      cardLine('track-card-detail', rungSentence(r.id))
     );
-  } else if (upcoming) {
-    item.append(
-      cardLine('track-row-name', stepName(step)),
-      cardLine(
-        'track-row-detail',
-        step.rungs.map((r) => cardLine('track-row-option', `${r.name}: ${rungSentence(r.id)}`))
-      )
-    );
-  } else if (picked) {
-    const other = step.rungs.find((r) => r.id !== picked)!;
-    item.append(
-      cardLine('track-row-name', [
-        text(`${rung(picked).name} `),
-        cardLine('track-row-alt', `or ${other.name}`),
-      ]),
-      cardLine('track-row-detail', rungSentence(picked))
-    );
-  } else {
-    item.append(
-      cardLine('track-row-name', stepName(step)),
-      cardLine('track-row-detail', 'Pick one when you next reset the experiment.')
-    );
+    return item;
   }
+  const options = cardLine(
+    'track-options',
+    step.rungs.map((r) => {
+      const option = cardLine('track-option', [
+        cardLine('track-card-name', r.name),
+        ...(r.id === pick ? [cardLine('visually-hidden', ', your pick, ')] : []),
+        cardLine('track-card-detail', rungSentence(r.id)),
+      ]);
+      option.dataset.rung = r.id;
+      option.classList.toggle('is-picked', r.id === pick);
+      return option;
+    })
+  );
+  const body = cardLine('track-card-body', [options]);
+  if (status === 'lit' && !pick) {
+    body.append(cardLine('track-card-detail', 'Pick one when you next reset the experiment.'));
+  }
+  item.append(lead, cardLine('track-card-side', [gem, num, ...tag]), body);
   return item;
 }
 
@@ -3289,7 +3310,7 @@ function renderResetSummary(): void {
   resetSumGain.textContent = `+${gain}`;
   resetSumTo.textContent = `${isotopeNoun(gain)}, to ${resetTo}`;
   resetSumBonus.textContent = bonusText(resetTo, picks);
-  resetSumFrom.textContent = `from ${bonusText(held)}`;
+  resetSumFrom.textContent = bonusFrom(held);
   const energy = `${TRACK_EFFECT.warmStartEnergy.toLocaleString('en-US')} energy`;
   const finger = `Finger Strength ${ROMAN[TRACK_EFFECT.hotStartFinger]}`;
   resetHeadRow.hidden = !rungs.includes('warm-start');

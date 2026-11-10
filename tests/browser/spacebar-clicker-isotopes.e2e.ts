@@ -186,14 +186,22 @@ test('the Isotopes tab before a reset opens: the cost, the pay, the way there', 
     'aria-selected',
     'true'
   );
+  await expect(page.locator('#sc-reset-intro'), 'a player holding isotopes has reset').toBeHidden();
   await expect(page.locator('#sc-prestige-held')).toHaveText('1');
   await expect(page.locator('#sc-prestige-bonus')).toHaveText('+10% to all gains');
   await expect(page.locator('#sc-prestige-next')).toHaveText('Reset opens at 1.00M');
   await expect(page.locator('#sc-prestige-progress')).toHaveText('580K to go');
   await expect(page.locator('#sc-prestige-pays'), 'nothing to pay yet').toBeHidden();
+  await expect(page.locator('#sc-prestige-gains')).toBeHidden();
   await expect(page.locator('#sc-prestige-btn')).toBeHidden();
-  await expect(page.locator('.prestige-terms')).toContainText("This run's perks and offers");
-  await expect(page.locator('.prestige-terms')).toContainText('The perk codex');
+  await expect(page.locator('#sc-reset-unlocks')).toHaveText('The next reset unlocks Capacitor.');
+  // The meter fills on the badge's cube-root scale: 0.42M is three quarters.
+  const meter = await page.evaluate(
+    () => document.getElementById('sc-isotope-meter')!.style.transform
+  );
+  expect(meter).toMatch(/^scaleX\(0\.74/);
+  await expect(page.locator('.prestige-terms')).toContainText("this run's perks and offers");
+  await expect(page.locator('.prestige-terms')).toContainText('the perk codex');
 });
 
 test('resetting: the dialog, the toast and the shelf say what changed', async ({ page }) => {
@@ -208,7 +216,10 @@ test('resetting: the dialog, the toast and the shelf say what changed', async ({
   await page.click('[data-tab="prestige"]');
 
   await expect(page.locator('#sc-prestige-gain')).toHaveText('+1');
-  await expect(page.locator('#sc-prestige-after')).toHaveText('+20% after');
+  await expect(page.locator('#sc-prestige-to')).toHaveText('isotope, to 2');
+  await expect(page.locator('#sc-prestige-after')).toHaveText('+20%');
+  await expect(page.locator('#sc-prestige-from')).toHaveText('from +10%');
+  await expect(page.locator('#sc-prestige-held-fig'), 'open, the card shows the pay').toBeHidden();
   await expect(page.locator('#sc-prestige-next')).toHaveText('Next isotope at 3.00M');
   await expect(page.locator('#sc-prestige-progress')).toHaveText('400K to go');
   await expect(page.locator('#sc-reset-unlocks'), 'the hook, beside the button').toHaveText(

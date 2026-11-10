@@ -77,29 +77,42 @@ test('the Isotopes tab draws the track: held, picked, and the next two', async (
   await page.click('[data-tab="prestige"]');
 
   await expect(page.locator('#sc-track-count')).toHaveText('7 of 12');
-  await expect(page.locator('.track-socket.is-lit')).toHaveCount(7);
-  await expect(page.locator('#sc-track-sockets .track-half.is-picked')).toHaveCount(2);
-  await expect(page.locator('.track-half[data-rung="prodigy"]')).toHaveClass(/is-picked/);
-  await expect(page.locator('.track-socket.is-next')).toHaveCount(2);
+  // A card a rung, in order: seven lit, the next two named, the rest hidden.
+  await expect(page.locator('#sc-track .track-card')).toHaveCount(12);
+  await expect(page.locator('#sc-track .track-card.is-lit')).toHaveCount(7);
+  await expect(page.locator('#sc-track .track-card.is-next')).toHaveCount(2);
+  await expect(page.locator('#sc-track .track-card.is-hidden')).toHaveCount(3);
   await expect(page.locator('.track .panel-intro'), 'said once, not per fork').toContainText(
     'can switch at any reset after'
   );
 
-  // The next two first, then the rungs held, each with its socket and number.
-  const next = page.locator('#sc-track-next .track-row');
-  await expect(next).toHaveCount(2);
-  await expect(next.nth(0)).toContainText('At 8 isotopes');
-  await expect(next.nth(0).locator('.track-row-name')).toHaveText('Hot Start');
-  await expect(next.nth(1).locator('.track-row-name')).toHaveText('Heirloom or Cornerstone');
-  await expect(next.nth(1).locator('.track-half.is-picked')).toHaveCount(0);
+  // A fork held: both options, the pick lit in the card and in its socket.
+  const third = page.locator('.track-card[data-isotopes="3"]');
+  await expect(third).toContainText('At 3 isotopes, unlocked');
+  await expect(third.locator('.track-option .track-card-name')).toHaveText([
+    'Sixth Slot',
+    'Prodigy',
+  ]);
+  await expect(third.locator('.track-option.is-picked .track-card-name')).toHaveText('Prodigy');
+  await expect(third.locator('.track-half.is-picked')).toHaveAttribute('data-rung', 'prodigy');
+  await expect(
+    page.locator('.track-card[data-isotopes="6"] .track-option.is-picked .track-card-name')
+  ).toHaveText('Patience');
 
-  const held = page.locator('#sc-track-held .track-row');
-  await expect(held).toHaveCount(7);
-  await expect(held.nth(2)).toContainText('At 3 isotopes');
-  await expect(held.nth(2).locator('.track-row-name')).toHaveText('Prodigy or Sixth Slot');
-  await expect(held.nth(2).locator('.track-row-num')).toHaveText('3');
-  await expect(held.nth(2).locator('.track-half.is-picked')).toHaveCount(1);
-  await expect(page.locator('#sc-track-next-group')).toBeVisible();
+  // The next two, named, with what they do.
+  const eighth = page.locator('.track-card[data-isotopes="8"]');
+  await expect(eighth).toContainText('At 8 isotopes, next');
+  await expect(eighth.locator('.track-card-name')).toHaveText('Hot Start');
+  await expect(eighth.locator('.track-card-tag')).toHaveText('Next');
+  const ninth = page.locator('.track-card[data-isotopes="9"]');
+  await expect(ninth.locator('.track-card-name')).toHaveText(['Heirloom', 'Cornerstone']);
+  await expect(ninth.locator('.track-option.is-picked')).toHaveCount(0);
+
+  // Two ahead and no further: a socket and its number.
+  const tenth = page.locator('.track-card[data-isotopes="10"]');
+  await expect(tenth).toHaveClass(/is-hidden/);
+  await expect(tenth.locator('.track-card-name')).toHaveCount(0);
+  await expect(tenth).toContainText('At 10 isotopes: not revealed yet.');
 });
 
 test('with every rung held, the Isotopes tab has no next rungs and no unlock line', async ({
@@ -118,11 +131,10 @@ test('with every rung held, the Isotopes tab has no next rungs and no unlock lin
   await expect(page.locator('#sc-prestige-btn')).toBeVisible();
   await expect(page.locator('#sc-prestige-gain')).toHaveText('+2');
   await expect(page.locator('#sc-reset-unlocks')).toBeHidden();
-  await expect(page.locator('#sc-track-next-group')).toBeHidden();
-  await expect(page.locator('#sc-track-held .track-row')).toHaveCount(12);
-  await expect(page.locator('#sc-prestige-bonus'), 'at Enrichment’s 13%').toHaveText(
-    '+156% to all gains'
-  );
+  await expect(page.locator('#sc-track .track-card.is-next')).toHaveCount(0);
+  await expect(page.locator('#sc-track .track-card.is-lit')).toHaveCount(12);
+  await expect(page.locator('#sc-prestige-from'), 'at Enrichment’s 13%').toHaveText('from +156%');
+  await expect(page.locator('#sc-prestige-after')).toHaveText('+182%');
 });
 
 test('a new fork waits for a pick, and the reset unlocks it with a card', async ({ page }) => {
@@ -596,6 +608,30 @@ test.describe('on a phone', () => {
       };
     });
     expect(fit).toEqual({ inside: true });
+  });
+
+  test('the Isotopes tab: a rung a row, the hidden ones six sockets to a row, no sideways scroll', async ({
+    page,
+  }) => {
+    await seedSave(page, { energy: 50, runLifetime: 5000, isotopes: 4, perks: noDrops });
+    await openGame(page);
+    await page.click('[data-tab="prestige"]');
+    const fit = await page.evaluate(() => {
+      const grid = document.getElementById('sc-track')!.getBoundingClientRect();
+      const cards = Array.from(document.querySelectorAll('#sc-track .track-card'));
+      const shown = cards.filter((c) => !c.classList.contains('is-hidden'));
+      const hidden = cards.filter((c) => c.classList.contains('is-hidden'));
+      const tops = new Set(hidden.map((c) => Math.round(c.getBoundingClientRect().top)));
+      return {
+        acrossThePanel: shown.every(
+          (c) => Math.abs(c.getBoundingClientRect().width - grid.width) < 1
+        ),
+        hidden: hidden.length,
+        oneRow: tops.size,
+        noScroll: document.documentElement.scrollWidth <= window.innerWidth,
+      };
+    });
+    expect(fit).toEqual({ acrossThePanel: true, hidden: 6, oneRow: 1, noScroll: true });
   });
 
   test('six sockets and the isotope badge keep clear of each other', async ({ page }) => {
