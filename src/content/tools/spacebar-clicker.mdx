@@ -1,7 +1,7 @@
 ---
 faq:
   - question: 'Is Spacebar Clicker free to play?'
-    answer: 'Yes. Spacebar Clicker is a free browser game with no download, no account and no ads. Open the page, press the spacebar, and you are playing.'
+    answer: 'Yes. Spacebar Clicker is a free browser game with no download and no account. Open the page, press the spacebar, and you are playing.'
   - question: 'Does my progress save?'
     answer: 'Yes. The game saves to your browser every five seconds and again when you leave the page, so you can close the tab and pick up where you stopped. The save lives on this device in this browser. Clearing site data erases it, and the Reset button in the toolbar wipes it on purpose.'
   - question: 'Can I play Spacebar Clicker on my phone?'
@@ -11,20 +11,27 @@ faq:
   - question: 'Can I use an auto clicker?'
     answer: 'You can, but the game throws away any press that arrives less than 33 milliseconds after the last one, so anything above 30 presses per second is wasted. Nothing bans you. The game is built around holding your own rhythm, and auto-tappers already exist to do the automating for you.'
   - question: 'How is Spacebar Clicker different from the spacebar speed test?'
-    answer: 'The spacebar speed test measures your presses per second over a fixed window and gives you a rank. Spacebar Clicker is an idle game: progress carries over between visits, presses buy upgrades, and a steady rhythm matters more than raw speed. The surge event is the one moment the game asks you to mash, and it records your presses per second like the test does.'
-  - question: 'How long does it take to reach the first reset?'
-    answer: 'Around 20 to 25 minutes of steady tapping if you buy well and hold a combo, at the quick end if you also buy the perks that drop. About half as long again if you mash with no rhythm, and longer if you leave the auto-tappers to work on their own. Offline progress at half speed brings it closer across a couple of sessions.'
+    answer: 'The spacebar speed test measures your presses per second over a fixed window and gives you a rank. Spacebar Clicker is an idle game: progress carries over between visits, presses buy upgrades, and a steady rhythm matters more than raw speed. A surge is the one moment the game asks you to mash, and it records your presses per second like the test does.'
   - question: 'What does holding a rhythm do?'
-    answer: 'Each press that lands within 25% of your recent average interval adds one to your combo. At 10 combo every press is worth 1.5 times as much, at 25 it is doubled, at 50 it is 2.5 times and at 100 it is tripled. Pause for more than 0.8 seconds, or miss the beat three times in a row, and the combo breaks.'
+    answer: 'Each press that lands within 25% of your recent average gap adds one to your combo. At 10 combo every press is worth 1.5 times as much, at 25 it is doubled, at 50 it is 2.5 times and at 100 it is tripled. Pause for more than 0.8 seconds, or miss the beat three times in a row, and the combo breaks.'
+  - question: 'When can I reset for the first time?'
+    answer: 'Once a run has earned a million energy. A steady combo, the upgrades you choose and the perks you buy all bring that closer. The Isotopes tab shows how far off it is.'
+  - question: 'What happens when I leave the game?'
+    answer: 'Auto-tappers keep earning at full output for 30 minutes after your last press or purchase. Over the next 90 minutes the output falls to nothing, and at two hours the reactor faults. One press brings back a reactor that is running down, and ten presses on a steady beat restart one that has faulted. Closing the tab follows the same rule.'
   - question: 'How do perks work?'
-    answer: 'Perks are random drops that change the rules for one run. One appears at the top of the Upgrades or Auto-tappers tab while you play, and leaves once you have earned past its window, so buy the ones you want before the ring around it runs out. About two drops in three are commons that boost a number, three in ten are rares that change a rule, and one in twenty is a keystone that breaks a rule at a cost. You hold up to five, one keystone at a time, and they clear when you reset the experiment. The isotope track can raise both limits and carry one perk through a reset.'
+    answer: 'Perks are random drops that change the rules for one run. One appears at the top of the Upgrades or Auto-tappers tab while you play, and leaves once you have earned past its window, so buy the ones you want before the ring around it empties. About two drops in three are commons that boost a number, three in ten are rares that change a rule, and one in twenty is a keystone that breaks a rule at a cost. You hold up to five, one keystone at a time, and they clear when you reset. The isotope track can raise both limits and carry one perk through a reset.'
   - question: 'What does the isotope track unlock?'
-    answer: 'Every isotope you hold unlocks one rung of the track, for good, without spending anything. The first starts each run with 500 energy and a Lab Assistant. Later rungs lengthen surges and improve perk drops and away progress, and every third rung is a choice of two, such as a sixth perk slot or perks that drop at level II. You pick in the reset dialog and can switch at any reset. The track has twelve rungs, and the Isotopes tab shows the ones you hold and the next two.'
+    answer: 'Each isotope you hold unlocks one rung of the track, for good, and you spend nothing. The first starts each run with 500 energy and a Lab Assistant. Later rungs lengthen surges and improve perk drops and time away, and every third rung is a choice of two, such as a sixth perk slot or perks that drop at level II. You pick in the reset dialog and can switch at any reset. The track has twelve rungs.'
+  - question: 'Does Spacebar Clicker have an end?'
+    answer: 'No. The isotope track stops at twelve rungs, and isotopes past the twelfth still add 10% each. The game also keeps achievements, your fastest run to a million, and a codex of all 25 perks to fill.'
 ---
 
 import {
   AUTO_TAPPERS,
+  COMBO,
   COMBO_TIERS,
+  ISOTOPE_BONUS,
+  ISOTOPE_SCALE,
   ISOTOPE_TRACK,
   PERK_DROPS,
   PERK_FAMILY_NAMES,
@@ -34,313 +41,578 @@ import {
   PERKS,
   PRESS_UPGRADES,
   REACTOR_STATES,
+  RESTART_PRESSES,
+  RUNDOWN,
+  SURGE,
   TRACK_EFFECT,
 } from '../../games/spacebar-clicker/config';
-import { perkDetailAllLevels } from '../../games/spacebar-clicker/perks';
+import { formatPerkValue } from '../../games/spacebar-clicker/perks';
+import { isotopeThreshold, prestigeGain } from '../../games/spacebar-clicker/economy';
+import { Icon } from 'astro-icon/components';
+import PerkIcon from '../../components/games/PerkIcon.astro';
+import ShopIcon from '../../components/games/ShopIcon.astro';
 
 export const whole = (v) => v.toLocaleString('en-US');
 export const pct = (v) => `${Math.round(v * 100)}%`;
-export const perksIn = (tab) => PERKS.filter((p) => p.tab === tab);
+export const FAMILIES = [
+  ['rhythm', 'For players who hold a beat. These widen the window and raise the combo.'],
+  ['press', 'Each press pays more, combo or no combo.'],
+  ['luck', 'Double Tap fires more often, and can fire again.'],
+  ['surge', 'Surges come more often, last longer and hit harder.'],
+  ['machines', 'Auto-tappers earn more, cost less and copy themselves.'],
+];
+export const RARITY_ORDER = { common: 0, rare: 1, keystone: 2 };
+export const perksOf = (family) =>
+  PERKS.filter((p) => p.family === family).sort(
+    (a, b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity]
+  );
+export const TAB_NAMES = { press: 'Upgrades', auto: 'Auto-tappers' };
+export const levels = (p) => p.values.map((v) => formatPerkValue(p.unit, v)).join(' / ');
+export const ODDS = [
+  ['Ordinary drop', PERK_DROPS.odds],
+  [`Surge drop, 1 in ${Math.round(1 / PERK_DROPS.surgeChance)}`, PERK_DROPS.surgeOdds],
+];
 export const RARITIES = ['common', 'rare', 'keystone'];
 export const TIER_TEXT = {
   common: 'Boosts a number.',
   rare: 'Changes a rule.',
-  keystone: 'Breaks a rule, with a real downside. You hold one at a time.',
+  keystone: 'Breaks a rule, with a downside.',
 };
-export const scaling = (s) => (s === 1 ? 'one-off' : `x${s} per level`);
 export const tiers = [...COMBO_TIERS].reverse();
-export const forkName = (step) => step.rungs.map((r) => r.name).join(' or ');
-export const forkDetail = (step) =>
-  `Pick one, and change it at any reset. ${step.rungs.map((r) => `${r.name}: ${r.detail}.`).join(' ')}`;
+export const PAYS = [1, 2, 3, 4];
+export const SHOP_ITEMS = [...PRESS_UPGRADES, ...AUTO_TAPPERS];
+export const list = (names) =>
+  names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+export const stateNote = (s, i) => {
+  const next = REACTOR_STATES[i + 1]?.threshold ?? Infinity;
+  const gain = prestigeGain(s.threshold);
+  if (gain === 1) return 'A reset opens, for 1 isotope';
+  if (gain > 1) return `A reset pays ${gain} isotopes`;
+  const names = SHOP_ITEMS.filter(
+    (item) => item.baseCost >= s.threshold && item.baseCost < next
+  ).map((item) => item.name);
+  return `First prices in reach: ${list(names)}`;
+};
+export const LAMPS = REACTOR_STATES.slice(1).map((_, k, all) => {
+  const angle = (k / all.length) * 2 * Math.PI - Math.PI / 2;
+  return [(50 + 46 * Math.cos(angle)).toFixed(1), (50 + 46 * Math.sin(angle)).toFixed(1)];
+});
+export const fullMin = RUNDOWN.fullS / 60;
+export const fallMin = RUNDOWN.fallS / 60;
+export const faultH = (RUNDOWN.fullS + RUNDOWN.fallS) / 3600;
+export const mostMin = fullMin + fallMin / 2;
+export const restartMarks = Array.from(
+  { length: RESTART_PRESSES },
+  (_, i) => `M${526 + i * 9} 120V${112 - i * (90 / (RESTART_PRESSES - 1))}`
+).join('');
+export const nightShift = PERKS.find((p) => p.id === 'night-shift').values;
+export const TIPS = [
+  [
+    'ph:metronome',
+    'Find a beat you can hold',
+    'Harmonic triples your presses. Pick a pace that feels easy, four or five presses a second, and keep it. A sprint breaks the combo and costs more than it earns.',
+  ],
+  [
+    'ph:calculator',
+    'Buy by payback',
+    'Divide an item\u2019s price by the energy per second it adds. The smallest answer pays for itself soonest. Early on that is Finger Strength and Lab Assistants, and later the bigger auto-tappers.',
+  ],
+  [
+    'ph:lightning',
+    'Save up for the surge',
+    `A surge pays ${SURGE.multiplier} times per press for ${SURGE.durationS} seconds, and each press also pays ${SURGE.paysS} seconds of your auto-tappers\u2019 output. Stop buying when the countdown starts, mash, then spend the windfall.`,
+  ],
+  [
+    'ph:moon',
+    'Check in within the half hour',
+    `Auto-tappers hold full output for ${RUNDOWN.fullS / 60} minutes after your last press or purchase. Buy them before you step away, and one press on your return starts the clock again.`,
+  ],
+  [
+    'ph:dice-five',
+    'Take the perks that fit',
+    'Buy the perks that suit how you play: rhythm perks if you hold a beat, machine perks if you leave the game running. A second copy of a perk you hold raises its level.',
+  ],
+  [
+    'ph:hand',
+    'Rest your hand',
+    'Long sessions are hard on one thumb. Switch fingers, lean on the auto-tappers, and stop if anything hurts. The reactor will be there tomorrow.',
+  ],
+];
+export const millions = (v) => `${v / 1_000_000}M`;
+export const TRACK_ROWS = [0, 3, 6, 9].map((i) => ISOTOPE_TRACK.slice(i, i + 3));
 export const tierRange = (i) =>
   i === tiers.length - 1 ? `${tiers[i].min}+` : `${tiers[i].min} to ${tiers[i + 1].min - 1}`;
 
-<section id="what-is" class="info-section">
+export const topTier = Math.max(...COMBO_TIERS.map((t) => t.multiplier));
+
+<nav class="sc-jump" aria-label="On this page">
   <div class="container">
-    <h2>What is Spacebar Clicker?</h2>
-
-      Spacebar Clicker is an idle game played on one key. Every press of the spacebar feeds energy
-      into a lab reactor. You spend that energy on upgrades that make each press worth more, and on
-      auto-tappers that press for you while you do something else. The reactor changes state as
-      you earn, and once a run has produced a million energy you can reset the experiment for
-      isotopes: a permanent bonus, and new rules that unlock one at a time.
-
-      The difference from other spacebar clicker games is the combo. Most clickers reward mashing.
-      This one tracks the gap between your presses and pays up to three times more energy when you
-      hold a steady beat. A player tapping five times a second in rhythm out-earns a frantic masher
-      by a wide margin, which makes it a cousin of the <a href="/spacebar-speed-test">spacebar speed
-      test</a> rather than a copy of it.
-
-      Perks add the luck. They drop into the shop at random while you play, and each one bends a
-      rule for the rest of the run, so one run might lean on rhythm and the next on machines.
-
-      Everything saves in your browser. No account, no ads, no download.
-
+    <ul>
+      <li class="sc-jump-label" aria-hidden="true">
+        On this page
+      </li>
+      <li>
+        <a href="#how-to-play">How to play</a>
+      </li>
+      <li>
+        <a href="#combo">Combo</a>
+      </li>
+      <li>
+        <a href="#shop">Upgrades</a>
+      </li>
+      <li>
+        <a href="#perks">Perks</a>
+      </li>
+      <li>
+        <a href="#reactor">Reactor</a>
+      </li>
+      <li>
+        <a href="#rundown">Time away</a>
+      </li>
+      <li>
+        <a href="#prestige">Isotopes</a>
+      </li>
+      <li>
+        <a href="#tips">Tips</a>
+      </li>
+      <li>
+        <a href="#faq">FAQ</a>
+      </li>
+    </ul>
   </div>
-</section>
+</nav>
 
-<section id="how-to-play" class="info-section alt-bg">
+<section id="about" class="info-section sc-doc">
   <div class="container">
-    <h2>How to play Spacebar Clicker</h2>
-    <ol class="steps-list section-content">
-      <li>
-        <strong>Press the spacebar</strong>
+    <h2>About this Spacebar Clicker Game</h2>
+    <div class="sc-lede">
+      Spacebar Clicker is a free clicker game you play on one key. Each press of the spacebar adds
+      energy to a lab reactor. You spend the energy on upgrades and on auto-tappers that press for
+      you, so it plays as an idle game too. At a million energy you reset the run for isotopes.
+    </div>
+    <div class="sc-lede">
+      Your progress saves in this browser, with no account and no download. For a straight count of
+      presses per second, use the <a href="/spacebar-speed-test">spacebar speed test</a>. Four
+      things set this game apart from other spacebar clicker games.
+    </div>
+    <div class="sc-diff">
+      <div style="--hue: var(--perk-rhythm)">
+        <span class="sc-diff-figure">x{topTier}</span>
+        <h3>Rhythm beats mashing</h3>
 
-          Each press adds energy to the reactor. On a phone, tap the reactor instead. The first
-          upgrade costs {PRESS_UPGRADES[0].baseCost} energy, so a steady tapper can afford it within
-          fifteen seconds.
+          The game times the gap between your presses. Keep the gaps even and each press pays up to
+          three times as much.
 
-      </li>
-      <li>
-        <strong>Hold a rhythm</strong>
+      </div>
+      <div style="--hue: var(--perk-luck)">
+        <span class="sc-diff-figure">{PERKS.length}</span>
+        <h3>Perks change the run</h3>
 
-          Tap at a pace you can keep. After ten presses in time your combo reaches Steady and every
-          press pays 1.5 times as much. Keep going for Locked in, Resonance and Harmonic. The bar
-          under the combo counter drains during the 0.8 second grace window, so you can see a
-          combo about to break. Below it, a trace draws one spike per press. Evenly spaced spikes
-          mean you are on the beat, and a short spike marks a press that missed it.
+          Perks drop into the shop at random. Each one bends a rule until you reset, and you hold
+          {PERK_SLOTS} at a time.
 
-      </li>
-      <li>
-        <strong>Buy upgrades and auto-tappers</strong>
+      </div>
+      <div style="--hue: var(--ramp-blue)">
+        <span class="sc-diff-figure">+10%</span>
+        <h3>Resets add rules</h3>
 
-          Finger Strength and Spring Keys raise what a press is worth. Lab Assistants, Pneumatic
-          Keys and the rest generate energy on their own, even while you are away. New auto-tappers
-          appear in the shop once a run has earned half their price.
+          Each isotope adds 10% to all you earn, for good, and unlocks one rung of a
+          {ISOTOPE_TRACK.length}-rung track.
 
-      </li>
-      <li>
-        <strong>Mash the surge</strong>
+      </div>
+      <div style="--hue: var(--ramp-green)">
+        <span class="sc-diff-figure">{RUNDOWN.fullS / 60} min</span>
+        <h3>The reactor needs you</h3>
 
-          Every few minutes of active play the reactor warns you, counts down from three, and then
-          pays ten times per press for five seconds. This is the one moment speed beats rhythm. The
-          game records your presses per second for each surge.
+          Auto-tappers run at full output for {RUNDOWN.fullS / 60} minutes after your last press.
+          Then the reactor runs down, and {RESTART_PRESSES} presses on a beat restart it.
 
-      </li>
-      <li>
-        <strong>Catch the perks</strong>
-
-          Now and then a perk drops into the shop: a random bonus that lasts the rest of the run.
-          A ring around it drains as you earn, so decide before it runs out. You can hold up to
-          {PERK_SLOTS} at once, and they show in the reactor's top-right corner.
-
-      </li>
-      <li>
-        <strong>Reset the experiment</strong>
-
-          Once a run has earned a million energy you can reset it for isotopes. Each isotope adds
-          10% to every gain for good, and unlocks a rung of the isotope track: a head start, a
-          longer surge, a sixth perk slot and more. Your energy, shop, reactor state and perks
-          start over; your isotopes, achievements, records and perk codex stay. Isotopes sit as
-          beads in the reactor's top-left corner: point at them or tap them for their bonus and
-          the next unlock. Once a reset is open, a ring beside them shows what it would pay.
-
-      </li>
-    </ol>
-    <div class="note">
-      <strong>Note:</strong> Holding the spacebar down does nothing. The game ignores the repeat
-      events your operating system fires for a held key, and it discards any press that lands
-      within 33 milliseconds of the one before.
+      </div>
     </div>
 
   </div>
 </section>
 
-<section id="combo" class="info-section">
+export const trace = (xs, short, width) =>
+  `M0 32${xs
+    .map((x, i) => `H${x - 6}L${x - 3} 34.5L${x} ${short(i) ? 20 : 5}L${x + 3} 35L${x + 6} 32`)
+    .join('')}H${width}`;
+export const BEATS = [18, 41, 64, 87, 110, 133, 150, 173];
+export const EVEN = Array.from({ length: 13 }, (_, i) => 20 + i * 25);
+export const UNEVEN = [16, 30, 62, 74, 118, 131, 142, 190, 221, 232, 281, 296, 322];
+export const glass = PERKS.find((p) => p.id === 'glass-rhythm').values;
+export const upgradeNote = (u) =>
+  u.max > 1 ? `x${u.scale} per level, ${u.max} levels` : 'one purchase';
+export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 0 0 1 8 1Z';
+
+<section id="how-to-play" class="info-section alt-bg sc-doc">
   <div class="container">
-    <h2>The combo: steady beats fast</h2>
-
-      A press keeps rhythm when the gap since the last press is within 25% of the average of your
-      previous five gaps, and under 0.6 seconds. Each press that keeps rhythm adds one to the combo.
-      The first five presses after a break count regardless, so a combo can start. One or two
-      off-beat presses are forgiven and add nothing. The third in a row breaks the combo, and so
-      does a pause longer than 0.8 seconds.
-
-    <div class="spec-table spec-table-3 section-content">
-      <div class="spec-row spec-head">
-        <span class="spec-name">Combo</span>
-        <span class="spec-num">Multiplier</span>
-        <span class="spec-desc">Tier</span>
-      </div>
-      {tiers.map((tier, i) => (
-        <div class="spec-row">
-          <span class="spec-name">{tierRange(i)}</span>
-          <span class="spec-num">x{tier.multiplier}</span>
-          <span class="spec-desc">{tier.label || 'No tier yet'}</span>
+    <h2>How to play this Spacebar Clicker</h2>
+    <ol class="sc-steps">
+      <li>
+        <div class="sc-step-art" aria-hidden="true">
+          <span class="sc-art-key">SPACE</span>
         </div>
-      ))}
-    </div>
+        <div class="sc-step-body">
+          <h3>Press the spacebar</h3>
 
-      The combo multiplies your presses only. Auto-tappers ignore it until you own Synchronisation,
-      which gives them half of your current multiplier. Rhythm, not speed, is what the tracker
-      measures: a tapper at three presses a second holds a combo as well as one at eight, as long as
-      the gaps stay even.
+            Each press adds energy to the reactor. On a phone, tap the reactor. Holding the key down
+            does nothing.
 
-      Two perks change this table for a run. Overtone adds a tier above Harmonic, and Glass Rhythm
-      multiplies every tier by two to three but lets two off-beat presses in a row break the
-      combo.
-
-  </div>
-</section>
-
-<section id="shop" class="info-section alt-bg">
-  <div class="container">
-    <h2>Every upgrade and what it costs</h2>
-
-      Prices rise with each purchase. The cost of the next level is the base cost multiplied by the
-      scaling factor once for every level you already own, rounded to a whole number. These are the
-      live numbers the game runs on.
-
-    <h3>Press upgrades</h3>
-    <div class="spec-table">
-      <div class="spec-row spec-head">
-        <span class="spec-name">Upgrade</span>
-        <span class="spec-num">Base cost</span>
-        <span class="spec-num">Scaling</span>
-        <span class="spec-desc">Effect and cap</span>
-      </div>
-      {PRESS_UPGRADES.map((u) => (
-        <div class="spec-row">
-          <span class="spec-name">{u.name}</span>
-          <span class="spec-num">{whole(u.baseCost)}</span>
-          <span class="spec-num">{scaling(u.scale)}</span>
-          <span class="spec-desc">{u.detail}{u.max > 1 ? `. Up to ${u.max} levels.` : '.'}</span>
         </div>
-      ))}
-    </div>
-
-    <h3>Auto-tappers</h3>
-    <div class="spec-table">
-      <div class="spec-row spec-head">
-        <span class="spec-name">Auto-tapper</span>
-        <span class="spec-num">Base cost</span>
-        <span class="spec-num">Per second</span>
-        <span class="spec-desc">Scaling and flavour</span>
-      </div>
-      {AUTO_TAPPERS.map((t) => (
-        <div class="spec-row">
-          <span class="spec-name">{t.name}</span>
-          <span class="spec-num">{whole(t.baseCost)}</span>
-          <span class="spec-num">{t.eps}</span>
-          <span class="spec-desc">x{t.scale} per purchase. {t.detail}.</span>
+      </li>
+      <li>
+        <div class="sc-step-art" aria-hidden="true">
+          <svg class="sc-art-beat" viewBox="0 0 192 44" fill="none">
+            <path class="sc-art-beat-base" d="M0 32.5H192" />
+            <path class="sc-art-beat-trace" d={trace(BEATS, (i) => i === 6, 192)} />
+          </svg>
         </div>
-      ))}
-    </div>
+        <div class="sc-step-body">
+          <h3>Hold a beat</h3>
 
-      Those ten items are the whole shop, apart from the perks that drop into it at random. There
-      is no tech tree and one prestige layer. Auto-tappers out-earn your fingers after fifteen or
-      twenty minutes of play, not long before resetting the experiment starts to make sense.
+            Ten presses in time reach Steady, and each press pays x1.5. Keep the beat for Locked in,
+            Resonance and Harmonic at x3.
 
-  </div>
-</section>
+        </div>
+      </li>
+      <li>
+        <div class="sc-step-art" aria-hidden="true">
+          <div class="sc-art-tiles">
+            <span>
+              <ShopIcon id="finger" />
+            </span>
+            <span>
+              <ShopIcon id="spring" />
+            </span>
+            <span>
+              <ShopIcon id="assistant" />
+            </span>
+            <span>
+              <ShopIcon id="arm" />
+            </span>
+          </div>
+        </div>
+        <div class="sc-step-body">
+          <h3>Buy upgrades and auto-tappers</h3>
 
-<section id="perks" class="info-section">
-  <div class="container">
-    <h2>Perks: random drops that bend the rules</h2>
+            Upgrades raise what a press pays. Auto-tappers earn energy on their own, and keep
+            earning after you stop.
 
-      While you play, perks drop into the shop at random, each at the top of the Upgrades or
-      Auto-tappers tab. Each one bends a rule for the rest of the run, from a wider rhythm window
-      to an auto-tapper that copies itself. A ring around the perk drains as you earn, and when it
-      runs out the offer is gone.
-
-      You can't time a drop. Perks come only while you are playing, with the page in view and a
-      press in the last minute, and the game draws a fresh wait before each one: two can land a
-      minute apart, or a long stretch can pass with nothing. In the game's own simulation, a
-      steady player gets four to eight drops on a first run to a million. Each surge also has a 1
-      in {Math.round(1 / PERK_DROPS.surgeChance)} chance to end with a bonus drop, on better odds.
-
-    <div class="spec-table section-content">
-      <div class="spec-row spec-head">
-        <span class="spec-name">Rarity</span>
-        <span class="spec-num">Per drop</span>
-        <span class="spec-num">Surge drop</span>
-        <span class="spec-desc">What it is and what it costs</span>
-      </div>
-      {RARITIES.map((r) => (
-        <div class="spec-row">
-          <span class="spec-name">{PERK_RARITY_NAMES[r]}</span>
-          <span class="spec-num" data-label="Per drop">{pct(PERK_DROPS.odds[r])}</span>
-          <span class="spec-num" data-label="Surge drop">{pct(PERK_DROPS.surgeOdds[r])}</span>
-          <span class="spec-desc">
-            {TIER_TEXT[r]} Costs {PERK_DROPS.priceS[r]} seconds of your income, and stays on offer
-            until you earn another {PERK_DROPS.windowS[r]} seconds’ worth.
+        </div>
+      </li>
+      <li>
+        <div class="sc-step-art" aria-hidden="true">
+          <span class="sc-art-surge">
+            <b>x10</b>
+            <small>for 5 seconds</small>
           </span>
         </div>
-      ))}
-    </div>
+        <div class="sc-step-body">
+          <h3>Mash the surge</h3>
 
-      The game sets each price and window in your income at the moment the perk drops, so a perk
-      costs the same share of your earnings early in a run as late. Energy you collect for time
-      away doesn't count against a window. Later, the <a href="#isotope-track">isotope track</a>
-      can lean ordinary drops rarer, take a quarter off perks you have held before, keep offers
-      up twice as long, or let you reroll one.
+            The reactor warns you, counts down from three, then pays ten times per press. For those
+            five seconds, speed beats rhythm.
 
-      You can hold {PERK_SLOTS} perks, and one keystone at a time; the isotope track can add a
-      sixth slot or a second keystone. A perk you already hold can
-      drop again as an upgrade, to level II and then III, at {PERK_UPGRADE_SCALE} times the price
-      for each level you hold. With every slot full, the game asks which perk to let go before you
-      buy a new one, and a new keystone replaces the old. Perks last until you reset the
-      experiment, though the isotope track can carry one across. The Perks tab holds a codex of
-      every perk you have found, across all your runs.
-
-    <h3>Upgrade perks</h3>
-    <div class="spec-table">
-      <div class="spec-row spec-head">
-        <span class="spec-name">Perk</span>
-        <span class="spec-word">Rarity</span>
-        <span class="spec-word">Family</span>
-        <span class="spec-desc">Effect at levels I, II and III</span>
-      </div>
-      {perksIn('press').map((p) => (
-        <div class="spec-row">
-          <span class="spec-name">{p.name}</span>
-          <span class="spec-word">{PERK_RARITY_NAMES[p.rarity]}</span>
-          <span class="spec-word">{PERK_FAMILY_NAMES[p.family]}</span>
-          <span class="spec-desc">{perkDetailAllLevels(p)}.</span>
         </div>
-      ))}
-    </div>
-
-    <h3>Auto-tapper perks</h3>
-    <div class="spec-table">
-      <div class="spec-row spec-head">
-        <span class="spec-name">Perk</span>
-        <span class="spec-word">Rarity</span>
-        <span class="spec-word">Family</span>
-        <span class="spec-desc">Effect at levels I, II and III</span>
-      </div>
-      {perksIn('auto').map((p) => (
-        <div class="spec-row">
-          <span class="spec-name">{p.name}</span>
-          <span class="spec-word">{PERK_RARITY_NAMES[p.rarity]}</span>
-          <span class="spec-word">{PERK_FAMILY_NAMES[p.family]}</span>
-          <span class="spec-desc">{perkDetailAllLevels(p)}.</span>
+      </li>
+      <li>
+        <div class="sc-step-art" aria-hidden="true">
+          <span class="sc-art-perk">
+            <svg viewBox="0 0 36 36" fill="none">
+              <path class="sc-art-perk-track" d={RING} />
+              <path class="sc-art-perk-ring" d={RING} pathLength="100" />
+            </svg>
+            <PerkIcon id="metronome" />
+          </span>
         </div>
-      ))}
+        <div class="sc-step-body">
+          <h3>Catch the perks</h3>
+
+            A perk drops into the shop with a ring that drains as you earn. Buy it before the ring
+            empties, and it lasts the rest of the run.
+
+        </div>
+      </li>
+      <li>
+        <div class="sc-step-art" aria-hidden="true">
+          <span class="sc-art-core">1</span>
+        </div>
+        <div class="sc-step-body">
+          <h3>Reset for isotopes</h3>
+
+            At a million energy you can reset the run. Each isotope adds 10% to all you earn, for
+            good, and unlocks a rung of the isotope track.
+
+        </div>
+      </li>
+    </ol>
+    <div class="sc-fine">
+      The game ignores a held key, and any press within 33 milliseconds of the last.
     </div>
 
   </div>
 </section>
 
-<section id="reactor" class="info-section alt-bg">
+<section id="combo" class="info-section sc-doc">
+  <div class="container">
+    <h2>The combo: a steady beat pays up to 3x</h2>
+
+      This spacebar clicker times the gap between your presses. A press on the beat adds one to your
+      combo, and the combo multiplies what each press pays.
+
+    <div class="sc-ladder">
+      {tiers.map((tier, i) => (
+        <div class={tier.label ? 'sc-ladder-tier' : 'sc-ladder-tier is-none'}>
+          <span class="sc-ladder-mult">x{tier.multiplier}</span>
+          <span
+            class="sc-ladder-bar"
+            style={`--m: ${tier.multiplier}; --a: ${Math.round((i / (tiers.length - 1)) * 100)}`}
+          />
+          <span class="sc-ladder-name">{tier.label || 'No tier yet'}</span>
+          <span class="sc-ladder-range">{tierRange(i)} combo</span>
+        </div>
+      ))}
+    </div>
+    <div class="sc-traces">
+      <div class="sc-trace">
+        <div class="sc-step-art" aria-hidden="true">
+          <svg class="sc-art-beat is-wide" viewBox="0 0 340 44" fill="none">
+            <path class="sc-art-beat-base" d="M0 32.5H340" />
+            <path class="sc-art-beat-trace" d={trace(EVEN, () => false, 340)} />
+          </svg>
+        </div>
+        <div class="sc-step-body">
+          <h3>On the beat</h3>
+          <p>Even gaps at any speed. Three presses a second hold a combo as well as eight.</p>
+        </div>
+      </div>
+      <div class="sc-trace is-off">
+        <div class="sc-step-art" aria-hidden="true">
+          <svg class="sc-art-beat is-wide" viewBox="0 0 340 44" fill="none">
+            <path class="sc-art-beat-base" d="M0 32.5H340" />
+            <path class="sc-art-beat-trace" d={trace(UNEVEN, (i) => i % 3 !== 0, 340)} />
+          </svg>
+        </div>
+        <div class="sc-step-body">
+          <h3>Off the beat</h3>
+
+            Uneven gaps draw short spikes. The game forgives {COMBO.missesToBreak - 1} in a row, and
+            the next one breaks the combo.
+
+        </div>
+      </div>
+    </div>
+    <div class="sc-facts">
+      <div>
+        <span class="sc-fact-figure">{pct(COMBO.tolerance)}</span>
+
+          A press keeps the beat within {pct(COMBO.tolerance)} of the average of your last
+          {COMBO.window} gaps.
+
+      </div>
+      <div>
+        <span class="sc-fact-figure">{COMBO.graceMs / 1000} s</span>
+        <p>A longer pause breaks the combo. The bar under the counter drains to show it.</p>
+      </div>
+      <div>
+        <span class="sc-fact-figure">{COMBO.freeStarts} presses</span>
+        <p>The first {COMBO.freeStarts} presses after a break count, so a combo can start.</p>
+      </div>
+    </div>
+
+      The combo multiplies your presses. Auto-tappers ignore it until you buy Synchronisation, which
+      gives them half your multiplier. Two perks change the ladder for a run. Overtone adds a tier
+      above Harmonic. Glass Rhythm multiplies each tier by {glass[0]} to
+      {glass[glass.length - 1]}, and breaks on two misses in a row.
+
+  </div>
+</section>
+
+<section id="shop" class="info-section alt-bg sc-doc">
+  <div class="container">
+    <h2>Upgrades and auto-tappers in this Spacebar Clicker</h2>
+
+      The shop holds {PRESS_UPGRADES.length + AUTO_TAPPERS.length} items. Each purchase raises the
+      next price: the base cost, multiplied by the item's scaling once per level you own. The
+      numbers below are the ones the game runs on.
+
+    <div class="sc-shop">
+      <div>
+        <div class="sc-shop-head">
+          <h3>Upgrades</h3>
+          <span>raise what a press pays</span>
+        </div>
+        <ul class="sc-shop-list">
+          {PRESS_UPGRADES.map((u) => (
+            <li class="sc-shop-item">
+              <span class="sc-shop-tile" aria-hidden="true">
+                <ShopIcon id={u.id} />
+              </span>
+              <span class="sc-shop-name">{u.name}</span>
+              <span class="sc-shop-cost">{whole(u.baseCost)}</span>
+              <span class="sc-shop-effect">{u.detail}</span>
+              <span class="sc-shop-note">{upgradeNote(u)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <div class="sc-shop-head">
+          <h3>Auto-tappers</h3>
+          <span>press for you</span>
+        </div>
+        <ul class="sc-shop-list">
+          {AUTO_TAPPERS.map((t) => (
+            <li class="sc-shop-item">
+              <span class="sc-shop-tile" aria-hidden="true">
+                <ShopIcon id={t.id} />
+              </span>
+              <span class="sc-shop-name">{t.name}</span>
+              <span class="sc-shop-cost">{whole(t.baseCost)}</span>
+              <span class="sc-shop-effect">
+                <span class="sc-shop-eps">+{t.eps}</span> energy per second. {t.detail}.
+              </span>
+              <span class="sc-shop-note">x{t.scale} per purchase</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+
+      A new auto-tapper appears in the shop once a run has earned half its price. Perks drop into
+      the same shop at random.
+
+  </div>
+</section>
+
+<section id="perks" class="info-section sc-doc">
+  <div class="container">
+    <h2>Perks in this Spacebar Clicker: {PERKS.length} random drops</h2>
+
+      Perks drop into the shop while you play. Each one bends a rule for the rest of the run, and a
+      ring around it drains as you earn. Buy it before the ring empties or the offer leaves.
+
+
+      You can't time a drop. They come only while you play, at uneven gaps, and a steady first run
+      to a million sees three to seven. One surge in {Math.round(1 / PERK_DROPS.surgeChance)} ends
+      with a bonus drop on better odds.
+
+    <div class="sc-odds">
+      {ODDS.map(([label, odds]) => (
+        <div class="sc-odds-row">
+          <span class="sc-odds-label">{label}</span>
+          <div class="sc-odds-bar">
+            {RARITIES.map((r) => (
+              <span data-rarity={r} style={`flex: ${Math.round(odds[r] * 100)}`}>
+                {odds[r] >= 0.2 ? `${PERK_RARITY_NAMES[r]} ` : ''}
+                {pct(odds[r])}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div class="sc-odds-tiers">
+        {RARITIES.map((r) => (
+          <div data-rarity={r}>
+            <h3>{PERK_RARITY_NAMES[r]}</h3>
+            <p>
+              {TIER_TEXT[r]} Costs <span class="readout">{PERK_DROPS.priceS[r]} s</span> of your
+              income.
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+
+      The game prices a perk in seconds of your income at the moment it drops, so a perk costs the
+      same share early in a run as late. You hold {PERK_SLOTS} perks and one keystone. A perk you
+      hold can drop again as level II, then III, at {PERK_UPGRADE_SCALE} times the price for each
+      level you hold. With every slot full, you choose one to let go.
+
+
+      Perks end with the run. The Perks tab keeps a codex of each one you have found, and the
+      <a href="#isotope-track">isotope track</a> can add a sixth slot, a second keystone, or carry
+      one perk through a reset.
+
+    <div class="sc-filter" id="sc-perk-filter" hidden>
+      <span class="sc-filter-label">Show</span>
+      <button type="button" data-filter-family="" aria-pressed="true">
+        {'All '}
+        <small>{PERKS.length}</small>
+      </button>
+      {FAMILIES.map(([id]) => (
+        <button type="button" data-filter-family={id} data-family={id} aria-pressed="false">
+          <i />
+          {`${PERK_FAMILY_NAMES[id]} `}
+          <small>{perksOf(id).length}</small>
+        </button>
+      ))}
+      <span class="sc-filter-sep" />
+      {RARITIES.map((r) => (
+        <button type="button" data-filter-rarity={r} aria-pressed="false">
+          {PERK_RARITY_NAMES[r]}
+        </button>
+      ))}
+    </div>
+    <div class="sc-fine" id="sc-perk-none" hidden>
+      No perk is both. Pick another pair.
+    </div>
+    {FAMILIES.map(([id, blurb]) => (
+      <section class="sc-family" data-family={id}>
+        <div class="sc-family-head">
+          <h3>{PERK_FAMILY_NAMES[id]} perks</h3>
+          <span>{blurb}</span>
+          <small>{perksOf(id).length} perks</small>
+        </div>
+        <div class="sc-perks">
+          {perksOf(id).map((p) => (
+            <article class="sc-perk" data-rarity={p.rarity}>
+              <span class="sc-perk-tile" aria-hidden="true">
+                <PerkIcon id={p.id} />
+              </span>
+              <h4>{p.name}</h4>
+              <span class="sc-perk-rarity">{PERK_RARITY_NAMES[p.rarity]}</span>
+              <span class="sc-perk-where">Drops in {TAB_NAMES[p.tab]}</span>
+              <span class="sc-perk-effect">
+                {p.detail.split('{v}')[0]}
+                <span class="sc-perk-levels">{levels(p)}</span>
+                {p.detail.split('{v}')[1]}
+              </span>
+            </article>
+          ))}
+        </div>
+      </section>
+    ))}
+    <div class="sc-fine">
+      Where a perk lists three values, they are levels I, II and III.
+    </div>
+
+  </div>
+</section>
+
+<section id="reactor" class="info-section alt-bg sc-doc">
   <div class="container">
     <h2>Reactor states</h2>
 
-      The reactor's state follows the energy your current run has earned. Each state past Dormant
-      adds 5% to every gain for the rest of the run, so a Supercritical reactor pays 30% more than a
-      Dormant one. The state resets when you reset the experiment.
+    The reactor changes state as a run earns. Each state past Dormant adds 5% to all you earn for
+    the rest of the run, and lights one more lamp on the dial. A reset returns it to Dormant.
 
-    <div class="spec-table spec-table-3 section-content">
-      <div class="spec-row spec-head">
-        <span class="spec-name">State</span>
-        <span class="spec-num">Energy this run</span>
-        <span class="spec-desc">Bonus to all gains</span>
-      </div>
+    <div class="sc-states">
       {REACTOR_STATES.map((s, i) => (
-        <div class="spec-row">
-          <span class="spec-name">{s.name}</span>
-          <span class="spec-num">{whole(s.threshold)}</span>
-          <span class="spec-desc">+{i * 5}%</span>
+        <div class="sc-state" data-state={s.id} style={`--k: ${8 + i * 12}`}>
+          <svg class="sc-state-dial" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="sc-state-bezel" cx="50" cy="50" r="38" />
+            <circle class="sc-state-core" cx="50" cy="50" r="30" />
+            <circle class="sc-state-heart" cx="50" cy="50" r={4 + i} />
+            {LAMPS.map(([x, y], k) => (
+              <circle class={k < i ? 'sc-state-lamp is-lit' : 'sc-state-lamp'} cx={x} cy={y} r="2.6" />
+            ))}
+          </svg>
+          <h3>{s.name}</h3>
+          <span class="sc-state-at">{whole(s.threshold)}</span>
+          <span class="sc-state-bonus">+{i * 5}% to all gains</span>
+          <span class="sc-state-note">{stateNote(s, i)}</span>
         </div>
       ))}
     </div>
@@ -348,224 +620,298 @@ export const tierRange = (i) =>
   </div>
 </section>
 
-<section id="prestige" class="info-section">
+<section id="rundown" class="info-section sc-doc">
   <div class="container">
-    <h2>Reset the experiment</h2>
+    <h2>When you stop pressing</h2>
 
-      Once a run has earned a million energy, the Isotopes tab lets you reset the experiment: the
-      run starts over, and you gain isotopes. Isotopes gained equal the square root of your run's
-      energy in millions, rounded down: one million gives 1, four million gives 2, twenty-five
-      million gives 5, a hundred million gives 10. Each isotope adds 10% to every gain, presses and auto-tappers
-      alike, on every run from then on. Your perks go with the reset, unless the isotope track
-      lets you keep one, and the codex of perks you have found stays.
+    This spacebar clicker keeps earning after you stop, for a while. The auto-tappers hold full
+    output, then the reactor runs down. The same rule pays you for time with the tab closed.
 
-      The thresholds climb, but a run keeps speeding up as it goes, so each isotope after the first
-      arrives sooner than the one before. In the game's simulation, a steady player with no perks
-      earns the first isotope at about 24 minutes and the second about 12 minutes later. The
-      isotope beads and the Isotopes tab show what a reset gives now and how far off
-      the next isotope is, so when to reset is your call, and the game asks you to confirm.
-
-    <h3 id="isotope-track">The isotope track</h3>
-
-      Each isotope you hold also unlocks a rung of the isotope track, for good. Nothing is spent:
-      holding the isotopes is enough, and a reset that pays several unlocks several at once. Most
-      rungs are small, like a head start on every run or a longer surge. Every third rung is a
-      choice of two, which you make in the reset dialog and can change at any reset. The Isotopes
-      tab shows the rungs you hold and the next two, and the game names a rung when it
-      shapes an offer, a surge or your time away.
-
-    <div class="spec-table spec-table-3 section-content">
-      <div class="spec-row spec-head">
-        <span class="spec-name">Rung</span>
-        <span class="spec-num">Isotopes</span>
-        <span class="spec-desc">What it does</span>
+    <div class="sc-run">
+      <div class="sc-run-art">
+        <svg
+          viewBox="0 0 640 150"
+          role="img"
+          aria-label={`Output against time away: full for ${fullMin} minutes, a straight fall to nothing at ${faultH} hours, then ${RESTART_PRESSES} presses bring it back.`}
+        >
+          <defs>
+            <linearGradient id="sc-run-fall" x1="0" x2="1">
+              <stop offset="0" class="sc-run-stop-live" />
+              <stop offset="1" class="sc-run-stop-dead" />
+            </linearGradient>
+          </defs>
+          <path class="sc-run-axis" d="M0 120H640" />
+          <path class="sc-run-rule" d="M100 24V126M400 24V126M520 24V126" />
+          <path class="sc-run-live" d="M0 30H100" />
+          <path class="sc-run-fall" d="M100 30L400 120" stroke="url(#sc-run-fall)" />
+          <path class="sc-run-dead" d="M400 120H520" />
+          <path class="sc-run-marks" d={restartMarks} />
+          <path class="sc-run-live" d="M616 30H640" />
+          <text class="sc-run-wide" x="0" y="16">{'full output'}</text>
+          <text class="sc-run-wide" x="0" y="142">{'last press'}</text>
+          <text x="100" y="142" text-anchor="middle">{`${fullMin} min`}</text>
+          <text x="400" y="142" text-anchor="middle">{`${faultH} h`}</text>
+          <text x="580" y="142" text-anchor="middle">{'you return'}</text>
+        </svg>
       </div>
-      {ISOTOPE_TRACK.map((step) => (
-        <div class="spec-row">
-          <span class="spec-name">{forkName(step)}</span>
-          <span class="spec-num" data-label="At">{step.isotopes}</span>
-          <span class="spec-desc">
-            {step.rungs.length > 1 ? forkDetail(step) : `${step.rungs[0].detail}.`}
+      <div class="sc-run-stages">
+        <div>
+          <h3>Full output</h3>
+          <span class="sc-run-when">{fullMin} minutes</span>
+
+          Auto-tappers earn at full rate after your last press or purchase.
+
+        </div>
+        <div>
+          <h3>Run-down</h3>
+          <span class="sc-run-when">the next {fallMin} minutes</span>
+
+          Output falls in a straight line to nothing, and the reactor fades to grey. One press
+          brings it back. The most any absence pays is {mostMin} minutes of full output.
+
+        </div>
+        <div>
+          <h3>Fault</h3>
+          <span class="sc-run-when">at {faultH} hours</span>
+
+          The reactor stops and the readouts show 0.
+
+        </div>
+        <div>
+          <h3>Restart</h3>
+          <span class="sc-run-when">{RESTART_PRESSES} presses</span>
+
+          {RESTART_PRESSES} presses on a steady beat restart it.
+
+        </div>
+      </div>
+    </div>
+
+    Three things stretch this. The Night Lab rung holds full output for
+    {TRACK_EFFECT.nightLabFullS / 60} minutes. The Night Shift perk slows the run-down to as long
+    as {nightShift[nightShift.length - 1]} hours. Idle Hands pays auto-tappers more after 10
+    seconds without a press.
+
+  </div>
+</section>
+
+<section id="prestige" class="info-section alt-bg sc-doc">
+  <div class="container">
+    <h2>Reset for isotopes</h2>
+
+    A run that has earned a million energy can reset. Your energy, shop, reactor state and perks
+    start over, and you keep an isotope. Each isotope adds {pct(ISOTOPE_BONUS)} to all you earn on
+    every later run.
+
+    <div class="sc-pays">
+      {PAYS.map((n) => (
+        <div>
+          <span class="sc-pays-at">
+            {millions(isotopeThreshold(n))} <small>energy in a run</small>
+          </span>
+          <span class="sc-pays-dots" aria-hidden="true">
+            {Array.from({ length: n }, () => (
+              <i />
+            ))}
+          </span>
+          <span class="sc-pays-get">
+            pays <b>{n === 1 ? '1 isotope' : `${n} isotopes`}</b>
           </span>
         </div>
       ))}
     </div>
 
-      In the game's simulation, a steady player who buys perks holds all twelve rungs after 100 to
-      180 minutes of play, depending on how often they reset. The track stops at twelve for now.
-      Isotopes past it still add 10% to every gain, or
-      {Math.round(TRACK_EFFECT.enrichmentRate * 100)}% with Enrichment.
+    Each isotope costs {ISOTOPE_SCALE} times the energy of the one before, and a run speeds up as
+    it goes. The Isotopes tab shows what a reset pays now and how far off the next isotope is, so
+    the timing is your call.
 
-  </div>
-</section>
+    A reset keeps your isotopes, your achievements, your records and the codex of perks you have
+    found.
 
-<section id="million" class="info-section alt-bg">
-  <div class="container">
-    <h2>How to reach a million energy</h2>
-    <div class="tips-grid section-content">
-      <div class="tip-card">
-        <span class="tip-card-icon" aria-hidden="true">
-          🎵
-        </span>
-        <h3>Find a beat you can hold</h3>
+    <h3 id="isotope-track">The isotope track: {ISOTOPE_TRACK.length} rungs</h3>
 
-          A combo at Harmonic triples your presses. Pick a pace that feels easy, around four or five
-          presses a second, and keep it. Sprinting breaks the combo and costs more than it earns.
+    Each isotope you hold unlocks one rung, for good. You spend nothing. Every third rung is a
+    choice of two, and you can switch your pick at any reset.
 
-      </div>
-      <div class="tip-card">
-        <span class="tip-card-icon" aria-hidden="true">
-          🧮
-        </span>
-        <h3>Buy by payback</h3>
-
-          Divide an item's price by the energy per second it adds. The item with the smallest answer
-          pays for itself soonest. Early on that is Finger Strength and Lab Assistants; later the
-          bigger auto-tappers win.
-
-      </div>
-      <div class="tip-card">
-        <span class="tip-card-icon" aria-hidden="true">
-          ⚡
-        </span>
-        <h3>Spend the surge</h3>
-
-          Ten times per press for five seconds is the best five seconds in the game. Stop buying
-          when the countdown starts, mash, then spend the windfall.
-
-      </div>
-      <div class="tip-card">
-        <span class="tip-card-icon" aria-hidden="true">
-          😴
-        </span>
-        <h3>Leave it running</h3>
-
-          Auto-tappers earn at half speed while you are away, for up to four hours. A few Pneumatic
-          Keys before you close the tab is worth a free Robot Arm when you come back.
-
-      </div>
-      <div class="tip-card">
-        <span class="tip-card-icon" aria-hidden="true">
-          🎲
-        </span>
-        <h3>Take the perks that fit</h3>
-
-          Buy the perks that suit how you play: rhythm perks if you hold a beat, machine perks if
-          you leave the game running. In the simulation, a steady player who buys what drops
-          reaches a million about three minutes sooner.
-
-      </div>
-      <div class="tip-card">
-        <span class="tip-card-icon" aria-hidden="true">
-          🖐️
-        </span>
-        <h3>Rest your hand</h3>
-
-          Thirty minutes of tapping is a lot for one thumb. Switch fingers, use the auto-tappers,
-          and stop if anything hurts. The reactor will be there tomorrow.
-
-      </div>
+    <div class="sc-track">
+      {TRACK_ROWS.map((row) => (
+        <div class="sc-track-row">
+          {row.map((step) =>
+            step.rungs.length > 1 ? (
+              <div class="sc-rung is-fork">
+                <span class="sc-gem is-fork" aria-hidden="true">
+                  <b>{step.isotopes}</b>
+                </span>
+                <h4>{step.rungs.map((r) => r.name).join(' or ')}</h4>
+                <span class="sc-rung-pick">
+                  <span class="visually-hidden">At {step.isotopes} isotopes. </span>Pick one, and
+                  switch at any reset
+                </span>
+                <div class="sc-rung-options">
+                  <p>
+                    <b>{step.rungs[0].name}.</b> {step.rungs[0].detail}.
+                  </p>
+                  <span>or</span>
+                  <p>
+                    <b>{step.rungs[1].name}.</b> {step.rungs[1].detail}.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div class="sc-rung">
+                <span class="sc-gem" aria-hidden="true">
+                  <b>{step.isotopes}</b>
+                </span>
+                <h4>{step.rungs[0].name}</h4>
+                <p>
+                  <span class="visually-hidden">
+                    At {step.isotopes === 1 ? '1 isotope' : `${step.isotopes} isotopes`}.{' '}
+                  </span>
+                  {step.rungs[0].detail}.
+                </p>
+              </div>
+            )
+          )}
+        </div>
+      ))}
     </div>
 
+    The track stops at {ISOTOPE_TRACK.length} rungs for now. Isotopes past it still add
+    {pct(ISOTOPE_BONUS)} to all you earn, or {Math.round(TRACK_EFFECT.enrichmentRate * 100)}% with
+    Enrichment.
+
   </div>
 </section>
 
-<section id="faq" class="info-section">
+<section id="tips" class="info-section sc-doc">
   <div class="container">
-    <h2>Spacebar Clicker FAQ</h2>
+    <h2>Tips for this Spacebar Clicker</h2>
+    <div class="tips-grid section-content">
+      {TIPS.map(([icon, title, text]) => (
+        <div class="tip-card">
+          <span class="tip-card-icon" aria-hidden="true">
+            <Icon name={icon} width={24} height={24} />
+          </span>
+          <h3>{title}</h3>
+          <p>{text}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="info-section alt-bg">
+  <div class="container">
+    <h2>FAQ about this Spacebar Clicker</h2>
     <div class="faq-list section-content">
       <details class="faq-item">
         <summary>Is Spacebar Clicker free to play?</summary>
 
-          Yes. Spacebar Clicker is a free browser game with no download, no account and no ads.
+          Yes. Spacebar Clicker is a free browser game with no download and no account.
           Open the page, press the spacebar, and you are playing.
 
       </details>
       <details class="faq-item">
         <summary>Does my progress save?</summary>
 
-          Yes. The game saves to your browser every five seconds and again when you leave the page,
-          so you can close the tab and pick up where you stopped. The save lives on this device in
-          this browser. Clearing site data erases it, and the Reset button in the toolbar wipes it
-          on purpose.
+          Yes. The game saves to your browser every five seconds and again when you leave
+          the page, so you can close the tab and pick up where you stopped. The save lives
+          on this device in this browser. Clearing site data erases it, and the Reset
+          button in the toolbar wipes it on purpose.
 
       </details>
       <details class="faq-item">
         <summary>Can I play Spacebar Clicker on my phone?</summary>
 
-          Yes. Tap the reactor instead of pressing a key. Taps build the combo the same way key
-          presses do, and auto-tappers run the same.
+          Yes. Tap the reactor instead of pressing a key. Taps build the combo the same
+          way key presses do, and auto-tappers run the same.
 
       </details>
       <details class="faq-item">
         <summary>Does Spacebar Clicker work at school or work?</summary>
 
-          It is an ordinary web page with no download or plugin, so it runs anywhere a browser can
-          reach reflexlab.co. Whether a school or office network allows the site is up to whoever
-          runs that network, and nothing on this page can change that.
+          It is an ordinary web page with no download or plugin, so it runs anywhere a
+          browser can reach reflexlab.co. Whether a school or office network allows the
+          site is up to whoever runs that network, and nothing on this page can change
+          that.
 
       </details>
       <details class="faq-item">
         <summary>Can I use an auto clicker?</summary>
 
-          You can, but the game throws away any press that arrives less than 33 milliseconds after
-          the last one, so anything above 30 presses per second is wasted. Nothing bans you. The
-          game is built around holding your own rhythm, and auto-tappers already exist to do the
-          automating for you.
+          You can, but the game throws away any press that arrives less than 33
+          milliseconds after the last one, so anything above 30 presses per second is
+          wasted. Nothing bans you. The game is built around holding your own rhythm, and
+          auto-tappers already exist to do the automating for you.
 
       </details>
       <details class="faq-item">
         <summary>How is Spacebar Clicker different from the spacebar speed test?</summary>
 
-          The <a href="/spacebar-speed-test">spacebar speed test</a> measures your presses per
-          second over a fixed window and gives you a rank. Spacebar Clicker is an idle game:
-          progress carries over between visits, presses buy upgrades, and a steady rhythm matters
-          more than raw speed. The surge event is the one moment the game asks you to mash, and it
-          records your presses per second like the test does. The <a href="/cps">CPS test</a> does
-          the same for mouse clicks.
-
-      </details>
-      <details class="faq-item">
-        <summary>How long does it take to reach the first reset?</summary>
-
-          Around 20 to 25 minutes of steady tapping if you buy well and hold a combo, at the quick
-          end if you also buy the perks that drop. About half as long again if you mash with no
-          rhythm, and longer if you leave the auto-tappers to work on their own. Offline progress at
-          half speed brings it closer across a couple of sessions.
+          The <a href="/spacebar-speed-test">spacebar speed test</a> measures your presses
+          per second over a fixed window and gives you a rank. Spacebar Clicker is an idle
+          game: progress carries over between visits, presses buy upgrades, and a steady
+          rhythm matters more than raw speed. A surge is the one moment the game asks you
+          to mash, and it records your presses per second like the test does.
 
       </details>
       <details class="faq-item">
         <summary>What does holding a rhythm do?</summary>
 
-          Each press that lands within 25% of your recent average interval adds one to your combo.
-          At 10 combo every press is worth 1.5 times as much, at 25 it is doubled, at 50 it is 2.5
-          times and at 100 it is tripled. Pause for more than 0.8 seconds, or miss the beat three
-          times in a row, and the combo breaks.
+          Each press that lands within 25% of your recent average gap adds one to your
+          combo. At 10 combo every press is worth 1.5 times as much, at 25 it is doubled,
+          at 50 it is 2.5 times and at 100 it is tripled. Pause for more than 0.8 seconds,
+          or miss the beat three times in a row, and the combo breaks.
+
+      </details>
+      <details class="faq-item">
+        <summary>When can I reset for the first time?</summary>
+
+          Once a run has earned a million energy. A steady combo, the upgrades you choose
+          and the perks you buy all bring that closer. The Isotopes tab shows how far off
+          it is.
+
+      </details>
+      <details class="faq-item">
+        <summary>What happens when I leave the game?</summary>
+
+          Auto-tappers keep earning at full output for 30 minutes after your last press or
+          purchase. Over the next 90 minutes the output falls to nothing, and at two hours
+          the reactor faults. One press brings back a reactor that is running down, and
+          ten presses on a steady beat restart one that has faulted. Closing the tab
+          follows the same rule, which the <a href="#rundown">time away section</a> draws.
 
       </details>
       <details class="faq-item">
         <summary>How do perks work?</summary>
 
-          Perks are random drops that change the rules for one run. One appears at the top of the
-          Upgrades or Auto-tappers tab while you play, and leaves once you have earned past its
-          window, so buy the ones you want before the ring around it runs out. About two drops in
-          three are commons that boost a number, three in ten are rares that change a rule, and one
-          in twenty is a keystone that breaks a rule at a cost. You hold up to five, one keystone at
-          a time, and they clear when you reset the experiment. The isotope track can raise both
-          limits and carry one perk through a reset. The <a href="#perks">perks section</a> above
-          lists every one.
+          Perks are random drops that change the rules for one run. One appears at the top
+          of the Upgrades or Auto-tappers tab while you play, and leaves once you have
+          earned past its window, so buy the ones you want before the ring around it
+          empties. About two drops in three are commons that boost a number, three in ten
+          are rares that change a rule, and one in twenty is a keystone that breaks a rule
+          at a cost. You hold up to five, one keystone at a time, and they clear when you
+          reset. The isotope track can raise both limits and carry one perk through a
+          reset. The <a href="#perks">perks section</a> lists all 25.
 
       </details>
       <details class="faq-item">
         <summary>What does the isotope track unlock?</summary>
 
-          Every isotope you hold unlocks one rung of the track, for good, without spending
-          anything. The first starts each run with {whole(TRACK_EFFECT.warmStartEnergy)} energy and
-          a Lab Assistant. Later rungs lengthen surges and improve perk drops and away progress,
-          and every third rung is a choice of two, such as a sixth perk slot or perks that drop at
-          level II. You pick in the reset dialog and can switch at any reset. The track has twelve
-          rungs, and the Isotopes tab shows the ones you hold and the next two. The <a
-          href="#isotope-track">isotope track table</a> lists them all.
+          Each isotope you hold unlocks one rung of the track, for good, and you spend
+          nothing. The first starts each run with 500 energy and a Lab Assistant. Later
+          rungs lengthen surges and improve perk drops and time away, and every third rung
+          is a choice of two, such as a sixth perk slot or perks that drop at level II.
+          You pick in the reset dialog and can switch at any reset. The track has twelve
+          rungs, and the <a href="#isotope-track">isotope track section</a> lists them.
+
+      </details>
+      <details class="faq-item">
+        <summary>Does Spacebar Clicker have an end?</summary>
+
+          No. The isotope track stops at twelve rungs, and isotopes past the twelfth still
+          add 10% each. The game also keeps achievements, your fastest run to a million,
+          and a codex of all 25 perks to fill.
 
       </details>
     </div>

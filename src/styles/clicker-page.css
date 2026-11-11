@@ -1,0 +1,1359 @@
+/* ==========================================================================
+   Spacebar Clicker's page: the colours its game and its content share, and
+   the content's own blocks below the game (SPACEBAR-CLICKER.md §6).
+
+   Global on purpose: the content comes from an MDX entry, which a page's
+   scoped styles don't reach. Imported by spacebar-clicker.astro only.
+   ========================================================================== */
+
+:where(.game-section, .sc-doc) {
+  /* The Reactor-Ramp (DESIGN.md), here rather than on the face because
+     isotopes wear Blue-White on Cherenkov Blue off the face too: the shelf
+     beside it, the Isotopes tab and the page's content. */
+  --ramp-green: #22c55e;
+  --ramp-teal: #2dd4bf;
+  --ramp-cyan: #22d3ee;
+  --ramp-blue: #38bdf8;
+  --ramp-white: #e0f2fe;
+
+  /* Surge Gold (DESIGN.md): the reactor in overdrive. Lighter than Caution
+     Amber, so it never reads as the shop's "New" tag. */
+  --gold: #fcd34d;
+  --gold-deep: #fbbf24;
+  --gold-ink: #fef3c7;
+
+  /* The Perk-Family Exception (DESIGN.md): a perk wears its family's hue,
+     so the build reads at a glance. Surge perks take Surge Gold, since gold
+     already means a surge here. Each hue clears every reserved color and
+     the others by at least dE 13, and the perk's name always goes with it. */
+  --perk-rhythm: #a78bfa;
+  --perk-press: #fb7185;
+  --perk-luck: #e879f9;
+  --perk-surge: var(--gold);
+  --perk-machines: #a3e635;
+}
+
+/* --- Jump strip ------------------------------------------------------------ */
+
+.sc-jump {
+  border-block: 1px solid var(--line-subtle);
+  background-color: var(--panel-01);
+}
+
+.sc-jump ul {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 10px 0;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+.sc-jump-label {
+  margin-inline-end: var(--space-sm);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.sc-jump a {
+  display: block;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink-secondary);
+  text-decoration: none;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.sc-jump a:hover {
+  border-color: var(--line);
+  background-color: var(--panel-03);
+  color: var(--ink-primary);
+}
+
+/* --- About: what sets the game apart --------------------------------------- */
+
+.info-section .sc-lede p {
+  font-size: 1.0625rem;
+}
+
+.sc-diff {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-block-start: var(--space-lg);
+}
+
+.sc-diff > div {
+  padding: var(--space-md);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+/* A panel's figure, in the hue of what it counts: a rhythm perk's violet for
+   the combo, a luck perk's fuchsia for the drops, the isotopes' blue, and the
+   reactor's green (DESIGN.md, the Perk-Family and Reactor-Ramp Exceptions). */
+.sc-diff-figure {
+  display: block;
+  margin-block-end: 10px;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--hue, var(--ink-primary));
+}
+
+.sc-diff h3 {
+  margin-block-end: 6px;
+  font-size: 1rem;
+}
+
+.info-section .sc-diff p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* --- How to play: six steps, each under a small drawing from the game ------ */
+
+.sc-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: var(--space-lg) 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: sc-step;
+}
+
+.sc-steps > li {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+  counter-increment: sc-step;
+}
+
+/* The drawing's stage: the reactor face's panel and grid. */
+.sc-step-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 96px;
+  border-block-end: 1px solid var(--line-subtle);
+  background-color: var(--panel-01);
+  background-image:
+    linear-gradient(var(--line-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-subtle) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.sc-step-art::before {
+  content: counter(sc-step);
+  position: absolute;
+  inset: 8px auto auto 10px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.sc-step-body {
+  padding: 14px var(--space-md) var(--space-md);
+}
+
+.sc-step-body h3 {
+  margin-block-end: 6px;
+  font-size: 1rem;
+}
+
+.info-section .sc-step-body p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* A small note under a block. MDX wraps its words in a paragraph of their
+   own, so the note is a div and the paragraph inside takes the type. */
+.sc-fine {
+  margin-block-start: var(--space-md);
+}
+
+.sc-fine[hidden] {
+  display: none;
+}
+
+.info-section .sc-fine p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+
+/* 1. The keycap under the reactor. */
+.sc-art-key {
+  padding: 10px 44px;
+  border: 1px solid var(--line);
+  border-block-end-width: 3px;
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--ink-secondary);
+}
+
+/* 2. The rhythm scope's trace: a heartbeat per press, in the reactor's green
+   with the scope's glow, and one short beat that missed. */
+.sc-art-beat {
+  width: 192px;
+  height: 44px;
+  overflow: visible;
+}
+
+.sc-art-beat-base {
+  stroke: rgb(255 255 255 / 7%);
+}
+
+.sc-art-beat-trace {
+  stroke: var(--ramp-green);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 3px var(--ramp-green));
+}
+
+/* 3. Four of the shop's glyph tiles. */
+.sc-art-tiles {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.sc-art-tiles > span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+  color: var(--ink-primary);
+}
+
+/* 4. A surge, in Surge Gold. */
+.sc-art-surge {
+  display: flex;
+  align-items: baseline;
+  font-family: var(--font-mono);
+}
+
+.sc-art-surge b {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--gold);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--gold) 45%, transparent);
+}
+
+.sc-art-surge small {
+  margin-inline-start: var(--space-sm);
+  font-size: 0.75rem;
+  color: var(--ink-secondary);
+}
+
+/* 5. A perk on offer, its ring part drained. */
+.sc-art-perk {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background-color: color-mix(in srgb, var(--perk-rhythm) 10%, var(--panel-01));
+  color: var(--perk-rhythm);
+}
+
+.sc-art-perk > svg:first-child {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sc-art-perk-track {
+  stroke: color-mix(in srgb, var(--perk-rhythm) 25%, var(--line));
+}
+
+.sc-art-perk-ring {
+  stroke: var(--perk-rhythm);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 62 100;
+}
+
+/* 6. An isotope, as the Isotopes tab draws one: a small core. */
+.sc-art-core {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid var(--ramp-blue);
+  border-radius: var(--radius-full);
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--ramp-blue) 30%, var(--panel-01)) 0,
+    var(--panel-01) 72%
+  );
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--ramp-blue) 50%, transparent),
+    inset 0 0 8px color-mix(in srgb, var(--ramp-blue) 30%, transparent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--ramp-white);
+}
+
+/* --- The combo: a ladder of tiers, two traces and three rules -------------- */
+
+.sc-ladder {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: end;
+  gap: 10px;
+  margin-block-start: var(--space-lg);
+  padding: 20px var(--space-md) var(--space-md);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+.sc-ladder-tier {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.sc-ladder-mult {
+  font-family: var(--font-mono);
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+/* A tier's column: as tall as its multiplier, and greener the higher it is,
+   in the reactor's green (--m and --a come from the markup). */
+.sc-ladder-bar {
+  height: calc(var(--m) * 38px);
+  border: 1px solid color-mix(in srgb, var(--ramp-green) calc(var(--a) * 1%), var(--line));
+  border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--ramp-green) calc(var(--a) * 1%), var(--panel-01)),
+    color-mix(in srgb, var(--ramp-green) calc(var(--a) * 0.45%), var(--panel-01))
+  );
+}
+
+.sc-ladder-tier.is-none .sc-ladder-bar {
+  border-style: dashed;
+  background: var(--panel-01);
+}
+
+.sc-ladder-tier.is-none .sc-ladder-mult {
+  color: var(--ink-muted);
+}
+
+.sc-ladder-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.sc-ladder-range {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.sc-traces {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-block-start: 12px;
+}
+
+.sc-trace {
+  overflow: hidden;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+.sc-trace .sc-step-art {
+  height: 84px;
+}
+
+.sc-trace .sc-step-art::before {
+  content: none;
+}
+
+.sc-art-beat.is-wide {
+  width: min(340px, 100% - 2 * var(--space-md));
+  height: auto;
+  aspect-ratio: 340 / 44;
+}
+
+/* Off the beat, the trace goes grey: grey is the reactor's own colour for
+   output lost (DESIGN.md, the run-down). */
+.sc-trace.is-off .sc-art-beat-trace {
+  stroke: var(--ink-muted);
+  filter: none;
+}
+
+.sc-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-block: 12px var(--space-lg);
+}
+
+.sc-facts > div {
+  padding: 14px var(--space-md);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+.sc-fact-figure {
+  display: block;
+  margin-block-end: 4px;
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.info-section .sc-facts p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* --- The shop: rows as the game's own shop draws them ---------------------- */
+
+.sc-shop {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-block: var(--space-lg);
+}
+
+.sc-shop-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-block-end: 10px;
+}
+
+.sc-shop-head h3 {
+  font-size: 1.0625rem;
+}
+
+.sc-shop-head span {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+.sc-shop-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sc-shop-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 10px 14px 10px 10px;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+.sc-shop-tile {
+  display: grid;
+  grid-row: span 2;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-01);
+  color: var(--ink-primary);
+}
+
+.sc-shop-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.sc-shop-cost {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: end;
+  color: var(--ink-primary);
+}
+
+.sc-shop-effect {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--ink-secondary);
+}
+
+.sc-shop-note {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  text-align: end;
+  white-space: nowrap;
+  color: var(--ink-muted);
+}
+
+/* What an auto-tapper adds, in the reactor's green. */
+.sc-shop-eps {
+  font-family: var(--font-mono);
+  color: var(--ramp-green);
+}
+
+/* --- Perks: the odds, the filter, and a card per perk by family ------------ */
+
+/* A perk's card, its family's heading and its filter chip take the family's
+   hue (DESIGN.md, the Perk-Family Exception, widened to this content). */
+.sc-doc [data-family='rhythm'] {
+  --perk: var(--perk-rhythm);
+}
+.sc-doc [data-family='press'] {
+  --perk: var(--perk-press);
+}
+.sc-doc [data-family='luck'] {
+  --perk: var(--perk-luck);
+}
+.sc-doc [data-family='surge'] {
+  --perk: var(--perk-surge);
+}
+.sc-doc [data-family='machines'] {
+  --perk: var(--perk-machines);
+}
+
+.sc-odds {
+  display: grid;
+  gap: 10px;
+  margin-block: var(--space-lg);
+  padding: var(--space-md);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+.sc-odds-row {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8125rem;
+  color: var(--ink-secondary);
+}
+
+.sc-odds-bar {
+  display: flex;
+  gap: 2px;
+  overflow: hidden;
+  height: 28px;
+  border-radius: 6px;
+}
+
+/* Rarity is a step of grey, light for rare: a neutral scale, so no hue is
+   spent on it and the families keep theirs. */
+.sc-odds-bar span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  padding-inline: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sc-odds-bar [data-rarity='common'] {
+  justify-content: flex-start;
+  background-color: #2e2e33;
+  color: var(--ink-primary);
+}
+
+.sc-odds-bar [data-rarity='rare'] {
+  justify-content: flex-start;
+  background-color: #63636d;
+  color: #fff;
+}
+
+.sc-odds-bar [data-rarity='keystone'] {
+  background-color: var(--ink-primary);
+  color: var(--chassis-black, #0a0a0b);
+}
+
+.sc-odds-tiers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-block-start: 6px;
+  padding-block-start: 12px;
+  border-block-start: 1px solid var(--line-subtle);
+}
+
+.sc-odds-tiers h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block-end: 4px;
+  font-size: 0.875rem;
+}
+
+.sc-odds-tiers h3::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background-color: #63636d;
+}
+
+.sc-odds-tiers [data-rarity='common'] h3::before {
+  border: 1px solid #55555e;
+  background-color: #2e2e33;
+}
+
+.sc-odds-tiers [data-rarity='keystone'] h3::before {
+  background-color: var(--ink-primary);
+}
+
+.info-section .sc-odds-tiers p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.sc-odds-tiers .readout {
+  color: var(--ink-primary);
+}
+
+.sc-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-block: var(--space-xl) 0;
+  font-size: 0.8125rem;
+}
+
+.sc-filter[hidden] {
+  display: none;
+}
+
+.sc-filter-label {
+  margin-inline-end: 4px;
+  color: var(--ink-muted);
+}
+
+.sc-filter-sep {
+  width: 1px;
+  height: 20px;
+  margin-inline: var(--space-sm);
+  background-color: var(--line);
+}
+
+.sc-filter button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: transparent;
+  font: inherit;
+  color: var(--ink-secondary);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.sc-filter button:hover {
+  border-color: var(--ink-muted);
+  color: var(--ink-primary);
+}
+
+.sc-filter button[aria-pressed='true'] {
+  border-color: var(--ink-secondary);
+  background-color: var(--panel-03);
+  color: var(--ink-primary);
+}
+
+.sc-filter button i {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--perk);
+}
+
+.sc-filter button small {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.sc-family {
+  margin-block-start: 26px;
+}
+
+.sc-family[hidden] {
+  display: none;
+}
+
+.sc-family-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-block-end: 10px;
+  padding-block-end: var(--space-sm);
+  border-block-end: 1px solid color-mix(in srgb, var(--perk) 35%, var(--line));
+}
+
+.sc-family-head h3 {
+  font-size: 1.0625rem;
+  color: var(--perk);
+}
+
+.sc-family-head span {
+  font-size: 0.875rem;
+  color: var(--ink-secondary);
+}
+
+.sc-family-head small {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: var(--ink-muted);
+}
+
+.sc-perks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sc-perk {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-content: start;
+  gap: 4px 10px;
+  padding: 12px;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+.sc-perk[hidden] {
+  display: none;
+}
+
+/* A keystone's card is rimmed and faintly tinted in its family's hue, as its
+   offer is in the shop. */
+.sc-perk[data-rarity='keystone'] {
+  border-color: color-mix(in srgb, var(--perk) 45%, var(--line));
+  background-color: color-mix(in srgb, var(--perk) 5%, var(--panel-03));
+}
+
+.sc-perk-tile {
+  display: grid;
+  grid-row: span 2;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid color-mix(in srgb, var(--perk) 45%, var(--line));
+  border-radius: var(--radius-md);
+  background-color: color-mix(in srgb, var(--perk) 10%, var(--panel-01));
+  color: var(--perk);
+}
+
+.sc-perk h4 {
+  align-self: end;
+  font-size: 0.9375rem;
+}
+
+.sc-perk-rarity {
+  align-self: end;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.sc-perk[data-rarity='rare'] .sc-perk-rarity {
+  color: var(--ink-primary);
+}
+
+.sc-perk[data-rarity='keystone'] .sc-perk-rarity {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: var(--perk);
+  font-weight: 700;
+  color: var(--chassis-black, #0a0a0b);
+}
+
+.sc-perk-where {
+  grid-column: 2 / -1;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.sc-perk-effect {
+  grid-column: 1 / -1;
+  margin-block-start: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-secondary);
+}
+
+.sc-perk-levels {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  color: var(--ink-primary);
+}
+
+/* --- Reactor states: seven dials, each in its state's colour --------------- */
+
+.sc-states {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-sm);
+  margin-block-start: var(--space-lg);
+}
+
+/* A state's colour is the reactor's own for it (DESIGN.md, the Reactor-Ramp
+   Exception): green through Stable, then teal, cyan and blue, and a
+   Blue-White heart at Supercritical. --k, from the markup, is how brightly
+   the core burns. */
+.sc-state {
+  --c: var(--ramp-green);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-md) var(--space-sm) 14px;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+  text-align: center;
+}
+
+.sc-state[data-state='charged'] {
+  --c: var(--ramp-teal);
+}
+
+.sc-state[data-state='unstable'] {
+  --c: var(--ramp-cyan);
+}
+
+.sc-state[data-state='critical'],
+.sc-state[data-state='supercritical'] {
+  --c: var(--ramp-blue);
+}
+
+.sc-state-dial {
+  overflow: visible;
+  width: 76px;
+  height: 76px;
+  margin-block-end: 4px;
+}
+
+.sc-state-bezel {
+  fill: none;
+  stroke: color-mix(in srgb, var(--c) 35%, var(--line));
+  stroke-dasharray: 2 3;
+}
+
+.sc-state-core {
+  fill: color-mix(in srgb, var(--c) calc(var(--k) * 1%), var(--panel-01));
+  stroke: var(--c);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 calc(var(--k) * 0.12px) var(--c));
+}
+
+.sc-state-heart {
+  fill: var(--c);
+}
+
+.sc-state[data-state='supercritical'] .sc-state-heart {
+  fill: var(--ramp-white);
+}
+
+.sc-state-lamp {
+  fill: var(--line);
+}
+
+.sc-state-lamp.is-lit {
+  fill: var(--c);
+  filter: drop-shadow(0 0 2px var(--c));
+}
+
+.sc-state h3 {
+  font-size: 0.9375rem;
+  color: var(--c);
+}
+
+.sc-state-at {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ink-primary);
+}
+
+.sc-state-bonus {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.sc-state-note {
+  width: 100%;
+  margin-block-start: 6px;
+  padding-block-start: var(--space-sm);
+  border-block-start: 1px solid var(--line-subtle);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--ink-secondary);
+}
+
+/* --- When you stop pressing: output against time away ---------------------- */
+
+.sc-run {
+  overflow: hidden;
+  margin-block: var(--space-lg);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+.sc-run-art {
+  padding: 20px var(--space-md) 6px;
+  border-block-end: 1px solid var(--line-subtle);
+  background-color: var(--panel-01);
+  background-image:
+    linear-gradient(var(--line-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-subtle) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.sc-run-art svg {
+  display: block;
+  overflow: visible;
+  width: 100%;
+  height: auto;
+  fill: none;
+}
+
+.sc-run-art text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--ink-muted);
+}
+
+.sc-run-axis {
+  stroke: rgb(255 255 255 / 10%);
+}
+
+.sc-run-rule {
+  stroke: rgb(255 255 255 / 10%);
+  stroke-dasharray: 2 4;
+}
+
+/* Live output in the reactor's green; lost output in grey, as the reactor
+   itself runs down to grey (DESIGN.md, the run-down). */
+.sc-run-live,
+.sc-run-marks {
+  stroke: var(--ramp-green);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.sc-run-live {
+  filter: drop-shadow(0 0 3px var(--ramp-green));
+}
+
+.sc-run-fall {
+  stroke-width: 2;
+}
+
+.sc-run-stop-live {
+  stop-color: var(--ramp-green);
+}
+
+.sc-run-stop-dead {
+  stop-color: var(--ink-muted);
+}
+
+.sc-run-dead {
+  stroke: var(--ink-muted);
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+}
+
+/* The stages sit under their stretch of the chart. */
+.sc-run-stages {
+  display: grid;
+  grid-template-columns: 1fr 3fr 1.2fr 1.2fr;
+}
+
+.sc-run-stages > div {
+  padding: 14px var(--space-md) var(--space-md);
+}
+
+.sc-run-stages > div + div {
+  border-inline-start: 1px solid var(--line-subtle);
+}
+
+.sc-run-stages h3 {
+  margin-block-end: 4px;
+  font-size: 0.9375rem;
+}
+
+.sc-run-when {
+  display: block;
+  margin-block-end: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.info-section .sc-run-stages p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* --- Tips: the site's line icons in place of emoji ------------------------- */
+
+.sc-doc .tip-card-icon {
+  color: var(--ink-primary);
+}
+
+.sc-doc .tip-card p {
+  margin: 0;
+}
+
+/* --- Isotopes: what a reset pays, and the track three rungs to a row -------- */
+
+.sc-pays {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-block: var(--space-lg);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+.sc-pays > div {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px var(--space-md);
+}
+
+.sc-pays > div + div {
+  border-inline-start: 1px solid var(--line-subtle);
+}
+
+.sc-pays-at {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.sc-pays-at small {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+
+.sc-pays-dots {
+  display: flex;
+  gap: 5px;
+}
+
+/* An isotope, as the reset dialog draws the one it pays: a small core with a
+   point of light (DESIGN.md, the Reactor-Ramp Exception). */
+.sc-pays-dots i {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--ramp-blue);
+  border-radius: var(--radius-full);
+  background: radial-gradient(circle, var(--ramp-white) 0 18%, var(--panel-01) 30%);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--ramp-blue) 50%, transparent);
+}
+
+.sc-pays-get {
+  font-size: 0.8125rem;
+  color: var(--ink-secondary);
+}
+
+.sc-pays-get b {
+  color: var(--ramp-blue);
+}
+
+.sc-track {
+  display: grid;
+  gap: 10px;
+  margin-block: 20px var(--space-lg);
+}
+
+/* Every third rung is a fork, so a row is two rungs and the fork they lead
+   to, the fork wider for its two options. */
+.sc-track-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: 10px;
+}
+
+.sc-rung {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-content: start;
+  gap: 2px 12px;
+  padding: 12px;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-03);
+}
+
+.sc-rung.is-fork {
+  border-color: color-mix(in srgb, var(--ramp-blue) 35%, var(--line));
+  background-color: color-mix(in srgb, var(--ramp-blue) 5%, var(--panel-03));
+}
+
+/* A rung's gem, as the Isotopes tab draws a held one: a dark centre with a
+   faint blue heart inside a lit ring. A fork's is a diamond. */
+.sc-gem {
+  display: grid;
+  grid-row: span 2;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid var(--ramp-blue);
+  border-radius: var(--radius-full);
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--ramp-blue) 30%, var(--panel-01)) 0,
+    var(--panel-01) 72%
+  );
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--ramp-blue) 45%, transparent),
+    inset 0 0 8px color-mix(in srgb, var(--ramp-blue) 30%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ramp-white);
+}
+
+.sc-gem.is-fork {
+  border-radius: 7px;
+  transform: rotate(45deg) scale(0.86);
+}
+
+.sc-gem.is-fork b {
+  transform: rotate(-45deg);
+}
+
+.sc-rung h4 {
+  font-size: 0.9375rem;
+}
+
+.info-section .sc-rung p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.sc-rung-pick {
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ramp-blue);
+}
+
+.sc-rung-options {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  margin-block-start: var(--space-sm);
+}
+
+.sc-rung-options b {
+  color: var(--ink-primary);
+}
+
+.sc-rung-options > span {
+  align-self: center;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 900px) {
+  .sc-states {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .sc-run-stages {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sc-run-stages > div:nth-child(3) {
+    border-inline-start: 0;
+  }
+
+  .sc-run-stages > div:nth-child(n + 3) {
+    border-block-start: 1px solid var(--line-subtle);
+  }
+
+  .sc-track-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sc-rung.is-fork {
+    grid-column: 1 / -1;
+  }
+
+  .sc-pays {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sc-pays > div:nth-child(3) {
+    border-inline-start: 0;
+  }
+
+  .sc-pays > div:nth-child(n + 3) {
+    border-block-start: 1px solid var(--line-subtle);
+  }
+
+  .sc-perks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sc-shop {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sc-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sc-diff {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .sc-steps,
+  .sc-diff {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sc-states {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* On a phone the chart's small words would overlap, so the two at its
+     left edge go and the rest grow; the stages below say it all. */
+  .sc-run-art text {
+    font-size: 18px;
+  }
+
+  .sc-run-wide {
+    display: none;
+  }
+
+  .sc-traces,
+  .sc-facts,
+  .sc-perks,
+  .sc-odds-tiers,
+  .sc-track-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sc-odds-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .sc-filter-sep {
+    flex-basis: 100%;
+    height: 0;
+    margin: 0;
+  }
+
+  /* The ladder turns on its side: a tier a row, its bar as wide as its
+     multiplier. */
+  .sc-ladder {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .sc-ladder-tier {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    align-items: center;
+    gap: 2px 10px;
+  }
+
+  .sc-ladder-mult {
+    grid-row: span 2;
+    font-size: 1.125rem;
+  }
+
+  .sc-ladder-bar {
+    grid-column: 2;
+    width: calc(var(--m) / 3 * 100%);
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  .sc-ladder-name {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .sc-ladder-range {
+    display: none;
+  }
+
+  .sc-shop-note {
+    white-space: normal;
+  }
+
+  .sc-jump-label {
+    display: none;
+  }
+}

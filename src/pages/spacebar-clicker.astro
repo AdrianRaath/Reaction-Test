@@ -9,6 +9,7 @@ import ResetModal from '../components/tool/ResetModal.astro';
 import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
+  COMBO_TIERS,
   ISOTOPE_TRACK,
   PERK_SLOTS,
   PERKS,
@@ -21,15 +22,24 @@ import {
 import { formatEnergy } from '../games/spacebar-clicker/format';
 import '../styles/content.css';
 import '../styles/instrument.css';
+import '../styles/clicker-page.css';
 
 // A game page, not a tool page: it is in the registry (sidebar, cross-links,
 // sitemap) with `telemetry: false`, so no rig and no top-bar readout. The game
 // keeps its own save and its own HUD. See src/scripts/spacebar-clicker.ts.
 
 // Authored for the primary keyword "spacebar clicker". No "| ReflexLab" suffix.
-const TITLE = 'Spacebar Clicker - Free Online Idle Spacebar Game';
+const TITLE = 'Spacebar Clicker - Free Online Spacebar Clicker Game';
 const DESCRIPTION =
-  'Play Spacebar Clicker free. Every press charges the reactor, upgrades and auto-tappers do the rest, and a steady rhythm earns up to 3x. No ads, saves in your browser.';
+  'Play Spacebar Clicker, a free spacebar clicker game. Charge the reactor, hold a steady beat for up to 3x, catch 25 perks and reset for isotopes. Saves in your browser.';
+
+// The header's chips: what the game holds, counted from its config.
+const HERO_FACTS = [
+  [PERKS.length, 'perks'],
+  [COMBO_TIERS.filter((t) => t.multiplier > 1).length, 'combo tiers'],
+  [REACTOR_STATES.length, 'reactor states'],
+  [ISOTOPE_TRACK.length, 'isotope rungs'],
+];
 
 const entry = await getEntry('tools', 'spacebar-clicker');
 if (!entry) throw new Error('Missing tools/spacebar-clicker content entry');
@@ -129,9 +139,19 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     <div class="hero-content">
       <h1 class="hero-title">Spacebar Clicker</h1>
       <p class="hero-subtitle">
-        Press space to feed the reactor. Buy upgrades, hire auto-tappers, and hold a steady rhythm
-        for up to 3x energy. Your progress saves in this browser.
+        A spacebar clicker game with a reactor to charge. Hold a steady beat for up to 3x, catch
+        perks that change the run, and reset for isotopes that last.
       </p>
+      <ul class="hero-facts">
+        {
+          HERO_FACTS.map(([count, label]) => (
+            <li>
+              <span class="readout">{count}</span> {label}
+            </li>
+          ))
+        }
+        <li><span class="hero-fact-word">Free</span> saves in your browser</li>
+      </ul>
     </div>
   </section>
 
@@ -1020,6 +1040,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
 <script>
   import '../scripts/spacebar-clicker';
+  import '../scripts/clicker-page';
 </script>
 
 <style>
@@ -1052,56 +1073,65 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   /* --- Hero ----------------------------------------------------------------- */
 
+  /* Short on purpose: at 1440x900 the header and the reactor face share one
+     screen, so the title is smaller than the display size and the chips sit
+     on one line. */
   .hero-section {
-    padding: var(--space-xl) 0 var(--space-md);
+    padding: var(--space-lg) 0 var(--space-md);
     text-align: center;
   }
 
   .hero-content {
-    max-width: 620px;
+    max-width: 940px;
     margin-inline: auto;
   }
 
   .hero-title {
-    margin-block-end: var(--space-md);
-    font-size: var(--text-display-size);
+    margin-block-end: var(--space-sm);
+    font-size: 2.5rem;
     font-weight: var(--text-display-weight);
     line-height: var(--text-display-lh);
     letter-spacing: var(--text-display-ls);
   }
 
   .hero-subtitle {
-    font-size: 1.125rem;
+    max-width: 600px;
+    margin-inline: auto;
     color: var(--ink-secondary);
+  }
+
+  /* What the game holds, counted from its config. */
+  .hero-facts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-block-start: 0.75rem;
+    padding: 0;
+    list-style: none;
+    font-size: 0.8125rem;
+    color: var(--ink-secondary);
+  }
+
+  .hero-facts li {
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-full);
+    background-color: var(--panel-02);
+  }
+
+  .hero-facts .readout,
+  .hero-fact-word {
+    margin-inline-end: 2px;
+    font-weight: 600;
+    color: var(--ink-primary);
   }
 
   /* --- Game card --------------------------------------------------------------- */
 
   .game-section {
-    /* The Reactor-Ramp (DESIGN.md), here rather than on the face because
-       isotopes wear Blue-White on Cherenkov Blue off the face too: the
-       shelf beside it and the Isotopes tab. */
-    --ramp-green: #22c55e;
-    --ramp-teal: #2dd4bf;
-    --ramp-cyan: #22d3ee;
-    --ramp-blue: #38bdf8;
-    --ramp-white: #e0f2fe;
-
-    /* Surge Gold (DESIGN.md): the reactor in overdrive. Lighter than Caution
-       Amber, so it never reads as the shop's "New" tag. */
-    --gold: #fcd34d;
-    --gold-deep: #fbbf24;
-    --gold-ink: #fef3c7;
-
-    /* The Perk-Family Exception (DESIGN.md): a perk wears its family's hue,
-       so the build reads at a glance. Surge perks take Surge Gold, since gold
-       already means a surge here. Each hue clears every reserved color and
-       the others by at least ΔE 13, and the perk's name always goes with it. */
-    --perk-rhythm: #a78bfa;
-    --perk-press: #fb7185;
-    --perk-luck: #e879f9;
-    --perk-surge: var(--gold);
-    --perk-machines: #a3e635;
+    /* The Reactor-Ramp, Surge Gold and the perk families' hues are set in
+       clicker-page.css, which the page's content below the game shares. */
     --perk: var(--ink-primary);
 
     /* One card (SPACEBAR-CLICKER.md §8.5.18): every surface that holds a
@@ -5922,8 +5952,10 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
       font-size: 2rem;
     }
 
-    .hero-subtitle {
-      font-size: var(--text-body-size);
+    /* On a phone the chips would take three rows above the game; the
+       section under it gives the same counts. */
+    .hero-facts {
+      display: none;
     }
 
     .game-card {

@@ -999,56 +999,65 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ## 6. Content and SEO
 
-- **Title**: "Spacebar Clicker - Free Online Idle Spacebar Game", with an
-  authored description and FAQ JSON-LD.
-- About 3,500 words below the game, tables and FAQ answers included,
-  measured 2026-10-27. The H2s are:
-  - What is Spacebar Clicker?
-  - How to play Spacebar Clicker
-  - The combo: steady beats fast
-  - Every upgrade and what it costs
-  - Perks: random drops that bend the rules
-  - Reactor states
-  - Reset the experiment, with an H3, "The isotope track" (`#isotope-track`)
-  - How to reach a million energy
-  - Spacebar Clicker FAQ, with 10 questions
-- The tables render from `config.ts`, so changing a number changes the page.
-  That includes the perks section: the drop odds by rarity, with each tier's
-  price and window, and a table per shop tab of all 25 perks with their
-  rarity, family and every level's effect (`perkDetailAllLevels`). The rarity
-  and family names come from `PERK_RARITY_NAMES` and `PERK_FAMILY_NAMES`,
-  which the game uses too. The isotope track's table renders from
-  `ISOTOPE_TRACK`: each rung, the isotopes it takes, and what it does, a fork
-  as "Sixth Slot or Prodigy" with both effects.
-- **Claims from the simulation**, each said to be from it on the page, and to
-  recheck when the pace or the perks change (§4.12):
-  - Four to eight drops in a steady first run to a million (10th to 90th
-    percentile, buying what drops).
-  - A steady player who buys what drops reaches a million about three minutes
-    sooner (about 21 minutes against 24).
-  - With no perks, the first isotope comes at about 24 minutes and the second
-    about 12 minutes later. Until 2026-10-26 the page said waiting for the
-    second isotope was slower than resetting and earning a million again; the
-    pace change of 2026-10-23 had made that false.
-  - "Around 20 to 25 minutes" to the first reset, in the FAQ.
-  - A steady player who buys perks holds all twelve rungs after 100 to 180
-    minutes of play, depending on how often they reset (§8.3.3: 104, 124 and
-    177 minutes resetting at 9M, 4M and 1M). The page gives the range only,
-    not which habit is quicker, so it reads as a fact and not a nudge to
-    wait (§8.2).
+Rebuilt 2026-11-11 (§8.5.20), from a spec sheet of tables into blocks drawn
+with the game's own parts.
+
+- **Title**: "Spacebar Clicker - Free Online Spacebar Clicker Game", with an
+  authored description and FAQ JSON-LD. "Idle" left the title, since a
+  reactor left alone runs down; the copy still says "idle game" where it
+  fits.
+- **House rules for the page's copy** (maintainer, 2026-11-11):
+  - No "no ads" claim anywhere; the site may carry ads later.
+  - No times for how long a run, an isotope or the track takes; runs differ
+    by player. Rule durations are fine: a surge's 5 seconds, 30 minutes of
+    full output.
+  - Headings that name the game say "this Spacebar Clicker", since the game
+    is a variation on the type and the bare name reads as generic.
+  - The stop-slop skill on every draft, and "spacebar clicker" keywords in
+    the title, the subtitle and the H2s.
+- **The header**: H1 "Spacebar Clicker", a subtitle that names it a
+  spacebar clicker game, and chips counted from the config (hidden on a
+  phone).
+- **Under the game**, a jump strip, then these H2s:
+  1. About this Spacebar Clicker Game (`#about`): four panels.
+  2. How to play this Spacebar Clicker (`#how-to-play`): six cards.
+  3. The combo: a steady beat pays up to 3x (`#combo`): tier ladder, two
+     traces, three rules.
+  4. Upgrades and auto-tappers in this Spacebar Clicker (`#shop`): rows
+     like the game's shop.
+  5. Perks in this Spacebar Clicker: 25 random drops (`#perks`): odds
+     bars, filter chips, a card per perk by family.
+  6. Reactor states (`#reactor`): seven dials.
+  7. When you stop pressing (`#rundown`): output against time away.
+  8. Reset for isotopes (`#prestige`), with an H3, "The isotope track: 12
+     rungs" (`#isotope-track`).
+  9. Tips for this Spacebar Clicker (`#tips`): six cards.
+  10. FAQ about this Spacebar Clicker (`#faq`): 12 questions.
+- **Everything with a number reads from `config.ts`** (and `economy.ts`
+  for the payout and the reactor states' notes), so changing a number
+  changes the page. The exceptions are the FAQ's answers, which the
+  frontmatter holds as plain text for the JSON-LD: the combo tiers, the
+  33 ms floor, the drop odds in words, the run-down's 30 and 90 minutes,
+  the track's first rung and "all 25 perks". Recheck them when a rule
+  changes.
+- **One claim from the simulation is left**: "a steady first run to a
+  million sees three to seven" drops (10th to 90th percentile, buying what
+  drops; §4.12). Recheck it when the pace or the drops change.
 - **Kept off the page on purpose:** the 10-minute ceiling on the wait for a
   drop. Published, it would be the visible pity the maintainer ruled out
-  (§8.1.2).
-- **The isotope track on the page** (2026-10-27): "How to play" and "What is"
-  mention it; the perks section names what it changes there (a sixth slot, a
-  second keystone, rarer drops, a kept perk); the Reset section has the
-  table; the perks FAQ answer gives both limits; a tenth FAQ asks what the
-  track unlocks. The page lists all twelve rungs although the game reveals
-  only the next two, as it lists all 25 perks while the codex hides the
-  undiscovered.
-- On a phone the spec tables stack, and a cell with a `data-label` names
-  itself (`content.css`). The odds table uses it, so its two percentages
-  don't lose their headings.
+  (§8.1.2). And every time-to-finish figure, as above.
+- **The page lists all 25 perks and all twelve rungs**, though the game
+  reveals only the next two rungs and the codex hides the undiscovered.
+- **Files.** The copy and markup are `src/content/tools/spacebar-clicker.mdx`;
+  the blocks' styles, and the colour tokens the game shares, are
+  `src/styles/clicker-page.css`; the perk filter is
+  `src/scripts/clicker-page.ts`. A section that uses the ramp or the perk
+  hues takes the class `sc-doc`.
+- **Writing in the MDX.** Outside a `.map()`, prose is bare text between
+  blank lines; a `<p>` or an SVG `<text>` with words on their own line
+  gets a paragraph inside it and breaks. Prettier mangles `{/* */}`
+  comments, so there are none. The FAQ is written twice, in the
+  frontmatter and on the page; the page's copy adds the links.
 - When a mechanic changes, update the copy that describes it.
 
 ## 7. Testing
@@ -1058,7 +1067,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  85 as of 2026-11-11, in about ten minutes.
+  86 as of 2026-11-11, in about ten minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
@@ -2577,6 +2586,10 @@ drift):
   the words are gone ("isotope, to 13", "from +156%", "All gains", "Next" on
   the track's cards).
 - **This doc's §6**, once the page changes.
+- **The audit became the page's rebuild on 2026-11-11 (§8.5.20), and the
+  page's part of it is done:** every item above about the MDX is dealt
+  with there. Still waiting for a read of their own: the in-game words
+  listed here (the dialogs, the badge, the tabs, the share bar).
 
 #### 8.5.10 Finding 5: presses and surges fade, 2026-11-10
 
@@ -3440,6 +3453,143 @@ the maintainer asks.
 - On a combo break, the combo row desaturates and shakes. This shakes the row
   only, never the screen.
 
+#### 8.5.20 The page below the game, rebuilt, 2026-11-11
+
+The copy audit of §8.5.9 became a rebuild. The maintainer's brief: the
+content under the game and the header dated from a much simpler game; the
+page should show how much game there is, read less like a spec sheet, be
+more visual (the tables above all), and stay optimised for "spacebar
+clicker" keywords. Ideas, then mockups, then a build in three passes.
+
+- **Decided.**
+  - Every perk and every rung stays listed, though the game hides the ones
+    not yet found.
+  - The perk grid gets filter chips, the page's one new script.
+  - The perk families' hues may be used in the page's content (DESIGN.md,
+    the Perk-Family Exception, widened).
+  - The title drops "Idle" (§6).
+  - No "no ads" claim, and no times for a run (§6). The simulation's
+    timings leave the page as their sections are rebuilt: the first isotope
+    at about 24 minutes, the second about 9 later, the track in 100 to 170
+    minutes, and the FAQ's "20 to 25 minutes".
+  - The isotope track is laid out three rungs to a row, each row ending in
+    its fork, not as the Isotopes tab's rail.
+- **The outline.** H1 "Spacebar Clicker"; a jump strip; then:
+  1. About this Spacebar Clicker Game (the maintainer's title)
+  2. How to play Spacebar Clicker
+  3. The combo: a steady beat pays up to 3x
+  4. Spacebar Clicker upgrades and auto-tappers
+  5. Spacebar Clicker perks: 25 random drops
+  6. Reactor states
+  7. When you stop pressing (new: full output, the run-down, the fault and
+     the restart)
+  8. Reset for isotopes, with an H3, "The isotope track: 12 rungs"
+  9. Spacebar Clicker tips
+  10. Spacebar Clicker FAQ, with two more questions: what happens when you
+      leave, and whether the game ends
+      A "first run" timeline was in the outline and waits on a call: without
+      times it repeats the reactor states (see the calls below).
+- **Built, pass 1, part 1.**
+  - **The header.** A 2.5rem title (it was the 3.5rem display size), a
+    subtitle held to 600px that names it a spacebar clicker game, and a row
+    of chips counted from the config: 25 perks, 4 combo tiers, 7 reactor
+    states, 12 isotope rungs, and "Free, saves in your browser". Measured
+    at 1440x900: the header is 186px, as before (185px), so the face still
+    ends at 888px. On a phone the chips are hidden: they would take three
+    rows above the game, and the About section gives the same counts.
+  - **The jump strip** under the game: one link per section, in the MDX.
+  - **About this Spacebar Clicker Game** replaces "What is Spacebar
+    Clicker?" (`#about`, was `#what-is`): two paragraphs and four panels,
+    each a figure, a heading and two sentences. Rhythm beats mashing (x3),
+    Perks change the run (25), Resets add rules (+10%), The reactor needs
+    you (30 min). Every figure reads from the config. The panels carry no
+    coloured top border; the maintainer turned that down at the mockup.
+  - **`src/styles/clicker-page.css`**, new and global, since a page's
+    scoped styles don't reach its MDX. It holds the content's blocks, and
+    the Reactor-Ramp, Surge Gold and perk-family tokens, moved out of the
+    page's scoped `.game-section` rule so the game and the content share
+    one definition (`:where(.game-section, .sc-doc)`). A content section
+    that uses them takes the class `sc-doc`.
+  - "No ads" is gone from the description, the About copy and the first
+    FAQ answer, in the frontmatter and on the page.
+- **Built, pass 1, part 2: How to play** (`#how-to-play`). The heading is
+  "How to play this Spacebar Clicker". The maintainer's rule, 2026-11-11:
+  headings say "this Spacebar Clicker", since the game is a variation on
+  the type and the bare name reads as generic; the rest of the outline's
+  headings follow it as they are built. Six cards, three to a row (two
+  under 900px, one under 480px), each a small drawing on the face's grid
+  over a heading and two sentences: the keycap; the rhythm scope's trace,
+  drawn with `drawScope`'s own shape (a dip, a spike and a dip per press,
+  one short spike off the beat) in the reactor's green with its glow, at
+  the maintainer's ask; four shop glyphs; "x10 for 5 seconds" in Surge
+  Gold; a perk tile with its ring part drained; and an isotope as a small
+  core. `ShopIcon` and `PerkIcon` are imported into the MDX. The old
+  steps' long paragraphs, the beads line and "even while you are away" are
+  gone. Prettier turns an MDX `{/* */}` comment into `{/_ _/}` and breaks
+  the page, so the MDX carries no comments; the CSS explains each drawing.
+- **Built, pass 2: the combo, the shop and the perks.**
+  - **The combo** (`#combo`), "The combo: a steady beat pays up to 3x". A
+    ladder of the five tiers, each a column as tall as its multiplier and
+    greener the higher it is (on a phone, a tier a row with a bar as wide);
+    two traces in the rhythm scope's shape, "On the beat" in green and "Off
+    the beat" in grey with short spikes; three rule cards (25%, 0.8 s, 5
+    presses); and a closing paragraph on Synchronisation, Overtone and
+    Glass Rhythm. The figures read from `COMBO` and `COMBO_TIERS`.
+  - **The shop** (`#shop`), "Upgrades and auto-tappers in this Spacebar
+    Clicker". Two columns of rows built like the game's shop rows, with
+    `ShopIcon`: name, effect, base cost, and the scaling and cap under it.
+    An auto-tapper's output is in the reactor's green. The line about
+    auto-tappers out-earning fingers "after fifteen or twenty minutes" is
+    gone (no times).
+  - **The perks** (`#perks`), "Perks in this Spacebar Clicker: 25 random
+    drops". Two stacked bars for the odds of an ordinary drop and a surge
+    drop, in three steps of grey so no hue is spent on rarity, over each
+    rarity's line and price. Then the 25 perks as cards, grouped by family
+    under a heading and one line in the family's hue, commons first: glyph
+    tile, name, rarity, which shop tab it drops in, and the effect with its
+    three levels' values in mono. A keystone's card is rimmed and tinted.
+    "Three to seven drops" on a first run stays: a count, not a time.
+  - **The filter chips** (`src/scripts/clicker-page.ts`, new): All and the
+    five families, then the three rarities; one family and one rarity at a
+    time, a chip pressed again lets go, and a family with nothing to show
+    hides with its heading. The chips are hidden until the script runs, so
+    without it every perk shows. A pair with no perk (Luck and Keystone)
+    shows "No perk is both. Pick another pair."
+  - **MDX and paragraphs.** In the MDX a `<p>` whose words sit on their own
+    lines gets a second paragraph inside it, which a browser splits in two,
+    so a class or `hidden` on the outer one is lost. Outside a `.map()`,
+    prose is bare text between blank lines, and a classed block is a `<div>`
+    whose inner paragraph the CSS styles (`.sc-lede p`, `.sc-fine p`).
+  - **Checks.** "the page lists every perk and the drop odds" now reads the
+    bars and the cards, and runs the filter by mouse and by Space on a chip,
+    with no press landing on the reactor.
+- **Built, pass 3, part 1: the isotopes** (`#prestige`), "Reset for
+  isotopes", to the mockup approved with the perks. A strip of what a
+  reset pays, 1M, 3M, 9M and 27M for 1 to 4, read from `isotopeThreshold`,
+  each isotope a small core. The track as four rows of three, each row
+  ending in its fork: a rung is a gem with its number, its name and what
+  it does; a fork is a diamond, tinted, with "Pick one, and switch at any
+  reset" over its two options. The square-root payout, the simulation's
+  minutes for the first two isotopes and for the whole track, and the
+  beads are gone. One line says what a reset keeps: isotopes,
+  achievements, records and the codex. The check "the page lists the
+  isotope track" reads the new rungs, rows and payout strip.
+- **Answered, 2026-11-11.** The first-run timeline is dropped (call 3
+  below); the reactor states' strip is to name what opens at each
+  threshold. Rule durations stay (call 2): "30 min" of full output, a
+  surge's five seconds. Only times for a run are out.
+- **Calls for review.**
+  1. **The combo chip says 4 tiers**, not the mockup's 5: Steady, Locked
+     in, Resonance and Harmonic. The fifth was "no tier yet".
+  2. **"30 min" in the fourth panel** is a rule (full output for 30 minutes
+     after the last press), not a time for a run, so it stayed.
+  3. **The first-run timeline.** With no times it is a list of energy
+     thresholds, which the reactor states already are. Suggested: drop it,
+     and let the reactor states' strip name what opens at each threshold.
+  4. **The chips on a phone** are hidden, as above.
+  5. **The jump strip** doesn't follow the scroll or mark the current
+     section; it is a plain row of links.
+
 ### 8.7 Known gaps
 
 - Not playtested, and not checked on real touch devices, Firefox or Safari.
@@ -3724,3 +3874,23 @@ the maintainer asks.
   face's badge and the credit beads are unchanged.
 - **2026-11-11.** The reset dialog's perks to keep have a tooltip on hover
   and keyboard focus saying what each does at level I (§8.5.19).
+- **2026-11-11.** The page below the game, rebuild begun (§8.5.20): a
+  shorter header with a new subtitle and chips counted from the config, a
+  jump strip, and "About this Spacebar Clicker Game" with four panels in
+  place of "What is Spacebar Clicker?". The title drops "Idle". "No ads" is
+  gone from the page. The ramp, gold and perk-family tokens moved to
+  `src/styles/clicker-page.css`, shared by the game and the content.
+- **2026-11-11.** "How to play this Spacebar Clicker" rebuilt as six cards
+  with drawings from the game, the beat drawn as the rhythm scope draws it
+  (§8.5.20).
+- **2026-11-11.** The combo, the shop and the perks rebuilt on the page
+  (§8.5.20): a tier ladder and two traces; shop rows with the game's
+  glyphs; odds bars and a card per perk by family, with filter chips
+  (`src/scripts/clicker-page.ts`).
+- **2026-11-11.** "Reset for isotopes" rebuilt on the page (§8.5.20): a
+  payout strip from the game's own thresholds and the track three rungs to
+  a row.
+- **2026-11-11.** The page's rebuild finished (§8.5.20, §6): seven reactor
+  dials, a new "When you stop pressing" section with a chart of output
+  against time away, tips with the site's icons, and a 12-question FAQ. No
+  time-to-finish figure is left on the page.

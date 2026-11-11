@@ -6,12 +6,12 @@
 
 import type { Page } from '@playwright/test';
 
-import { ISOTOPE_TRACK, PERKS } from '../../src/games/spacebar-clicker/config';
+import { ISOTOPE_TRACK, PERKS, REACTOR_STATES } from '../../src/games/spacebar-clicker/config';
 import { editSave, energy, expect, openGame, pressSteady, seedSave, test } from './fixtures';
 
 test('page shell: title, heading, no top-bar telemetry', async ({ page }) => {
   await page.goto('/spacebar-clicker');
-  await expect(page).toHaveTitle('Spacebar Clicker - Free Online Idle Spacebar Game');
+  await expect(page).toHaveTitle('Spacebar Clicker - Free Online Spacebar Clicker Game');
   // By role: Astro's dev toolbar adds h1s of its own.
   await expect(
     page.getByRole('heading', { level: 1, name: 'Spacebar Clicker', exact: true })
@@ -122,15 +122,36 @@ test('the energy number and the share bar sit on the axis of the core', async ({
 
 test('the page lists every perk and the drop odds, straight from the config', async ({ page }) => {
   await page.goto('/spacebar-clicker');
-  const tables = page.locator('#perks .spec-table');
-  const rows = (i: number) => tables.nth(i).locator('.spec-row:not(.spec-head)');
-  await expect(rows(0)).toHaveCount(3);
-  await expect(rows(0).first()).toContainText('65%');
-  await expect(rows(1)).toHaveCount(PERKS.filter((p) => p.tab === 'press').length);
-  await expect(rows(2)).toHaveCount(PERKS.filter((p) => p.tab === 'auto').length);
-  await expect(rows(1).first()).toContainText(
-    'Rhythm tolerance widens from 25% to 40% / 55% / 70%.'
+  const bars = page.locator('#perks .sc-odds-bar');
+  await expect(bars).toHaveCount(2);
+  await expect(bars.first()).toContainText('65%');
+  await expect(bars.last().locator('[data-rarity="keystone"]')).toHaveText('10%');
+  const cards = page.locator('#perks .sc-perk');
+  await expect(cards).toHaveCount(PERKS.length);
+  await expect(cards.first().locator('h4')).toHaveText('Metronome');
+  await expect(cards.first().locator('.sc-perk-effect')).toHaveText(
+    'Rhythm tolerance widens from 25% to 40% / 55% / 70%'
   );
+  await expect(cards.first().locator('.sc-perk-where')).toHaveText('Drops in Upgrades');
+
+  // The chips filter by family and by rarity, and a chip pressed again lets go.
+  const shown = page.locator('#perks .sc-perk:visible');
+  const chip = (name: string) => page.locator('#sc-perk-filter button').filter({ hasText: name });
+  await chip('Machines').click();
+  await expect(shown).toHaveCount(PERKS.filter((p) => p.family === 'machines').length);
+  await expect(page.locator('#perks .sc-family:visible')).toHaveCount(1);
+  await chip('Keystone').click();
+  await expect(shown).toHaveCount(1);
+  await expect(shown.locator('h4')).toHaveText('Autopilot');
+  await chip('Machines').click();
+  await expect(shown).toHaveCount(PERKS.filter((p) => p.rarity === 'keystone').length);
+  await chip('Keystone').click();
+  await expect(shown).toHaveCount(PERKS.length);
+  // A chip is a button: Space on it filters, and doesn't press the reactor.
+  await chip('Luck').focus();
+  await page.keyboard.press('Space');
+  await expect(shown).toHaveCount(PERKS.filter((p) => p.family === 'luck').length);
+  await expect(page.locator('#sc-energy')).toHaveText('0');
 
   const faq = await page
     .locator('script[type="application/ld+json"]')
@@ -139,19 +160,58 @@ test('the page lists every perk and the drop odds, straight from the config', as
     );
   expect(faq).toContain('How do perks work?');
   expect(faq).toContain('What does the isotope track unlock?');
+  expect(faq).toContain('What happens when I leave the game?');
+  expect(faq).not.toContain('no ads');
   await expect(page.locator('#faq summary').last()).toHaveText(
-    'What does the isotope track unlock?'
+    'Does Spacebar Clicker have an end?'
   );
+});
+
+test('the page draws the reactor states and the run-down from the config', async ({ page }) => {
+  await page.goto('/spacebar-clicker');
+  const states = page.locator('#reactor .sc-state');
+  await expect(states).toHaveCount(REACTOR_STATES.length);
+  await expect(states.first().locator('h3')).toHaveText('Dormant');
+  await expect(states.first().locator('.sc-state-lamp.is-lit')).toHaveCount(0);
+  await expect(states.last().locator('.sc-state-lamp.is-lit')).toHaveCount(
+    REACTOR_STATES.length - 1
+  );
+  await expect(states.nth(4).locator('.sc-state-note')).toHaveText('A reset opens, for 1 isotope');
+  await expect(states.nth(5).locator('.sc-state-note')).toHaveText('A reset pays 3 isotopes');
+  await expect(states.nth(1).locator('.sc-state-note')).toContainText('Robot Arm');
+
+  const stages = page.locator('#rundown .sc-run-stages > div');
+  await expect(stages).toHaveCount(4);
+  await expect(stages.nth(0)).toContainText('30 minutes');
+  await expect(stages.nth(1)).toContainText('75 minutes of full output');
+  await expect(stages.nth(2)).toContainText('at 2 hours');
+  await expect(stages.nth(3)).toContainText('10 presses on a steady beat restart it.');
+
+  // Every link in the jump strip lands on a section.
+  const targets = await page
+    .locator('.sc-jump a')
+    .evaluateAll((links) =>
+      links.map((a) => document.querySelector(a.getAttribute('href')!) !== null)
+    );
+  expect(targets.length).toBe(9);
+  expect(targets.every(Boolean)).toBe(true);
 });
 
 test('the page lists the isotope track, straight from the config', async ({ page }) => {
   await page.goto('/spacebar-clicker');
-  const rows = page.locator('#isotope-track ~ .spec-table .spec-row:not(.spec-head)');
-  await expect(rows).toHaveCount(ISOTOPE_TRACK.length);
-  await expect(rows.first()).toContainText('Warm Start');
-  await expect(rows.nth(2)).toContainText('Sixth Slot or Prodigy');
-  await expect(rows.nth(2)).toContainText('Pick one, and change it at any reset.');
-  await expect(rows.last()).toContainText('Enrichment: Each isotope adds 13% to all gains');
+  const rungs = page.locator('#prestige .sc-rung');
+  await expect(rungs).toHaveCount(ISOTOPE_TRACK.length);
+  await expect(rungs.first().locator('h4')).toHaveText('Warm Start');
+  await expect(rungs.nth(2).locator('h4')).toHaveText('Sixth Slot or Prodigy');
+  await expect(rungs.nth(2)).toContainText('Pick one, and switch at any reset');
+  await expect(rungs.last()).toContainText('Enrichment. Each isotope adds 13% to all gains');
+  // Three rungs to a row, each row ending in its fork.
+  await expect(page.locator('#prestige .sc-track-row')).toHaveCount(ISOTOPE_TRACK.length / 3);
+  await expect(page.locator('#prestige .sc-track-row > :last-child.is-fork')).toHaveCount(
+    ISOTOPE_TRACK.length / 3
+  );
+  // What a reset pays: 1M, 3M, 9M and 27M for 1 to 4.
+  await expect(page.locator('#prestige .sc-pays-at')).toHaveText([/^1M/, /^3M/, /^9M/, /^27M/]);
 });
 
 test('the spacebar speed test keeps its telemetry and its retitle', async ({ page }) => {
