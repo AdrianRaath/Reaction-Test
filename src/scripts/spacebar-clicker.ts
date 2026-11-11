@@ -403,23 +403,24 @@ const achCount = el('sc-ach-count');
 const prestigeTab = el('sc-tab-prestige');
 const resetIntro = el('sc-reset-intro');
 const prestigeTiles = el('sc-reset-tiles');
-const prestigeHeldFig = el('sc-prestige-held-fig');
 const prestigeHeld = el('sc-prestige-held');
+const prestigeHeldTitle = el('sc-prestige-held-title');
+const prestigeLabel = el('sc-prestige-label');
 const prestigeBonus = el('sc-prestige-bonus');
 const prestigePays = el('sc-prestige-pays');
 const prestigeGainValue = el('sc-prestige-gain');
 const prestigeTo = el('sc-prestige-to');
-const prestigeGains = el('sc-prestige-gains');
 const prestigeAfter = el('sc-prestige-after');
 const prestigeFrom = el('sc-prestige-from');
+const prestigeFromWrap = el('sc-prestige-from-wrap');
 const prestigeNext = el('sc-prestige-next');
 const isotopeMeter = el('sc-isotope-meter');
 const prestigeProgress = el('sc-prestige-progress');
-const prestigeAction = el('sc-reset-action');
 const prestigeUnlocks = el('sc-reset-unlocks');
 const prestigeBtn = el<HTMLButtonElement>('sc-prestige-btn');
 const trackCount = el('sc-track-count');
 const trackGrid = el('sc-track');
+const trackRead = el('sc-track-read');
 
 const prestigeModal = el('sc-prestige-modal');
 const prestigeCancel = el('sc-prestige-cancel');
@@ -429,6 +430,9 @@ const resetSumGain = el('sc-reset-sum-gain');
 const resetSumTo = el('sc-reset-sum-to');
 const resetSumBonus = el('sc-reset-sum-bonus');
 const resetSumFrom = el('sc-reset-sum-from');
+const resetSumFromWrap = el('sc-reset-sum-from-wrap');
+const resetKeptToggle = el<HTMLButtonElement>('sc-reset-kept-toggle');
+const resetKeptRow = el('sc-reset-kept-row');
 const resetHeadRow = el('sc-reset-head-row');
 const resetHead = el('sc-reset-head');
 const resetChoices = el('sc-reset-choices');
@@ -2019,18 +2023,12 @@ function setSentence(target: HTMLElement, ...parts: SentencePart[]): void {
   );
 }
 
-/** "+10%", or with none held, what one is worth: "each adds 10%", never "+0%". */
-function bonusFrom(held: number): string {
-  return held > 0
-    ? `from ${bonusText(held)}`
-    : `each adds ${Math.round(isotopeRate(held, state.forks) * 100)}%`;
-}
-
 /**
- * The Isotopes tab's card. Until a reset opens: the isotopes held and the way
- * to the first isotope, and what the next reset unlocks. Once one is open:
- * what it pays, the gains after, the way to the next isotope, then what it
- * unlocks beside the button.
+ * The Isotopes tab's card (SPACEBAR-CLICKER.md §8.5.19). On one side what the
+ * player holds: the count and what it adds to every gain. On the other the
+ * reset: once one is open, what it pays, the gains before and after, what it
+ * unlocks, and the button; before, what the next reset will unlock. Under
+ * both, the way to the next isotope.
  */
 function renderPrestige(): void {
   const held = state.isotopes;
@@ -2039,35 +2037,40 @@ function renderPrestige(): void {
   // What a reset is, until the player has made one.
   resetIntro.hidden = state.prestiges > 0 || held > 0;
   prestigeTiles.classList.toggle('is-open', ready);
-  prestigeHeldFig.hidden = ready;
+  prestigeTiles.classList.toggle('has-isotopes', held > 0);
   prestigePays.hidden = !ready;
-  prestigeGains.hidden = !ready;
   prestigeBtn.hidden = !ready;
+  setText(prestigeLabel, ready ? 'A reset now pays' : 'Next reset');
 
   setText(prestigeHeld, String(held));
+  setText(prestigeHeldTitle, held ? isotopeCount(held) : 'No isotopes yet');
   // With none held, what one is worth, rather than "+0%".
   if (held) setSentence(prestigeBonus, [bonusText(held)], ' to all gains');
   else
-    setSentence(prestigeBonus, 'each adds ', [
-      `${Math.round(isotopeRate(held, state.forks) * 100)}%`,
-    ]);
+    setSentence(
+      prestigeBonus,
+      'Each adds ',
+      [`${Math.round(isotopeRate(held, state.forks) * 100)}%`],
+      ' to all gains'
+    );
 
   if (ready) {
     const next = nextIsotopeAt(state.runLifetime);
     setText(prestigeGainValue, `+${gain}`);
-    setText(prestigeTo, `${isotopeNoun(gain)}, to ${held + gain}`);
+    setText(prestigeTo, isotopeNoun(gain));
+    // The gains before and after; with none held there is no before.
+    prestigeFromWrap.hidden = held === 0;
+    setText(prestigeFrom, bonusText(held));
     setText(prestigeAfter, bonusText(held + gain));
-    setText(prestigeFrom, bonusFrom(held));
-    setSentence(prestigeNext, 'Next isotope at ', [formatEnergy(next)]);
+    setSentence(prestigeNext, 'Next isotope at ', [formatEnergy(next)], ' energy');
     setSentence(prestigeProgress, [formatEnergy(next - state.runLifetime)], ' to go');
   } else {
-    setSentence(prestigeNext, 'Reset opens at ', [formatEnergy(PRESTIGE_UNLOCK)]);
+    setSentence(prestigeNext, 'Reset opens at ', [formatEnergy(PRESTIGE_UNLOCK)], ' energy');
     setSentence(prestigeProgress, [formatEnergy(PRESTIGE_UNLOCK - state.runLifetime)], ' to go');
   }
   // Open, what this reset unlocks; closed, what any reset would: the next rung.
   const steps = ready ? stepsReached(held, held + gain) : nextSteps(held, 1);
   renderResetUnlocks(steps, ready);
-  prestigeAction.hidden = !ready && steps.length === 0;
   isotopeMeter.style.transform = `scaleX(${isotopeFill(state.runLifetime)})`;
   renderTrack();
 }
@@ -2076,9 +2079,9 @@ function renderPrestige(): void {
 let unlocksShown = '';
 
 /**
- * Under the figures, what a reset unlocks, its rungs named in the isotopes'
- * blue: "Unlocks Lucky Find." once one is open, "The next reset unlocks
- * Lucky Find." before.
+ * In the card, what a reset unlocks, its rungs named in the isotopes' blue:
+ * "Unlocks Lucky Find." once one is open, "The next reset unlocks Lucky
+ * Find." before.
  */
 function renderResetUnlocks(steps: readonly TrackStep[], open: boolean): void {
   const key = `${open}:${steps.map((s) => s.isotopes).join()}`;
@@ -2091,13 +2094,73 @@ function renderResetUnlocks(steps: readonly TrackStep[], open: boolean): void {
   );
 }
 
+// The isotope track in the Isotopes tab (SPACEBAR-CLICKER.md §8.5.19): a rail
+// of twelve rungs and one card that reads a rung, as the Perks tab's codex
+// board and its reading card do.
+
+type RungStatus = 'lit' | 'next' | 'hidden';
+
+/** A rung on the rail: its step, where it stands, and its button. */
+interface RailNode {
+  step: TrackStep;
+  status: RungStatus;
+  /** A held fork's pick, if one is saved. */
+  pick: RungId | undefined;
+  button: HTMLButtonElement;
+}
+
+let railNodes: RailNode[] = [];
+
 /** What the track shows, as the isotopes held and the picks. */
 let trackShown = '';
 
 /**
- * The isotope track in the Isotopes tab: a card per rung, in order, lit to
- * the isotopes held, the next two named with a blue rim, the rest dashed
- * with only their number.
+ * Which rung the reading card shows: the one under the mouse, else the one
+ * picked by a click, a tap or keyboard focus, else the next unlock, or the
+ * last rung once every one is held.
+ */
+let trackHover: number | null = null;
+let trackPicked: number | null = null;
+/** What the reading card last drew, so it is rebuilt only on a change. */
+let trackReadShown = '';
+
+/** A node whose words only the eye needs. */
+function visualLine(className: string, content: string | Node[]): HTMLElement {
+  const node = cardLine(className, content);
+  node.setAttribute('aria-hidden', 'true');
+  return node;
+}
+
+/** A rung's gem with its number: a circle, or a fork's diamond. */
+function trackGem(step: TrackStep): HTMLElement {
+  return visualLine('track-gem', [cardLine('track-gem-num', String(step.isotopes))]);
+}
+
+/** The words under a rung on the rail: its name, a fork's pick, or both of a fork's names. */
+function railName(step: TrackStep, status: RungStatus, pick: RungId | undefined): string {
+  if (status === 'hidden') return '';
+  if (!isFork(step)) return step.rungs[0].name;
+  return pick ? rung(pick).name : stepName(step);
+}
+
+/** A rung's name for a screen reader: where it sits, its state, and what it does. */
+function railLabel(step: TrackStep, status: RungStatus, pick: RungId | undefined): string {
+  const where = `At ${isotopeCount(step.isotopes)}`;
+  if (status === 'hidden') return `${where}: not revealed yet.`;
+  const lead = `${where}, ${status === 'lit' ? 'unlocked' : 'next'}: `;
+  if (!isFork(step)) return `${lead}${step.rungs[0].name}. ${rungSentence(step.rungs[0].id)}`;
+  return (
+    lead +
+    step.rungs
+      .map((r) => `${r.name}${r.id === pick ? ', your pick' : ''}. ${rungSentence(r.id)}`)
+      .join(' Or ')
+  );
+}
+
+/**
+ * The rail, rebuilt when the isotopes held or the picks change: a rung a
+ * column, in order, lit to the isotopes held, the next two rimmed and named,
+ * the rest dashed with only their number.
  */
 function renderTrack(): void {
   const held = state.isotopes;
@@ -2106,86 +2169,173 @@ function renderTrack(): void {
   trackShown = key;
 
   const next = nextSteps(held);
-  trackCount.textContent = `${ISOTOPE_TRACK.filter((s) => s.isotopes <= held).length} of ${ISOTOPE_TRACK.length}`;
-  trackGrid.replaceChildren(
-    ...ISOTOPE_TRACK.map((step) =>
-      trackCard(step, step.isotopes <= held ? 'lit' : next.includes(step) ? 'next' : 'hidden')
-    )
+  const unlocked = ISOTOPE_TRACK.filter((s) => s.isotopes <= held).length;
+  trackCount.textContent = `${unlocked} of ${ISOTOPE_TRACK.length}`;
+  // The line is lit from the first rung to the last one held.
+  trackGrid.style.setProperty(
+    '--done',
+    String(Math.max(0, unlocked - 1) / (ISOTOPE_TRACK.length - 1))
   );
+
+  railNodes = ISOTOPE_TRACK.map((step, i) => {
+    const status: RungStatus =
+      step.isotopes <= held ? 'lit' : next.includes(step) ? 'next' : 'hidden';
+    const saved = state.forks[step.isotopes];
+    const pick = status === 'lit' && saved && isPickFor(step.isotopes, saved) ? saved : undefined;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'track-node';
+    button.tabIndex = -1;
+    button.setAttribute('aria-label', railLabel(step, status, pick));
+    button.append(trackGem(step), visualLine('track-card-name', railName(step, status, pick)));
+    wireRailNode(button, i);
+    return { step, status, pick, button };
+  });
+  trackGrid.replaceChildren(
+    ...railNodes.map((node) => {
+      const item = document.createElement('li');
+      item.className = `track-card is-${node.status}`;
+      item.dataset.isotopes = String(node.step.isotopes);
+      if (isFork(node.step)) item.dataset.fork = '';
+      item.append(node.button);
+      return item;
+    })
+  );
+  trackHover = null;
+  trackPicked = null;
+  trackReadShown = '';
+  renderTrackRead();
+}
+
+/** The rung read when none is pointed at or picked: the next unlock, else the last rung. */
+function defaultRung(): number {
+  const next = railNodes.findIndex((n) => n.status === 'next');
+  return next >= 0 ? next : railNodes.length - 1;
+}
+
+function renderTrackRead(): void {
+  if (railNodes.length === 0) return;
+  const shown = trackHover ?? trackPicked ?? defaultRung();
+  // One Tab stop for the rail: the picked rung, else the one read.
+  const stop = trackPicked ?? shown;
+  railNodes.forEach((node, i) => {
+    node.button.classList.toggle('is-shown', i === shown);
+    node.button.tabIndex = i === stop ? 0 : -1;
+  });
+  if (trackReadShown === String(shown)) return;
+  trackReadShown = String(shown);
+  fillTrackRead(railNodes[shown]!);
 }
 
 /**
- * A rung on the track as a card: its socket, number and name on one line,
- * then what it does. A fork has its socket and number at the side and its
- * two options side by side, the pick lit. A rung not yet revealed shows only
- * its socket and number. Screen readers hear where it sits and its state
- * first: "At 3 isotopes, unlocked: Prodigy, your pick, …".
+ * The reading card for one rung: its gem, its name and state, and what it
+ * does. A fork shows both options side by side, the pick marked, and when
+ * it is picked. A rung not yet revealed says only where it sits.
  */
-function trackCard(step: TrackStep, status: 'lit' | 'next' | 'hidden'): HTMLLIElement {
-  const item = document.createElement('li');
-  item.className = `track-card is-${status}`;
-  item.dataset.isotopes = String(step.isotopes);
-  const fork = isFork(step);
-  if (fork) item.dataset.fork = '';
-  const saved = state.forks[step.isotopes];
-  const pick = status === 'lit' && saved && isPickFor(step.isotopes, saved) ? saved : undefined;
-
-  /** Parts only the eye needs: the socket, the number, the "Next" tag. */
-  const visual = (node: HTMLElement): HTMLElement => {
-    node.setAttribute('aria-hidden', 'true');
-    return node;
-  };
-  const halves = fork
-    ? step.rungs.map((r) => {
-        const half = cardLine('track-half', '');
-        half.dataset.rung = r.id;
-        half.classList.toggle('is-picked', r.id === pick);
-        return half;
-      })
-    : [];
-  const gem = visual(cardLine('track-gem', halves));
-  const num = visual(cardLine('track-card-num', String(step.isotopes)));
-  const tag = status === 'next' ? [visual(cardLine('track-card-tag', 'Next'))] : [];
-  const where = `At ${isotopeCount(step.isotopes)}`;
+function fillTrackRead({ step, status, pick }: RailNode): void {
+  trackRead.className = `track-read is-${status}`;
+  if (isFork(step)) trackRead.dataset.fork = '';
+  else delete trackRead.dataset.fork;
+  const tag = (words: string) => cardLine('track-card-tag', words);
+  const head = (name: string, standing: string) =>
+    cardLine('track-read-head', [text(name), ...(standing ? [tag(standing)] : [])]);
+  const standing = status === 'lit' ? 'Unlocked' : status === 'next' ? 'Next' : '';
+  const lines: HTMLElement[] = [];
 
   if (status === 'hidden') {
-    item.append(
-      cardLine('visually-hidden', `${where}: not revealed yet.`),
-      cardLine('track-card-head', [gem, num])
+    lines.push(
+      head(`At ${isotopeCount(step.isotopes)}`, ''),
+      cardLine('track-card-detail', 'Not revealed yet.')
     );
-    return item;
-  }
-  const lead = cardLine('visually-hidden', `${where}, ${status === 'lit' ? 'unlocked' : 'next'}: `);
-
-  if (!fork) {
+  } else if (!isFork(step)) {
     const r = step.rungs[0];
-    item.append(
-      lead,
-      cardLine('track-card-head', [gem, num, cardLine('track-card-name', r.name), ...tag]),
-      cardLine('track-card-detail', rungSentence(r.id))
+    lines.push(head(r.name, standing), cardLine('track-card-detail', rungSentence(r.id)));
+  } else {
+    const options = cardLine(
+      'track-options',
+      step.rungs.map((r) => {
+        const option = cardLine('track-option', [
+          cardLine('track-card-name', [
+            text(r.name),
+            ...(r.id === pick ? [cardLine('track-option-pick', 'Your pick')] : []),
+          ]),
+          cardLine('track-card-detail', rungSentence(r.id)),
+        ]);
+        option.dataset.rung = r.id;
+        option.classList.toggle('is-picked', r.id === pick);
+        return option;
+      })
     );
-    return item;
+    lines.push(
+      head('A fork: a choice of two', standing),
+      options,
+      cardLine(
+        'track-read-note',
+        status === 'lit' && !pick
+          ? 'Pick one when you next reset the experiment.'
+          : 'You pick when a reset first reaches it, and can switch at any reset after.'
+      )
+    );
   }
-  const options = cardLine(
-    'track-options',
-    step.rungs.map((r) => {
-      const option = cardLine('track-option', [
-        cardLine('track-card-name', r.name),
-        ...(r.id === pick ? [cardLine('visually-hidden', ', your pick, ')] : []),
-        cardLine('track-card-detail', rungSentence(r.id)),
-      ]);
-      option.dataset.rung = r.id;
-      option.classList.toggle('is-picked', r.id === pick);
-      return option;
-    })
-  );
-  const body = cardLine('track-card-body', [options]);
-  if (status === 'lit' && !pick) {
-    body.append(cardLine('track-card-detail', 'Pick one when you next reset the experiment.'));
-  }
-  item.append(lead, cardLine('track-card-side', [gem, num, ...tag]), body);
-  return item;
+  trackRead.replaceChildren(trackGem(step), cardLine('track-read-text', lines));
 }
+
+/** The rung an arrow key moves to along the rail, or null when the key is not one of ours. */
+function railStep(i: number, key: string): number | null {
+  const last = railNodes.length - 1;
+  switch (key) {
+    case 'ArrowRight':
+      return Math.min(i + 1, last);
+    case 'ArrowLeft':
+      return Math.max(i - 1, 0);
+    case 'Home':
+      return 0;
+    case 'End':
+      return last;
+    default:
+      return null;
+  }
+}
+
+/** A rung's button: hover reads it, a click, a tap or keyboard focus picks it. */
+function wireRailNode(button: HTMLButtonElement, i: number): void {
+  button.addEventListener('pointerenter', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    trackHover = i;
+    renderTrackRead();
+  });
+  button.addEventListener('focus', () => {
+    if (!button.matches(':focus-visible')) return;
+    trackPicked = i;
+    renderTrackRead();
+  });
+  button.addEventListener('click', (e) => {
+    // From the keyboard (no pointer), focus has already picked it.
+    if (e.detail === 0) return;
+    // A click or tap picks it; a second one lets go.
+    trackPicked = trackPicked === i ? null : i;
+    renderTrackRead();
+    // Space is the game's input; a focused button would swallow it.
+    button.blur();
+  });
+  button.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && trackPicked !== null) {
+      trackPicked = null;
+      renderTrackRead();
+      return;
+    }
+    const next = railStep(i, e.key);
+    if (next === null) return;
+    e.preventDefault();
+    railNodes[next]!.button.focus();
+  });
+}
+
+trackGrid.addEventListener('pointerleave', (e) => {
+  if (e.pointerType !== 'mouse' || trackHover === null) return;
+  trackHover = null;
+  renderTrackRead();
+});
 
 function renderPanels(): void {
   renderStats();
@@ -3368,6 +3518,9 @@ resetConfirm.addEventListener('click', () => {
 /** The isotopes the dialog's reset goes to. */
 let resetTo = 0;
 
+/** Whether the dialog shows the past picks' switches, opened by "Change". */
+let picksOpen = false;
+
 /** The picks the dialog shows, over the save's. */
 function dialogPicks(): ForkPicks {
   const picks: ForkPicks = { ...state.forks };
@@ -3453,13 +3606,14 @@ function buildResetChoices(chosen: ForkPicks): void {
   const groups: HTMLElement[] = [];
   const fresh = stepsReached(state.isotopes, resetTo).filter((s) => !isFork(s));
   if (fresh.length > 0) {
-    const group = resetGroup('This reset unlocks', false);
+    const group = resetGroup('You unlock', false);
     const list = document.createElement('ul');
     list.className = 'reset-unlocks';
     for (const step of fresh) {
       const item = document.createElement('li');
       const id = step.rungs[0].id;
       item.append(
+        visualLine('reset-unlock-bead', ''),
         cardLine('reset-option-name', rung(id).name),
         text(' '),
         cardLine('reset-option-detail', rungSentence(id))
@@ -3485,7 +3639,10 @@ function buildResetChoices(chosen: ForkPicks): void {
       option.querySelector('input')!.checked = r.id === pickOf(step);
       options.append(option);
     }
-    group.append(options);
+    const after = document.createElement('p');
+    after.className = 'reset-group-note';
+    after.textContent = 'You can switch at any reset after.';
+    group.append(options, after);
     groups.push(group);
   }
 
@@ -3503,25 +3660,58 @@ function buildResetChoices(chosen: ForkPicks): void {
     const title = document.createElement('p');
     title.className = 'reset-group-title';
     title.textContent = 'Your picks';
+    // On one line, by name; "Change" opens the switches under it.
+    const names = document.createElement('p');
+    names.className = 'reset-picks-names';
+    names.id = 'sc-reset-picks-names';
+    const body = document.createElement('div');
+    body.className = 'reset-picks-body';
+    body.id = 'sc-reset-picks';
+    body.hidden = !picksOpen;
+    const change = document.createElement('button');
+    change.type = 'button';
+    change.className = 'reset-link';
+    change.id = 'sc-reset-picks-toggle';
+    change.textContent = 'Change';
+    change.setAttribute('aria-controls', body.id);
+    change.setAttribute('aria-expanded', String(picksOpen));
+    change.addEventListener('click', () => {
+      picksOpen = !picksOpen;
+      body.hidden = !picksOpen;
+      change.setAttribute('aria-expanded', String(picksOpen));
+      hidePickTip();
+    });
+    head.append(title, names, change);
     const note = document.createElement('p');
     note.className = 'reset-group-note';
     note.textContent = 'Switch at any reset';
-    head.append(title, note);
     const list = document.createElement('div');
     list.className = 'reset-picks';
     for (const step of past) list.append(pickSwitch(step, pickOf(step)));
-    group.append(head, list);
+    body.append(note, list);
+    group.append(head, body);
     groups.push(group);
   }
 
   resetChoices.replaceChildren(...groups);
+  renderPickNames();
   renderKeep();
+}
+
+/** The past picks by name, on their line: "Sixth Slot · Reroll". */
+function renderPickNames(): void {
+  const names = resetChoices.querySelector<HTMLElement>('#sc-reset-picks-names');
+  if (!names) return;
+  const picked = Array.from(
+    resetChoices.querySelectorAll<HTMLInputElement>('.reset-pick input:checked')
+  ).map((input) => rung(input.value as RungId).name);
+  setText(names, picked.join(' · '));
 }
 
 /**
  * The keeping rung's perks, for the picks the dialog shows: Heirloom offers
  * the perks held that aren't keystones, Cornerstone the keystones. Each is a
- * chip with its glyph, then "Keep none" beside the heading. The best comes
+ * chip with its glyph, then "Keep none" as the last of them. The best comes
  * chosen, or the choice made before if it is still on offer.
  */
 function renderKeep(): void {
@@ -3562,7 +3752,9 @@ function renderKeep(): void {
     chip.append(radio('keep', held.id), tile, name);
     chips.append(chip);
   }
-  group.append(none, note, chips);
+  // "Keep none" is the last choice in the grid, so the choices fill it.
+  chips.append(none);
+  group.append(note, chips);
   keep.replaceChildren(group);
   const chosen = before === '' || perks.some((o) => o.id === before) ? before : perks[0]!.id;
   for (const input of group.querySelectorAll('input')) input.checked = input.value === chosen;
@@ -3575,9 +3767,11 @@ function renderResetSummary(): void {
   const picks = dialogPicks();
   const rungs = activeRungs(resetTo, picks);
   resetSumGain.textContent = `+${gain}`;
-  resetSumTo.textContent = `${isotopeNoun(gain)}, to ${resetTo}`;
+  resetSumTo.textContent = isotopeNoun(gain);
+  // The gains before and after; with none held there is no before.
+  resetSumFromWrap.hidden = held === 0;
+  resetSumFrom.textContent = bonusText(held);
   resetSumBonus.textContent = bonusText(resetTo, picks);
-  resetSumFrom.textContent = bonusFrom(held);
   const energy = `${TRACK_EFFECT.warmStartEnergy.toLocaleString('en-US')} energy`;
   const finger = `Finger Strength ${ROMAN[TRACK_EFFECT.hotStartFinger]}`;
   resetHeadRow.hidden = !rungs.includes('warm-start');
@@ -3647,10 +3841,22 @@ resetChoices.addEventListener('focusout', () => {
 });
 resetBody.addEventListener('scroll', hidePickTip, { passive: true });
 
+/** What is kept shows on a first reset, and behind "What's kept?" after. */
+function showKept(open: boolean): void {
+  resetKeptRow.hidden = !open;
+  resetKeptToggle.setAttribute('aria-expanded', String(open));
+}
+
+resetKeptToggle.addEventListener('click', () => showKept(resetKeptRow.hidden !== false));
+
 prestigeBtn.addEventListener('click', () => {
   resetTo = state.isotopes + prestigeGain(state.runLifetime);
+  picksOpen = false;
   buildResetChoices(state.forks);
   renderResetSummary();
+  const first = state.prestiges === 0 && state.isotopes === 0;
+  resetKeptToggle.hidden = first;
+  showKept(first);
   resetPickHint.hidden = true;
   openDialog(prestigeModal, prestigeCancel);
   // It opens at the top, so the numbers come first however long it runs.
@@ -3659,6 +3865,7 @@ prestigeBtn.addEventListener('click', () => {
 resetChoices.addEventListener('change', (e) => {
   // A fork pick can change which perks a keeping rung offers, and the bonus.
   if ((e.target as HTMLInputElement).name !== 'keep') renderKeep();
+  renderPickNames();
   renderResetSummary();
   if (unpickedForks(resetTo, dialogPicks()).length === 0) resetPickHint.hidden = true;
   // The keep group above may have grown or shrunk under a tooltip.

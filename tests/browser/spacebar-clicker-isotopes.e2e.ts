@@ -188,11 +188,12 @@ test('the Isotopes tab before a reset opens: the cost, the pay, the way there', 
   );
   await expect(page.locator('#sc-reset-intro'), 'a player holding isotopes has reset').toBeHidden();
   await expect(page.locator('#sc-prestige-held')).toHaveText('1');
+  await expect(page.locator('#sc-prestige-held-title')).toHaveText('1 isotope');
   await expect(page.locator('#sc-prestige-bonus')).toHaveText('+10% to all gains');
-  await expect(page.locator('#sc-prestige-next')).toHaveText('Reset opens at 1.00M');
+  await expect(page.locator('#sc-prestige-label')).toHaveText('Next reset');
+  await expect(page.locator('#sc-prestige-next')).toHaveText('Reset opens at 1.00M energy');
   await expect(page.locator('#sc-prestige-progress')).toHaveText('580K to go');
   await expect(page.locator('#sc-prestige-pays'), 'nothing to pay yet').toBeHidden();
-  await expect(page.locator('#sc-prestige-gains')).toBeHidden();
   await expect(page.locator('#sc-prestige-btn')).toBeHidden();
   await expect(page.locator('#sc-reset-unlocks')).toHaveText('The next reset unlocks Capacitor.');
   // The meter fills on the badge's cube-root scale: 0.42M is three quarters.
@@ -216,11 +217,14 @@ test('resetting: the dialog, the toast and the shelf say what changed', async ({
   await page.click('[data-tab="prestige"]');
 
   await expect(page.locator('#sc-prestige-gain')).toHaveText('+1');
-  await expect(page.locator('#sc-prestige-to')).toHaveText('isotope, to 2');
+  await expect(page.locator('#sc-prestige-to')).toHaveText('isotope');
+  // The gains before and after, side by side.
+  await expect(page.locator('#sc-prestige-from')).toHaveText('+10%');
   await expect(page.locator('#sc-prestige-after')).toHaveText('+20%');
-  await expect(page.locator('#sc-prestige-from')).toHaveText('from +10%');
-  await expect(page.locator('#sc-prestige-held-fig'), 'open, the card shows the pay').toBeHidden();
-  await expect(page.locator('#sc-prestige-next')).toHaveText('Next isotope at 3.00M');
+  await expect(page.locator('#sc-prestige-label'), 'open, the card shows the pay').toHaveText(
+    'A reset now pays'
+  );
+  await expect(page.locator('#sc-prestige-next')).toHaveText('Next isotope at 3.00M energy');
   await expect(page.locator('#sc-prestige-progress')).toHaveText('400K to go');
   await expect(page.locator('#sc-reset-unlocks'), 'the hook, beside the button').toHaveText(
     'Unlocks Capacitor.'
@@ -232,9 +236,19 @@ test('resetting: the dialog, the toast and the shelf say what changed', async ({
 
   await page.click('#sc-prestige-btn');
   await expect(page.locator('#sc-reset-sum-gain')).toHaveText('+1');
-  await expect(page.locator('#sc-reset-sum-to')).toHaveText('isotope, to 2');
+  await expect(page.locator('#sc-reset-sum-to')).toHaveText('isotope');
+  await expect(page.locator('#sc-reset-sum-from')).toHaveText('+10%');
   await expect(page.locator('#sc-reset-sum-bonus')).toHaveText('+20%');
-  await expect(page.locator('#sc-reset-sum-from')).toHaveText('from +10%');
+  // What the reset unlocks, as a card; what is kept, behind its button.
+  await expect(page.locator('#sc-reset-choices .reset-unlocks li')).toContainText([
+    'Surges last a second longer',
+  ]);
+  await expect(page.locator('#sc-reset-choices .reset-unlocks .reset-option-name')).toHaveText([
+    'Capacitor',
+  ]);
+  await expect(page.locator('#sc-reset-kept-row')).toBeHidden();
+  await page.click('#sc-reset-kept-toggle');
+  await expect(page.locator('#sc-reset-kept-row')).toContainText('the perk codex');
   await expect(page.locator('#sc-reset-head')).toHaveText('500 energy and a Lab Assistant');
   await page.click('#sc-prestige-confirm');
   await expect(page.locator('#sc-toast')).toHaveText(

@@ -90,20 +90,21 @@ test('achievements show the way to a badge that has a count', async ({ page }) =
   await expect(badge('fresh-start').locator('.achievement-progress')).toBeHidden();
 });
 
-test('a new player’s hidden rungs sit in one row, and the first isotope is 1.00M away', async ({
-  page,
-}) => {
+test('a new player’s track is one rail, and the first isotope is 1.00M away', async ({ page }) => {
   await openGame(page);
   await page.keyboard.press('Space');
   await page.click('[data-tab="prestige"]');
   await expect(page.locator('#sc-prestige-progress')).toHaveText('1.00M to go');
+  await expect(page.locator('#sc-prestige-held-title')).toHaveText('No isotopes yet');
+  await expect(page.locator('#sc-prestige-bonus')).toHaveText('Each adds 10% to all gains');
   const tops = await page
-    .locator('#sc-track .track-card.is-hidden')
+    .locator('#sc-track .track-card')
     .evaluateAll((cards) => cards.map((c) => Math.round(c.getBoundingClientRect().top)));
-  expect(tops).toHaveLength(10);
+  expect(tops).toHaveLength(12);
   expect(new Set(tops).size, 'one row').toBe(1);
-  const named = (await page.locator('#sc-track .track-card.is-next').first().boundingBox())!;
-  expect(tops[0], 'under the named cards').toBeGreaterThan(named.y + named.height);
+  await expect(page.locator('#sc-track .track-card.is-hidden')).toHaveCount(10);
+  // With nothing pointed at, the card under the rail reads the next unlock.
+  await expect(page.locator('#sc-track-read .track-read-head')).toContainText('Warm Start');
 });
 
 test('the energy number and the share bar sit on the axis of the core', async ({ page }) => {
@@ -287,11 +288,9 @@ test('reset the experiment: isotopes paid, the run wiped', async ({ page }) => {
   await page.click('[data-tab="prestige"]');
   await expect(page.locator('#sc-reset-intro'), 'what a reset is, before the first').toBeVisible();
   await expect(page.locator('#sc-prestige-gain')).toHaveText('+2');
-  await expect(page.locator('#sc-prestige-to')).toHaveText('isotopes, to 2');
+  await expect(page.locator('#sc-prestige-to')).toHaveText('isotopes');
   await expect(page.locator('#sc-prestige-after')).toHaveText('+20%');
-  await expect(page.locator('#sc-prestige-from'), 'none held: what one is worth').toHaveText(
-    'each adds 10%'
-  );
+  await expect(page.locator('#sc-prestige-from-wrap'), 'none held: no gains before').toBeHidden();
   await expect(page.locator('#sc-reset-unlocks')).toHaveText('Unlocks Warm Start and Capacitor.');
   await page.click('#sc-prestige-btn');
   await expect(page.locator('#sc-prestige-modal')).toBeVisible();
