@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { bestRun, checkAchievements, recordMillion } from './achievements';
+import { achievementProgress, bestRun, checkAchievements, recordMillion } from './achievements';
 import { ComboTracker, RestartTracker } from './combo';
 import {
   AUTO_TAPPERS,
@@ -646,6 +646,37 @@ describe('restart tracker', () => {
 // ---------------------------------------------------------------------------
 
 describe('achievements', () => {
+  it('counts the way to the badges that have a count', () => {
+    const s = defaultSave(NOW);
+    s.totalPresses = 4821;
+    s.bestCombo = 61;
+    s.bestSurgeCps = 7.44;
+    s.tappers.assistant = 3;
+    s.tappers.arm = 2;
+    s.prestiges = 2;
+    s.isotopes = 4;
+    s.perks.codex = { metronome: 1, overtone: 0 };
+    expect(achievementProgress(s, 'ten-thousand-taps')).toEqual({ have: 4821, need: 10_000 });
+    expect(achievementProgress(s, 'harmonic')).toEqual({ have: 61, need: 100 });
+    expect(achievementProgress(s, 'lightning')).toEqual({ have: 7.44, need: 12 });
+    expect(achievementProgress(s, 'staffed-up')).toEqual({ have: 3, need: 10 });
+    expect(achievementProgress(s, 'automated')).toEqual({ have: 2, need: AUTO_TAPPERS.length });
+    expect(achievementProgress(s, 'veteran')).toEqual({ have: 2, need: 5 });
+    expect(achievementProgress(s, 'full-track')).toEqual({ have: 4, need: 12 });
+    expect(achievementProgress(s, 'collector')).toEqual({ have: 2, need: 25 });
+    // Never past the goal, and nothing to count toward a one-off.
+    s.totalPresses = 50_000;
+    expect(achievementProgress(s, 'thousand-taps')).toEqual({ have: 1000, need: 1000 });
+    for (const id of [
+      'first-press',
+      'fresh-start',
+      'critical-mass',
+      'big-bang',
+      'quick-study',
+    ] as const)
+      expect(achievementProgress(s, id)).toBeNull();
+  });
+
   it('awards each badge once, from the save and the live context', () => {
     const s = defaultSave(NOW);
     s.totalPresses = 1;
@@ -808,6 +839,15 @@ describe('format', () => {
     expect(formatEnergy(123_456)).toBe('123K');
     expect(formatEnergy(1_234_567)).toBe('1.23M');
     expect(formatEnergy(2.5e9)).toBe('2.50B');
+  });
+
+  it('carries a rounding into the next figure or suffix', () => {
+    expect(formatEnergy(999_499)).toBe('999K');
+    expect(formatEnergy(999_500)).toBe('1.00M');
+    expect(formatEnergy(999_999)).toBe('1.00M');
+    expect(formatEnergy(9_996_000)).toBe('10.0M');
+    expect(formatEnergy(99_960_000)).toBe('100M');
+    expect(formatEnergy(999_999_999)).toBe('1.00B');
   });
 
   it('formats rates and multipliers', () => {

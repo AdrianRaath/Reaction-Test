@@ -15,6 +15,7 @@
 import { browserAdapter, KEY_PREFIX } from '../engine/storage';
 import { createBeeper } from '../engine/sound';
 import {
+  achievementProgress,
   bestRun,
   checkAchievements,
   recordMillion,
@@ -23,6 +24,7 @@ import {
 import { ComboTracker, RestartTracker, type PressResult } from '../games/spacebar-clicker/combo';
 import {
   ACHIEVEMENTS,
+  type AchievementId,
   AUTO_TAPPERS,
   COMBO,
   COMBO_TIERS,
@@ -1877,13 +1879,32 @@ function renderStats(): void {
   statEls.played.textContent = formatDuration(state.playedS);
 }
 
+/** A count toward a badge: whole, or to one place for a surge's presses per second. */
+function progressCount(value: number): string {
+  return Number.isInteger(value) ? value.toLocaleString('en-US') : value.toFixed(1);
+}
+
+/**
+ * The Achievements tab: each badge earned or not, and for a badge not yet
+ * earned that has a count, how far along it is (SPACEBAR-CLICKER.md §8.5.18).
+ */
 function renderAchievements(): void {
   const unlocked = new Set<string>(state.achievements);
   document.querySelectorAll<HTMLElement>('.achievement').forEach((item) => {
-    const hit = unlocked.has(item.dataset.id ?? '');
+    const id = item.dataset.id as AchievementId;
+    const hit = unlocked.has(id);
     item.classList.toggle('is-unlocked', hit);
-    const mark = item.querySelector('.achievement-mark');
-    if (mark) mark.textContent = hit ? '✓' : '✗';
+    const status = item.querySelector<HTMLElement>('.achievement-state');
+    if (status) setText(status, hit ? ', unlocked' : ', locked');
+    const row = item.querySelector<HTMLElement>('.achievement-progress');
+    if (!row) return;
+    const progress = hit ? null : achievementProgress(state, id);
+    row.hidden = progress === null;
+    if (!progress) return;
+    const fill = row.querySelector<HTMLElement>('.achievement-fill');
+    const count = row.querySelector<HTMLElement>('.achievement-count');
+    if (fill) fill.style.transform = `scaleX(${progress.have / progress.need})`;
+    if (count) setText(count, `${progressCount(progress.have)} of ${progressCount(progress.need)}`);
   });
   achCount.textContent = `${unlocked.size} of ${ACHIEVEMENTS.length}`;
 }

@@ -694,12 +694,19 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
             {
               ACHIEVEMENTS.map((a) => (
                 <li class="achievement" data-id={a.id}>
-                  <span class="achievement-mark" aria-hidden="true">
-                    ✗
-                  </span>
+                  <span class="achievement-mark" aria-hidden="true" />
                   <span class="achievement-text">
-                    <span class="achievement-name">{a.name}</span>
+                    <span class="achievement-name">
+                      {a.name}
+                      <span class="visually-hidden achievement-state">, locked</span>
+                    </span>
                     <span class="achievement-detail">{a.detail}</span>
+                    <span class="achievement-progress" hidden>
+                      <span class="achievement-bar" aria-hidden="true">
+                        <span class="achievement-fill" />
+                      </span>
+                      <span class="achievement-count readout" />
+                    </span>
                   </span>
                 </li>
               ))
@@ -3981,20 +3988,80 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     background-color: var(--card-bg);
   }
 
+  /* Not yet earned: an empty ring, something to fill, rather than a cross,
+     which read as failed (SPACEBAR-CLICKER.md §8.5.18). Earned: the ring in
+     Signal Green with a tick, as the rank checklist marks an achieved rank. */
   .achievement-mark {
-    min-width: 20px;
-    font-weight: 700;
-    color: var(--ink-muted);
+    position: relative;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin-block-start: 3px;
+    border: 1.5px solid var(--ink-disabled);
+    border-radius: var(--radius-full);
   }
 
   .achievement.is-unlocked .achievement-mark {
-    color: var(--signal-green); /* achieved, as the rank checklist does */
+    border-color: var(--signal-green);
+  }
+
+  .achievement.is-unlocked .achievement-mark::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 2px;
+    inset-inline-start: 4.5px;
+    width: 4px;
+    height: 7px;
+    border: solid var(--signal-green);
+    border-width: 0 1.5px 1.5px 0;
+    rotate: 45deg;
   }
 
   .achievement-text {
     display: flex;
+    min-width: 0;
+    flex: 1;
     flex-direction: column;
+    align-self: stretch;
     gap: 2px;
+  }
+
+  /* The way to a badge that has a count: a thin bar and the count, in the
+     neutral ramp. Green waits for the badge itself. */
+  .achievement-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    /* At the card's foot, so the bars in a row of cards line up. */
+    margin-block-start: auto;
+    padding-block-start: 4px;
+  }
+
+  .achievement-progress[hidden] {
+    display: none;
+  }
+
+  .achievement-bar {
+    flex: 1;
+    height: 3px;
+    border-radius: var(--radius-full);
+    background-color: color-mix(in srgb, var(--ink-muted) 28%, transparent);
+    overflow: hidden;
+  }
+
+  .achievement-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background-color: var(--ink-secondary);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  .achievement-count {
+    font-size: 0.6875rem;
+    color: var(--ink-muted);
+    white-space: nowrap;
   }
 
   .achievement-name {
@@ -4580,7 +4647,16 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   .track-grid :global(.track-card.is-hidden .track-card-head) {
     flex-direction: column;
+    justify-content: space-between;
     gap: 4px;
+    min-height: 44px;
+  }
+
+  /* The hidden rungs keep a row of their own, from its start
+     (SPACEBAR-CLICKER.md §8.5.18): all ten fit one row of the twelve
+     columns, where they ran on after the named cards and wrapped. */
+  .track-grid :global(.track-card:not(.is-hidden) + .track-card.is-hidden) {
+    grid-column-start: 1;
   }
 
   /* Socket, number and name on one line; "Next" at its end. */
@@ -4697,7 +4773,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
      sockets to a row. */
   @container reset-panel (max-width: 560px) {
     .track-grid {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
     }
 
     .track-grid :global(.track-card),

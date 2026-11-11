@@ -21,8 +21,19 @@ export function formatEnergy(value: number): string {
     scaled /= 1000;
     tier++;
   }
-  const digits = scaled >= 100 ? 0 : scaled >= 10 ? 1 : 2;
-  return `${scaled.toFixed(digits)}${SUFFIXES[tier]}`;
+  // Round first, then count the figures: 999,999 is 1.00M, not 1000K, and
+  // 99.96M is 100M, not 100.0M.
+  let rounded = Number(scaled.toFixed(figures(scaled)));
+  if (rounded >= 1000 && tier < SUFFIXES.length - 1) {
+    rounded /= 1000;
+    tier++;
+  }
+  return `${rounded.toFixed(figures(rounded))}${SUFFIXES[tier]}`;
+}
+
+/** Decimal places that keep a suffixed value to three significant figures. */
+function figures(scaled: number): number {
+  return scaled >= 100 ? 0 : scaled >= 10 ? 1 : 2;
 }
 
 /** Per-second rates: one decimal under 100, then the energy format. */

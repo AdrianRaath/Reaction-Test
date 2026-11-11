@@ -25,38 +25,73 @@ export interface AchievementContext {
 const CRITICAL_INDEX = 5; // REACTOR_STATES[5] is Critical
 const SUPERCRITICAL_INDEX = 6;
 
-const CONDITIONS: Record<AchievementId, (s: SaveState, ctx: AchievementContext) => boolean> = {
-  'first-press': (s) => s.totalPresses >= 1,
-  'warmed-up': (s) => s.totalPresses >= 100,
-  'thousand-taps': (s) => s.totalPresses >= 1000,
-  'ten-thousand-taps': (s) => s.totalPresses >= 10_000,
-  'steady-hands': (s, c) => Math.max(s.bestCombo, c.combo ?? 0) >= 25,
-  resonance: (s, c) => Math.max(s.bestCombo, c.combo ?? 0) >= 50,
-  harmonic: (s, c) => Math.max(s.bestCombo, c.combo ?? 0) >= 100,
-  'fast-fingers': (s, c) => Math.max(s.bestSurgeCps, c.surgeCps ?? 0) >= 8,
-  lightning: (s, c) => Math.max(s.bestSurgeCps, c.surgeCps ?? 0) >= 12,
-  'staffed-up': (s) => s.tappers.assistant >= 10,
-  automated: (s) => AUTO_TAPPERS.every((t) => s.tappers[t.id] > 0),
-  'critical-mass': (s) => reactorIndex(s.runLifetime) >= CRITICAL_INDEX,
-  'fresh-start': (s) => s.prestiges >= 1,
-  veteran: (s) => s.prestiges >= 5,
-  supercritical: (s) => reactorIndex(s.runLifetime) >= SUPERCRITICAL_INDEX,
-  'full-track': (s) => s.isotopes >= ISOTOPE_TRACK.length,
-  'big-bang': (_, c) => (c.resetGain ?? 0) >= 5,
-  collector: (s) => PERKS.every((p) => p.id in s.perks.codex),
-  'quick-study': (s) => s.bestMillionS !== null && s.bestMillionS < 600,
+/**
+ * The badges with a count to reach: what the save has, and what the badge
+ * needs. The Achievements tab shows the way there (SPACEBAR-CLICKER.md
+ * §8.5.18), and the badge is earned when the count gets there.
+ */
+const COUNTS: Partial<
+  Record<AchievementId, { need: number; have: (s: SaveState, ctx: AchievementContext) => number }>
+> = {
+  'first-press': { need: 1, have: (s) => s.totalPresses },
+  'warmed-up': { need: 100, have: (s) => s.totalPresses },
+  'thousand-taps': { need: 1000, have: (s) => s.totalPresses },
+  'ten-thousand-taps': { need: 10_000, have: (s) => s.totalPresses },
+  'steady-hands': { need: 25, have: (s, c) => Math.max(s.bestCombo, c.combo ?? 0) },
+  resonance: { need: 50, have: (s, c) => Math.max(s.bestCombo, c.combo ?? 0) },
+  harmonic: { need: 100, have: (s, c) => Math.max(s.bestCombo, c.combo ?? 0) },
+  'fast-fingers': { need: 8, have: (s, c) => Math.max(s.bestSurgeCps, c.surgeCps ?? 0) },
+  lightning: { need: 12, have: (s, c) => Math.max(s.bestSurgeCps, c.surgeCps ?? 0) },
+  'staffed-up': { need: 10, have: (s) => s.tappers.assistant },
+  automated: {
+    need: AUTO_TAPPERS.length,
+    have: (s) => AUTO_TAPPERS.filter((t) => s.tappers[t.id] > 0).length,
+  },
+  'fresh-start': { need: 1, have: (s) => s.prestiges },
+  veteran: { need: 5, have: (s) => s.prestiges },
+  'full-track': { need: ISOTOPE_TRACK.length, have: (s) => s.isotopes },
+  collector: { need: PERKS.length, have: (s) => PERKS.filter((p) => p.id in s.perks.codex).length },
 };
 
+/** The badges earned by a moment rather than a count. */
+const MOMENTS: Partial<Record<AchievementId, (s: SaveState, ctx: AchievementContext) => boolean>> =
+  {
+    'critical-mass': (s) => reactorIndex(s.runLifetime) >= CRITICAL_INDEX,
+    supercritical: (s) => reactorIndex(s.runLifetime) >= SUPERCRITICAL_INDEX,
+    'big-bang': (_, c) => (c.resetGain ?? 0) >= 5,
+    'quick-study': (s) => s.bestMillionS !== null && s.bestMillionS < 600,
+  };
+
+function earned(id: AchievementId, state: SaveState, ctx: AchievementContext): boolean {
+  const count = COUNTS[id];
+  if (count) return count.have(state, ctx) >= count.need;
+  return MOMENTS[id]?.(state, ctx) ?? false;
+}
+
+/**
+ * How far along a badge is: what the save has toward what it needs, never
+ * more than the need. Null for a badge with nothing to count: one earned by
+ * a moment, or by doing a thing once.
+ */
+export function achievementProgress(
+  state: SaveState,
+  id: AchievementId
+): { have: number; need: number } | null {
+  const count = COUNTS[id];
+  if (!count || count.need <= 1) return null;
+  return { have: Math.min(count.have(state, {}), count.need), need: count.need };
+}
+
 export function checkAchievements(state: SaveState, ctx: AchievementContext = {}): AchievementId[] {
-  const earned: AchievementId[] = [];
+  const won: AchievementId[] = [];
   for (const def of ACHIEVEMENTS) {
     if (state.achievements.includes(def.id)) continue;
-    if (CONDITIONS[def.id](state, ctx)) {
+    if (earned(def.id, state, ctx)) {
       state.achievements.push(def.id);
-      earned.push(def.id);
+      won.push(def.id);
     }
   }
-  return earned;
+  return won;
 }
 
 /** A run reaching a million: how long it took, and whether that beat the fastest. */

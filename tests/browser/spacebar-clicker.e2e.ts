@@ -62,6 +62,50 @@ test('a toast takes the keycap’s place, and the hint retires once a combo is h
   expect(Math.abs((await face.boundingBox())!.height - faceHeight)).toBeLessThan(1);
 });
 
+test('achievements show the way to a badge that has a count', async ({ page }) => {
+  await seedSave(page, {
+    totalPresses: 4821,
+    bestCombo: 61,
+    achievements: ['first-press', 'warmed-up', 'thousand-taps', 'steady-hands', 'resonance'],
+  });
+  await openGame(page);
+  await page.click('[data-tab="achievements"]');
+  const badge = (id: string) => page.locator(`.achievement[data-id="${id}"]`);
+
+  // Not yet earned, with a count: a bar and the count, and no cross.
+  await expect(badge('ten-thousand-taps').locator('.achievement-count')).toHaveText(
+    '4,821 of 10,000'
+  );
+  await expect(badge('harmonic').locator('.achievement-count')).toHaveText('61 of 100');
+  await expect(badge('harmonic').locator('.achievement-state')).toHaveText(', locked');
+  await expect(badge('harmonic').locator('.achievement-mark')).toHaveText('');
+  const bar = (await badge('harmonic').locator('.achievement-bar').boundingBox())!;
+  const fill = (await badge('harmonic').locator('.achievement-fill').boundingBox())!;
+  expect(fill.width / bar.width).toBeCloseTo(0.61, 1);
+
+  // Earned, or earned by a moment: nothing to count.
+  await expect(badge('thousand-taps').locator('.achievement-progress')).toBeHidden();
+  await expect(badge('thousand-taps').locator('.achievement-state')).toHaveText(', unlocked');
+  await expect(badge('critical-mass').locator('.achievement-progress')).toBeHidden();
+  await expect(badge('fresh-start').locator('.achievement-progress')).toBeHidden();
+});
+
+test('a new player’s hidden rungs sit in one row, and the first isotope is 1.00M away', async ({
+  page,
+}) => {
+  await openGame(page);
+  await page.keyboard.press('Space');
+  await page.click('[data-tab="prestige"]');
+  await expect(page.locator('#sc-prestige-progress')).toHaveText('1.00M to go');
+  const tops = await page
+    .locator('#sc-track .track-card.is-hidden')
+    .evaluateAll((cards) => cards.map((c) => Math.round(c.getBoundingClientRect().top)));
+  expect(tops).toHaveLength(10);
+  expect(new Set(tops).size, 'one row').toBe(1);
+  const named = (await page.locator('#sc-track .track-card.is-next').first().boundingBox())!;
+  expect(tops[0], 'under the named cards').toBeGreaterThan(named.y + named.height);
+});
+
 test('the energy number and the share bar sit on the axis of the core', async ({ page }) => {
   await seedSave(page, { energy: 32_454, runLifetime: 40_000, tappers: { assistant: 5 } });
   await openGame(page);

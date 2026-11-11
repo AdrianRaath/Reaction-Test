@@ -76,7 +76,7 @@ These are maintainer decisions. Follow them unless the maintainer changes them.
 | `src/games/spacebar-clicker/achievements.ts`          | `checkAchievements`, idempotent; the records, `recordMillion` and `bestRun` (§4.9).                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `src/games/spacebar-clicker/format.ts`                | Number formatting: `formatEnergy`, `formatRate`, `formatMultiplier`, `formatDuration`.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `src/games/spacebar-clicker/perks.ts`                 | Perk drops, offers, expiry, buying and upgrading, the slot limit and keystone swap (`needsSlot`, `keystoneSwap`), away deferral, Self-Replicator's copy, perk text. Pure.                                                                                                                                                                                                                                                                                                                                                         |
-| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks, the run-down, the restart, the share meter and the records included (94 as of 2026-11-10).                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `src/games/spacebar-clicker/spacebar-clicker.test.ts` | Unit tests for the game without perks, the run-down, the restart, the share meter and the records included (97 as of 2026-11-11).                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `src/games/spacebar-clicker/sim.ts`                   | The pacing simulation: plays whole runs headless against the real rules, with simulated players and perk policies (§4.12), and whole careers of runs and resets with the isotope track (§8.3.7).                                                                                                                                                                                                                                                                                                                                  |
 | `src/games/spacebar-clicker/pacing.test.ts`           | Holds the simulation's results in the agreed bands. About 5 s.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `src/games/spacebar-clicker/career.test.ts`           | Holds careers to the isotope track's targets (§8.3.7): a first run unchanged, the two sides of each fork. About 20 s.                                                                                                                                                                                                                                                                                                                                                                                                             |
@@ -1034,12 +1034,12 @@ The visuals were built in three passes, all shipped 2026-10-22.
 
 ## 7. Testing
 
-- `npm test` runs Vitest: the 94 clicker tests, the 63 perk tests, the 37
+- `npm test` runs Vitest: the 97 clicker tests, the 63 perk tests, the 37
   track tests, the pacing bands and the career bands.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  83 as of 2026-11-11, in about ten minutes.
+  85 as of 2026-11-11, in about ten minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
@@ -2550,6 +2550,8 @@ drift):
   it.", "Held this run, level 3", "Undiscovered", "Not found yet. It drops
   into the shop's Auto-tappers tab.", "Rare" and "Keystone" on this run's
   cards, and each row's count ("9 of 12").
+- **The design review** (§8.5.18): the "Achievements" heading over its
+  count, and a badge's count, "4,821 of 10,000".
 - **This doc's §6**, once the page changes.
 
 #### 8.5.10 Finding 5: presses and surges fade, 2026-11-10
@@ -3055,11 +3057,11 @@ ones first:
 13. Shop rows run from about 58 to 97px. **Open.**
 14. Stats is 13 equal tiles with no groups, and one label wraps. **Open.**
 15. A locked achievement's grey cross reads as failed; nothing shows
-    progress. **Open.**
+    progress. **Done, below.**
 16. A new player's isotope track ends in ten small sockets on two ragged
-    rows. **Open.**
+    rows. **Done, below.**
 17. A new player's Isotopes tab says "1000K to go" where the badge says
-    "1.00M to go". **Open.**
+    "1.00M to go". **Done, below.**
 18. The reset dialog's two section labels differ, a fifth chip is an
     orphan, and on a phone the last switch is cut by the buttons. **Open.**
 19. In the swap dialog the incoming perk looks like the six to drop.
@@ -3200,6 +3202,45 @@ Calls for review:
    pill, 31px, as the pill needs a place inside the card.
 4. **A note with no credits wraps beside the pill** on a narrow shop
    column; with credits the note keeps the card's width.
+
+**Findings 15, 16 and 17, built 2026-11-11** (§4.9, §4.7).
+
+- **15, achievements.** A badge not yet earned shows an empty ring, not a
+  cross; an earned one the ring in Signal Green with a tick. A badge with a
+  count shows the way to it until it is earned: a thin bar and the count,
+  "4,821 of 10,000", at the card's foot so a row's bars line up, in the
+  neutral ramp, as green waits for the badge. Counted: the three press
+  badges, the three combos (best combo), the two surge badges (best
+  presses per second, to one place), Staffed Up (Lab Assistants this run),
+  Automated (kinds owned), Veteran, Full Track (isotopes) and Collector
+  (perks found). First Press and Fresh Start need one of a thing, and
+  Critical Mass, Supercritical, Big Bang and Quick Study are earned by a
+  moment: no bar. `achievements.ts` now holds each counted badge as a need
+  and a count (`COUNTS`), which earns it and feeds `achievementProgress`;
+  the moments are `MOMENTS`. Hidden words say "locked" or "unlocked" after
+  each name, as the mark is visual.
+- **16, the hidden rungs.** The first hidden rung starts a row, so the
+  sockets sit in one row under the named cards: ten for a new player, where
+  six ran on after the two cards and four wrapped. Each socket's head keeps
+  one height, a fork's larger gem or not. On a phone the track's grid is
+  five columns, so ten sockets are two even rows.
+- **17, "1000K".** `formatEnergy` rounds before it counts figures and picks
+  a suffix: 999,999 is "1.00M", and 99.96M is "100M", not "100.0M". The
+  badge's "1000K to go" on a new player's first presses went with it.
+
+2 unit tests, 97 clicker tests in all; 2 browser checks, 85 in all.
+
+Calls for review:
+
+1. **"4,821 of 10,000" and the hidden "locked" and "unlocked"** are new
+   words, for the copy audit (§8.5.9).
+2. **Staffed Up counts this run's Lab Assistants,** so its bar empties at a
+   reset, as the badge's rule reads.
+3. **The surge badges count the best surge ever,** "7.4 of 8", and "0.0"
+   never shows: before a first surge it reads "0 of 8".
+4. **Earned badges show no count,** only the tick.
+5. **A new player's first row of the track is half empty,** two named
+   cards, with the sockets' row under it at ten twelfths of the width.
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
 the maintainer asks.
@@ -3471,3 +3512,8 @@ the maintainer asks.
   card, its name, rarity and price on one line, the effect at full width,
   and its note, credits and Reroll in a foot inside it. The worst case is
   131px, from 181, and no longer stretches the face.
+- **2026-11-11.** Design review, findings 15, 16 and 17 (§8.5.18). A badge
+  not yet earned shows an empty ring and, where it has a count, a bar and
+  the count to it. The isotope track's hidden rungs sit in one row. The
+  energy format rounds before it picks a suffix, so "1000K" reads "1.00M".
+  2 unit tests and 2 browser checks, 85 in all.
