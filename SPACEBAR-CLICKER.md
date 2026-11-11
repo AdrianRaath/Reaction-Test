@@ -2551,7 +2551,8 @@ drift):
   into the shop's Auto-tappers tab.", "Rare" and "Keystone" on this run's
   cards, and each row's count ("9 of 12").
 - **The design review** (§8.5.18): the "Achievements" heading over its
-  count, and a badge's count, "4,821 of 10,000".
+  count, a badge's count, "4,821 of 10,000", and the swap dialog's labels,
+  "On offer", "Drop one" and "Swapped out".
 - **This doc's §6**, once the page changes.
 
 #### 8.5.10 Finding 5: presses and surges fade, 2026-11-10
@@ -3065,7 +3066,7 @@ ones first:
 18. The reset dialog's two section labels differ, a fifth chip is an
     orphan, and on a phone the last switch is cut by the buttons. **Open.**
 19. In the swap dialog the incoming perk looks like the six to drop.
-    **Open.**
+    **Done, below.**
 20. On a phone the keycap and hint take about 90px, and the shop is a
     scroll away from the reactor. **Open.**
 21. The 588px fit is held against a 900px viewport; a 1440x900 screen shows
@@ -3222,8 +3223,9 @@ Calls for review:
 - **16, the hidden rungs.** The first hidden rung starts a row, so the
   sockets sit in one row under the named cards: ten for a new player, where
   six ran on after the two cards and four wrapped. Each socket's head keeps
-  one height, a fork's larger gem or not. On a phone the track's grid is
-  five columns, so ten sockets are two even rows.
+  one height, a fork's larger gem or not. On a phone they stay six to a row, as before: five
+  to a row was tried the same day and left a rung alone on a second row
+  with six hidden.
 - **17, "1000K".** `formatEnergy` rounds before it counts figures and picks
   a suffix: 999,999 is "1.00M", and 99.96M is "100M", not "100.0M". The
   badge's "1000K to go" on a new player's first presses went with it.
@@ -3241,6 +3243,36 @@ Calls for review:
 4. **Earned badges show no count,** only the tick.
 5. **A new player's first row of the track is half empty,** two named
    cards, with the sockets' row under it at ten twelfths of the width.
+
+**Finding 19, built 2026-11-11** (§4.13). The maintainer kept 18 for a
+prompt of its own, as the reset dialog has a bigger problem.
+
+- **Two groups under labels.** "On offer" over the perk on offer; "Drop
+  one" over the perks it could replace, or "Swapped out" over the one
+  keystone when there is nothing to pick. The explanation sits under the
+  title, over both, not between them.
+- **The offer looks like its shop card:** its hue on the rim and a faint
+  tint, its price over its rarity at the end. The perks to drop stay
+  neutral.
+- **A perk to drop says its rarity,** "Rare" or "Keystone" in the muted ink
+  at the end of its name's line; a common says nothing, as on this run's
+  cards (`perk-card-end`, built in `swapCard`).
+- **The list scrolls inside the dialog** when it is taller than the screen,
+  with the title, the offer and the button in place. With six perks on a
+  390x844 phone the dialog was 831px before the labels and would have been
+  894 with them; it is 812.
+
+Three assertions added to the swap checks, and the phone check holds the
+dialog inside the screen's height.
+
+Calls for review:
+
+1. **"On offer", "Drop one" and "Swapped out"** are new words, for the copy
+   audit (§8.5.9).
+2. **On a phone with six perks the sixth is a scroll away;** the fifth card
+   is cut at the list's edge, which is the only sign of it.
+3. **The dialog's text is still centred over left-set cards;** that is
+   finding 5, set aside.
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
 the maintainer asks.
@@ -3517,3 +3549,6 @@ the maintainer asks.
   the count to it. The isotope track's hidden rungs sit in one row. The
   energy format rounds before it picks a suffix, so "1000K" reads "1.00M".
   2 unit tests and 2 browser checks, 85 in all.
+- **2026-11-11.** Design review, finding 19 (§8.5.18): the swap dialog's
+  two groups under labels, the perk on offer in its hue with its price, a
+  rarity on the perks to drop, and a list that scrolls inside the screen.

@@ -442,6 +442,7 @@ const swapTitle = el('sc-swap-title');
 const swapIncoming = el('sc-swap-incoming');
 const swapMessage = el('sc-swap-message');
 const swapList = el('sc-swap-list');
+const swapListLabel = el('sc-swap-list-label');
 const swapCancel = el('sc-swap-cancel');
 const swapConfirm = el<HTMLButtonElement>('sc-swap-confirm');
 
@@ -1165,9 +1166,35 @@ function perkCard(id: PerkId, level: number, lines: HTMLElement[], asButton = fa
   return card;
 }
 
-/** A perk card for the swap dialog: name, level and effect. */
-function swapCard(id: PerkId, level: number, asButton = false): HTMLElement {
-  return perkCard(id, level, [cardLine('perk-card-detail', perkEffect(perk(id), level))], asButton);
+/**
+ * A perk card for the swap dialog: name, level and effect, and at its end its
+ * rarity when it is a rare or a keystone. The perk on offer also shows its
+ * price there, and names a common too.
+ */
+function swapCard(id: PerkId, level: number, asButton = false, price?: number): HTMLElement {
+  const def = perk(id);
+  const card = perkCard(
+    id,
+    level,
+    [cardLine('perk-card-detail', perkEffect(def, level))],
+    asButton
+  );
+  const end = document.createElement('span');
+  end.className = 'perk-card-end';
+  if (price !== undefined) {
+    const cost = document.createElement('span');
+    cost.className = 'perk-card-cost readout';
+    cost.textContent = formatEnergy(price);
+    end.append(cost);
+  }
+  if (price !== undefined || def.rarity !== 'common') {
+    const rarity = document.createElement('span');
+    rarity.className = 'perk-card-rarity';
+    rarity.textContent = PERK_RARITY_NAMES[def.rarity];
+    end.append(rarity);
+  }
+  if (end.childElementCount) card.append(end);
+  return card;
 }
 
 /** Bring a tab's offer row up to date: what is on offer, its price, its ring, its notes. */
@@ -3809,8 +3836,9 @@ function openSwap(tab: ShopTab, mode: 'slot' | 'keystone'): void {
   if (!offer) return;
   const incoming = perk(offer.id);
   swapTab = tab;
-  swapIncoming.replaceChildren(swapCard(offer.id, offer.level));
+  swapIncoming.replaceChildren(swapCard(offer.id, offer.level, false, offer.price));
   swapList.replaceChildren();
+  swapListLabel.textContent = mode === 'slot' ? 'Drop one' : 'Swapped out';
 
   if (mode === 'slot') {
     const choices = swapChoices(state, tab);

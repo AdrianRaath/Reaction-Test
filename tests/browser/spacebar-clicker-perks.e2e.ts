@@ -164,6 +164,23 @@ test('with every slot full, the dialog asks which perk to drop', async ({ page }
   await expect(dialog.locator('#sc-swap-title')).toHaveText('All 5 slots are full');
   await expect(dialog.locator('#sc-swap-incoming')).toContainText('Chain Reaction');
   await expect(dialog.locator('button.perk-card')).toHaveCount(5);
+  // Two groups under their labels: the offer with its price and rarity, in
+  // its hue, then the perks to drop, a rare or a keystone saying so.
+  await expect(dialog.locator('#sc-swap-incoming-label')).toHaveText('On offer');
+  await expect(dialog.locator('#sc-swap-list-label')).toHaveText('Drop one');
+  const incoming = dialog.locator('#sc-swap-incoming .perk-card');
+  await expect(incoming.locator('.perk-card-cost')).toHaveText('1,000');
+  await expect(incoming.locator('.perk-card-rarity')).toHaveText('Rare');
+  await expect(incoming).not.toHaveCSS('background-image', 'none');
+  await expect(dialog.locator('#sc-swap-list .perk-card').first()).toHaveCSS(
+    'background-image',
+    'none'
+  );
+  await expect(
+    dialog
+      .locator('#sc-swap-list .perk-card', { hasText: 'Storm Front' })
+      .locator('.perk-card-rarity')
+  ).toHaveText('Keystone');
   await expect(page.locator('#sc-swap-cancel')).toBeFocused();
 
   await page.keyboard.press('Escape');
@@ -211,6 +228,7 @@ test('a second keystone asks before it swaps, and the shop marks what keystones 
   await row.locator('.perk-buy').click();
   const dialog = page.locator('#sc-swap-modal');
   await expect(dialog.locator('#sc-swap-title')).toHaveText('Swap your keystone?');
+  await expect(dialog.locator('#sc-swap-list-label')).toHaveText('Swapped out');
   await expect(page.locator('#sc-swap-cancel')).toHaveText('Keep Glass Rhythm');
   await page.click('#sc-swap-cancel');
   await expect(dialog).toBeHidden();
@@ -660,7 +678,10 @@ test.describe('on a phone', () => {
       return (
         document.documentElement.scrollWidth <= window.innerWidth &&
         box.left >= 0 &&
-        box.right <= window.innerWidth
+        box.right <= window.innerWidth &&
+        // And within the screen's height: a long list scrolls inside it.
+        box.top >= 0 &&
+        box.bottom <= window.innerHeight
       );
     });
     expect(fits).toBe(true);
