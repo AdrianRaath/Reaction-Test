@@ -4480,9 +4480,13 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     padding: var(--space-lg);
   }
 
-  /* The count as a medal: dashed and empty before the first isotope, rimmed
-     and lit once any is held (a state, so the glow is a signal). */
+  /* The count as a medal, drawn as the reactor is (SPACEBAR-CLICKER.md
+     §8.5.19): dashed and empty before the first isotope; once any is held,
+     a dark centre with a faint blue heart inside a lit ring, the reactor's
+     dashed bezel within it, and the glow from the ring (a state, so the
+     glow is a signal). */
   .iso-medal {
+    position: relative;
     display: grid;
     flex-shrink: 0;
     place-items: center;
@@ -4490,6 +4494,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     height: 64px;
     border: 2px dashed var(--line);
     border-radius: var(--radius-full);
+    background-color: var(--panel-01);
     font-size: 1.375rem;
     font-weight: 700;
     color: var(--ink-muted);
@@ -4497,10 +4502,23 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   .iso-card.has-isotopes .iso-medal {
     border: 2px solid var(--ramp-blue);
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--ramp-blue) 26%, var(--panel-01)) 0,
+      var(--panel-01) 70%
+    );
     box-shadow:
       0 0 14px color-mix(in srgb, var(--ramp-blue) 35%, transparent),
       inset 0 0 12px color-mix(in srgb, var(--ramp-blue) 22%, transparent);
     color: var(--ramp-white);
+  }
+
+  .iso-card.has-isotopes .iso-medal::after {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border: 1px dashed color-mix(in srgb, var(--ramp-blue) 45%, transparent);
+    border-radius: inherit;
   }
 
   .iso-hold-title {
@@ -4691,9 +4709,14 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     outline: none;
   }
 
-  /* A rung's gem, its number in it: dashed while hidden, rimmed in blue when
-     next, lit like the badge's bead when held. A fork's is a diamond. */
+  /* A rung's gem, its number in it, drawn as the reactor is rather than as
+     a glossy bead (SPACEBAR-CLICKER.md §8.5.19): a dashed bezel while
+     hidden; an unlit ring in the isotopes' blue when next; and when held a
+     small core, a dark centre with a faint blue heart inside a lit ring,
+     a fine ring within it, the glow from the ring and the number in
+     Blue-White. A fork's is a diamond. */
   .track :global(.track-gem) {
+    position: relative;
     display: grid;
     flex-shrink: 0;
     place-items: center;
@@ -4701,7 +4724,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     height: var(--gem);
     border: 1.5px dashed var(--line);
     border-radius: var(--radius-full);
-    background-color: var(--panel-02);
+    background-color: var(--panel-01);
     font-family: var(--font-mono);
     font-size: 0.75rem;
     font-weight: 700;
@@ -4721,20 +4744,33 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   }
 
   .track :global(.is-next .track-gem) {
-    border: 1.5px solid var(--ramp-blue);
+    border: 1.5px solid color-mix(in srgb, var(--ramp-blue) 60%, var(--line));
     color: var(--ramp-blue);
   }
 
   .track :global(.is-lit .track-gem) {
-    border: 0;
+    border: 1.5px solid var(--ramp-blue);
     background: radial-gradient(
-      circle at 35% 35%,
-      #fff 0,
-      var(--ramp-white) 35%,
-      var(--ramp-blue) 100%
+      circle,
+      color-mix(in srgb, var(--ramp-blue) 30%, var(--panel-01)) 0,
+      var(--panel-01) 72%
     );
-    box-shadow: 0 0 8px color-mix(in srgb, var(--ramp-blue) 60%, transparent);
-    color: var(--chassis-black);
+    box-shadow:
+      0 0 10px color-mix(in srgb, var(--ramp-blue) 55%, transparent),
+      inset 0 0 8px color-mix(in srgb, var(--ramp-blue) 30%, transparent);
+    color: var(--ramp-white);
+  }
+
+  .track :global(.is-lit .track-gem::after) {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid color-mix(in srgb, var(--ramp-blue) 32%, transparent);
+    border-radius: inherit;
+  }
+
+  .track :global(.is-lit[data-fork] .track-gem::after) {
+    border-radius: 6px;
   }
 
   /* The rung the card under the rail is reading. */
@@ -4913,6 +4949,11 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
       border-radius: 6px;
     }
 
+    /* Too small for a ring inside the ring. */
+    .track-rail :global(.is-lit .track-gem::after) {
+      content: none;
+    }
+
     .track-rail :global(.track-card-name) {
       display: none;
     }
@@ -5070,17 +5111,22 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     font-weight: 600;
   }
 
+  /* The isotope being paid, as a small core: a point of light in a dark
+     centre, inside a lit ring. */
   .reset-pay-bead {
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
+    border: 1.5px solid var(--ramp-blue);
     border-radius: var(--radius-full);
     background: radial-gradient(
-      circle at 35% 35%,
-      #fff 0,
-      var(--ramp-white) 35%,
-      var(--ramp-blue) 100%
+      circle,
+      var(--ramp-white) 0 16%,
+      color-mix(in srgb, var(--ramp-blue) 45%, var(--panel-01)) 20% 44%,
+      var(--panel-01) 72%
     );
-    box-shadow: 0 0 12px color-mix(in srgb, var(--ramp-blue) 70%, transparent);
+    box-shadow:
+      0 0 12px color-mix(in srgb, var(--ramp-blue) 60%, transparent),
+      inset 0 0 6px color-mix(in srgb, var(--ramp-blue) 35%, transparent);
   }
 
   .reset-pay-value {
@@ -5234,18 +5280,18 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     line-height: 1.5;
   }
 
+  /* A point of light, like the core's heart. No ring: a ring with a dot
+     would read as a picked radio, over a fork's real ones. */
   .reset-choices :global(.reset-unlock-bead) {
     grid-row: span 2;
-    width: 12px;
-    height: 12px;
-    margin-block-start: 5px;
+    width: 8px;
+    height: 8px;
+    margin: 7px 2px 0;
     border-radius: var(--radius-full);
-    background: radial-gradient(
-      circle at 35% 35%,
-      #fff 0,
-      var(--ramp-white) 35%,
-      var(--ramp-blue) 100%
-    );
+    background-color: var(--ramp-white);
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--ramp-blue) 35%, transparent),
+      0 0 8px var(--ramp-blue);
   }
 
   .reset-choices :global(.reset-unlocks .reset-option-name),
@@ -5603,6 +5649,13 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   .pick-tip.is-below .pick-tip-box::after {
     inset-block: -5px auto;
     transform: rotate(225deg);
+  }
+
+  /* Over a perk to keep, the tooltip wears the perk's hue, as the shelf's
+     does (DESIGN.md, Perk-Family Exception). */
+  .pick-tip.is-perk .pick-tip-box,
+  .pick-tip.is-perk .pick-tip-box::after {
+    border-color: color-mix(in srgb, var(--perk) 55%, var(--line));
   }
 
   .pick-tip-name {

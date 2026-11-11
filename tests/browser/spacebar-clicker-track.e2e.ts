@@ -252,6 +252,34 @@ test('Heirloom and Cornerstone carry a perk through the reset, at level I', asyn
   await expect(keep.locator('.reset-keep-none')).toHaveText('Keep none');
   await expect(keep.locator('input[value="self-replicator"]')).toBeChecked();
 
+  // A hover says what a perk does at level I, the level it is kept at; so
+  // does its radio's description, and keyboard focus.
+  const tip = page.locator('#sc-pick-tip');
+  await expect(tip).toBeHidden();
+  await keep.locator('.reset-chip', { hasText: 'Self-Replicator' }).hover();
+  await expect(tip).toBeVisible();
+  await expect(tip).toHaveClass(/is-perk/);
+  await expect(page.locator('#sc-pick-tip-name')).toHaveText('Self-Replicator, at level I');
+  const kept = await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>(
+      '#sc-reset-keep input[value="self-replicator"]'
+    )!;
+    return {
+      tip: document.getElementById('sc-pick-tip-detail')!.textContent,
+      described: document.getElementById(input.getAttribute('aria-describedby')!)!.textContent,
+    };
+  });
+  expect(kept.tip!.length).toBeGreaterThan(10);
+  expect(kept.described).toBe(`At level I: ${kept.tip}`);
+  await page.mouse.move(5, 5);
+  await expect(tip).toBeHidden();
+  await keep.locator('input[value="self-replicator"]').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(keep.locator('input[value="overtone"]')).toBeChecked();
+  await expect(page.locator('#sc-pick-tip-name')).toHaveText('Overtone, at level I');
+  await page.keyboard.press('ArrowLeft');
+  await page.mouse.move(5, 5);
+
   // Cornerstone offers the keystone instead.
   await page.locator('input[value="cornerstone"]').check();
   await expect(keep.locator('legend')).toHaveText('Cornerstone: keep your keystone');

@@ -3749,7 +3749,13 @@ function renderKeep(): void {
     tile.append(perkGlyph(held.id));
     const name = cardLine('reset-chip-name', def.name);
     if (held.level > 1) name.append(text(' '), cardLine('reset-chip-level', ROMAN[held.level]!));
-    chip.append(radio('keep', held.id), tile, name);
+    // What it does at level I, the level it is kept at: the radio's
+    // description, and the tooltip's words on hover or focus.
+    const input = radio('keep', held.id);
+    const detail = cardLine('visually-hidden', `At level I: ${perkDetail(def, 1)}`);
+    detail.id = `sc-keep-detail-${held.id}`;
+    input.setAttribute('aria-describedby', detail.id);
+    chip.append(input, tile, name, detail);
     chips.append(chip);
   }
   // "Keep none" is the last choice in the grid, so the choices fill it.
@@ -3780,16 +3786,31 @@ function renderResetSummary(): void {
     : `${energy} and a Lab Assistant`;
 }
 
-// A past pick's tooltip: what the rung does, on hover or keyboard focus.
-// Touch has no hover, and a tap there makes the pick, so it shows none; the
-// Isotopes tab lists every rung.
+// The dialog's tooltip, on hover or keyboard focus. Over a past pick: what the
+// rung does, in the isotopes' blue. Over a perk to keep: what the perk does
+// at level I, the level it is kept at, in its family's hue. Touch has no
+// hover, and a tap there makes the choice, so it shows none; the Isotopes tab
+// reads every rung and the Perks tab every perk.
 let pickTipFor: HTMLElement | null = null;
 let pickTipBy: 'hover' | 'focus' = 'hover';
 
+/** What in the dialog has a tooltip: a past pick's half, or a perk to keep. */
+const TIPPED = '.reset-seg-option, .reset-chip';
+
 function showPickTip(option: HTMLElement, by: 'hover' | 'focus'): void {
-  const id = option.dataset.rung as RungId;
-  pickTipName.textContent = rung(id).name;
-  pickTipDetail.textContent = rungSentence(id);
+  const keep = option.matches('.reset-chip');
+  pickTip.classList.toggle('is-perk', keep);
+  if (keep) {
+    const def = perk(option.querySelector('input')!.value as PerkId);
+    pickTip.dataset.family = def.family;
+    pickTipName.textContent = `${def.name}, at level I`;
+    pickTipDetail.replaceChildren(...perkEffect(def, 1));
+  } else {
+    const id = option.dataset.rung as RungId;
+    delete pickTip.dataset.family;
+    pickTipName.textContent = rung(id).name;
+    pickTipDetail.textContent = rungSentence(id);
+  }
   pickTip.hidden = false;
   pickTipFor = option;
   pickTipBy = by;
@@ -3816,7 +3837,7 @@ function hidePickTip(): void {
 
 resetChoices.addEventListener('pointerover', (e) => {
   if (e.pointerType !== 'mouse') return;
-  const option = (e.target as Element).closest<HTMLElement>('.reset-seg-option');
+  const option = (e.target as Element).closest<HTMLElement>(TIPPED);
   if (option && option !== pickTipFor) showPickTip(option, 'hover');
 });
 // Leaving the half hides it, unless the pointer crossed onto the tooltip.
@@ -3833,7 +3854,7 @@ pickTip.addEventListener('pointerleave', (e) => {
 });
 resetChoices.addEventListener('focusin', (e) => {
   const input = e.target as HTMLElement;
-  const option = input.closest<HTMLElement>('.reset-seg-option');
+  const option = input.closest<HTMLElement>(TIPPED);
   if (option && input.matches(':focus-visible')) showPickTip(option, 'focus');
 });
 resetChoices.addEventListener('focusout', () => {

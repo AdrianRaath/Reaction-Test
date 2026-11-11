@@ -394,7 +394,10 @@ stage-change sequence (§5.3), a toast, an announcement and a chord.
     starts the next run in its slot, at level I."), two to a row at equal
     widths, with "Keep none" as the last of them, across the row when the
     count is odd. The chips follow the fork-9 pick as it changes; "Keep
-    none" holds through a switch.
+    none" holds through a switch. Hovering a chip, or focusing it from
+    the keyboard, shows what the perk does at level I, the level it is
+    kept at, in a tooltip in the perk's hue: "Assembly Line, at level I".
+    Touch shows none, as a tap makes the choice.
   - **"Your picks" on one line**, by name, "Sixth Slot · Reroll · Heirloom ·
     Enrichment", with "Change". "Change" opens the switches under it, as
     they were: each fork picked before as a two-way switch, "At 3", the
@@ -3386,6 +3389,49 @@ Calls for review:
     are two equal columns again, and "Keep none" is the last cell rather
     than a pill beside the heading: five perks make three full rows.
 
+**The gems, restyled 2026-11-11.** The maintainer found the isotope marks
+in the tab and the dialog, glossy beads with a white highlight, "off with
+the rest of the ui style", and asked for them nearer the reactor: not the
+reactor, but of its theme. Scope, the maintainer's: the Isotopes tab and
+the reset dialog only. The badge on the face, its beads in flight, the
+credit beads on an offer and the surge card, and the unlock card keep the
+bead. Held rungs must stay clearly brighter than the next two. Approved
+from a before-and-after mockup, with one change of mine: the mark on a
+"You unlock" card as a point of light, not a ring with a dot, which read as
+a picked radio over a fork's real ones.
+
+- **A held rung is a small core:** a dark centre with a faint blue heart, a
+  lit ring, a fine ring inside it (none on a phone's 22px gems), the glow
+  from the ring, and the number in Blue-White on the dark. The reading
+  card's gem and a fork's diamond are the same.
+- **A next rung is the ring unlit,** its number in blue; a hidden one the
+  dashed bezel.
+- **The medal** has the reactor's dashed bezel inside its ring.
+- **In the dialog,** the isotope being paid is a core with a point of light,
+  and each unlocked rung's mark a point of light.
+
+CSS only. Blue-White on Cherenkov Blue as before, so DESIGN.md's exception
+holds; its wording now says cores, not beads, for these two places.
+
+**Tooltips on the perks to keep, 2026-11-11.** The maintainer noticed the
+dialog names the perks to keep without a word of what they do, and asked
+for a tooltip on hover. Built on the past picks' tooltip (`showPickTip`,
+`TIPPED`): over a chip it reads "Assembly Line, at level I" and the effect
+at level I, as that is the level a kept perk starts at, whatever level is
+held, in the perk's family hue (`is-perk`). Keyboard focus shows it too,
+and each chip's radio is described by the same words. One browser check
+extended.
+
+Calls for review:
+
+1. **It shows level I, not the level held,** since that is what is kept;
+   the chip itself still shows the level held, "Assembly Line III".
+2. **Touch shows none,** as with the past picks: a tap makes the choice. A
+   line under the chips reading the chosen perk would cover touch, if
+   wanted.
+3. **"at level I" in the tooltip's name** is a new word or two, for the
+   copy audit (§8.5.9).
+
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
 the maintainer asks.
 
@@ -3672,3 +3718,9 @@ the maintainer asks.
   line behind "Change", buttons bottom right. Late in a career the dialog
   is 659px, from 824, and the tab 572px, from 787. Ten browser checks
   rewritten; 85 in all.
+- **2026-11-11.** The isotope marks in the Isotopes tab and the reset
+  dialog redrawn in the reactor's manner (§8.5.19): a held rung a small
+  core, a lit ring around a dark centre, in place of a glossy bead. The
+  face's badge and the credit beads are unchanged.
+- **2026-11-11.** The reset dialog's perks to keep have a tooltip on hover
+  and keyboard focus saying what each does at level I (§8.5.19).
