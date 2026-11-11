@@ -1495,26 +1495,16 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   .led-halo {
     fill: var(--led);
     opacity: 0;
-    transition: opacity 400ms var(--ease);
+    transition:
+      opacity 400ms var(--ease),
+      fill 400ms var(--ease);
   }
 
-  /* Each light keeps the color of the state it marks, so a lit dial reads as
-     the run's own ramp. */
-  .led-warming,
-  .led-stable {
-    --led: var(--ramp-green);
-  }
-  .led-charged {
-    --led: var(--ramp-teal);
-  }
-  .led-unstable {
-    --led: var(--ramp-cyan);
-  }
-  .led-critical {
-    --led: var(--ramp-blue);
-  }
-  .led-supercritical {
-    --led: var(--ramp-white);
+  /* Every lit light wears the dial's color, as the arc does: the stage's,
+     fading to the next stage's on a change, and gold from a surge's
+     countdown until its results. Unlit ones stay grey. */
+  .dial-led {
+    --led: var(--dial);
   }
 
   .dial-led.is-lit .led-dot {

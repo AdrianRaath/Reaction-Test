@@ -57,6 +57,20 @@ test('every reactor state wears its color and its dial lights', async ({ page })
       };
     });
     expect(got, id).toEqual({ state: id, stage: color, lit: i, booting: false });
+    if (i === 0) continue;
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => [
+            ...new Set(
+              [...document.querySelectorAll('.dial-led.is-lit .led-dot')].map(
+                (dot) => getComputedStyle(dot).fill
+              )
+            ),
+          ]),
+        `${id}: every lit light in the stage's color`
+      )
+      .toEqual([color]);
   }
 });
 

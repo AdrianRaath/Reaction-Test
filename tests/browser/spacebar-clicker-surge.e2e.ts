@@ -15,6 +15,17 @@ test.describe.configure({ timeout: 300_000 });
 const GOLD = 'rgb(252, 211, 77)';
 const GREEN = 'rgb(34, 197, 94)';
 
+/** The colors the dial's lit lights wear, once each. */
+function litLights(page: Page): Promise<string[]> {
+  return page.evaluate(() => [
+    ...new Set(
+      [...document.querySelectorAll('.dial-led.is-lit .led-dot')].map(
+        (dot) => getComputedStyle(dot).fill
+      )
+    ),
+  ]);
+}
+
 /** Load the game on a paused fake clock. Only `runFor` moves time after this. */
 async function openOnClock(page: Page) {
   await page.clock.install({ time: new Date('2026-10-22T12:00:00Z') });
@@ -81,6 +92,12 @@ test('a surge: countdown, overdrive, results, and back', async ({ page }) => {
     await page.evaluate(() => getComputedStyle(document.getElementById('sc-arc')!).stroke),
     'the dial turns gold for the countdown'
   ).toBe(GOLD);
+  expect(await page.locator('.dial-led.is-lit').count(), 'a light is lit by now').toBeGreaterThan(
+    0
+  );
+  await expect
+    .poll(() => litLights(page), 'and its lit lights with it (real time, for the fade)')
+    .toEqual([GOLD]);
 
   expect(await g.waitPhase('active')).toBe(true);
   expect(await g.text('#sc-surge-label')).toBe('Surge x10');
@@ -118,6 +135,7 @@ test('a surge: countdown, overdrive, results, and back', async ({ page }) => {
   await expect(page.locator('#sc-surge-summary')).toBeHidden();
   await page.waitForTimeout(1000); // real time for the 0.8 s fade back
   expect(await g.stage(), 'the core fades back to its stage color').toBe(GREEN);
+  await expect.poll(() => litLights(page), 'and so do the lights').toEqual([GREEN]);
   expect(await g.text('#sc-stat-best-surge')).toBe('8.0');
 
   await page.clock.runFor(200_000);

@@ -777,7 +777,10 @@ the build plan are in §8.1.
     button is padded, and its 30px ring sits 16px in from the face's outer
     edge, level with the perk chips.
   - The core: a progress dial with six state lights, a turning dashed bezel,
-    motes, the core heart, and the readout inside.
+    motes, the core heart, and the readout inside. Every lit light wears the
+    dial's color, as the arc does: the stage's, and gold from a surge's
+    countdown to its results (since 2026-11-11; each used to keep the color
+    of the stage it marks). Unlit ones are grey.
   - State name and surge label.
   - Combo row: count, tier label, next-tier target, the multiplier with the
     auto-tappers' line under it (§4.3), grace bar, and the rhythm scope
@@ -1035,8 +1038,9 @@ The visuals were built in three passes, all shipped 2026-10-22.
     shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
     full reset, the panel tabs in one row and two by two on a phone, the
     phone layout, a whole surge on a fake clock with and without reduced
-    motion, every reactor state, a live stage change, and the press pulse
-    and breathing after one.
+    motion, every reactor state with its lit lights in its color, the
+    lights turning gold in a surge and back, a live stage change, and the
+    press pulse and breathing after one.
   - **Perks** (`spacebar-clicker-perks.e2e.ts`): a live drop, its row, toast
     and tag; buying and an upgrade; the swap dialog and the keystone swap;
     switched-off upgrades and Brute Force's combo row; a window running out,
@@ -2126,7 +2130,7 @@ Finding 7 was measured again and parked (§8.5.15). For finding 8, five
 endgame achievements and two records are built (§8.5.16). Every finding has
 now been discussed. A UI polish pass began the same day (§8.5.17): the reset
 dialog, the perk shelf filling from the right, the isotope badge, the
-Isotopes tab, and the Perks tab.
+Isotopes tab, the Perks tab, and the dial's lights in the stage's color.
 
 #### 8.5.1 The review
 
@@ -2999,7 +3003,17 @@ Calls for review:
    page now; Surge Lines' card split it.
 9. **The words** go to the copy audit (§8.5.9).
 
-### 8.6 Unassigned ideas
+**6. The dial's lights, 2026-11-11.** The maintainer asked why the lit
+lights keep the colors of the stages they mark, green ones beside a blue
+arc and a gold reactor, when one color would look better. There was no
+functional reason: the colors were meant as the run's own ramp, a history,
+while lit and unlit read by brightness and halo, and progress by the count
+and the stage name. **Approved and built the same day:** every lit light
+takes the dial's color, as the arc does. On a stage change they all fade to
+the new color with the core while the new light pops; they turn gold with
+the arc at a surge's countdown and fade back after its results; the run-down
+fades them with the arc as before. Unlit ones stay grey. Two browser checks
+extended, 81 in all.
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
 the maintainer asks.
@@ -3249,3 +3263,6 @@ the maintainer asks.
   599px late in a career at 1440, from 1,567; 1,247px on a phone, from
   3,850. Perk numbers no longer break from their unit. 2 browser checks, 81
   in all.
+- **2026-11-11.** UI polish (§8.5.17): every lit light on the dial wears the
+  dial's color, as the arc does, the stage's or a surge's gold, instead of
+  the color of the stage it marks. Two browser checks extended.
