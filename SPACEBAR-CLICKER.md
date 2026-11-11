@@ -652,7 +652,9 @@ the build plan are in §8.1.
   - It is announced: "Rare drop: Overtone, in the Upgrades tab for 18,000
     energy." A surge's drop joins the "Surge over" announcement.
 - **The offer row** sits on the shop rows' grid, so its name lines up with
-  theirs.
+  theirs. Since 2026-11-11 it is laid out as a card (§8.5.18): name, rarity
+  and price on one line, the effect at full width under them, and its note,
+  credits and Reroll in a foot inside it.
   - Its glyph tile is lit in the family hue, affordable or not. The tile's
     border is a ring that drains as the window runs down, and it breathes in
     the last fifth. A rare's tile glows; a keystone's sits in a second ring.
@@ -3047,7 +3049,7 @@ ones first:
    text in a fault. **Done, below.**
 10. Floating gains collide with the dial. **Open.**
 11. A perk's offer row is 2.5 times a shop row, with its notes and Reroll
-    hanging off it. **Open.**
+    hanging off it. **Done, below.**
 12. Late in a run most of the Upgrades tab is maxed rows at full height, in
     two wordings. **Open.**
 13. Shop rows run from about 58 to 97px. **Open.**
@@ -3161,6 +3163,43 @@ Calls for review:
    wider than "You 0%" and there isn't room for equal sides.
 8. **"energy" now runs under the perk shelf's last sockets** at 1440, as it
    did before by less; it is below their pips.
+
+**Finding 11, built 2026-11-11** (§4.13). The maintainer set the open
+structural and face findings (1, 4, 5, 8, 10) aside for now and asked for 11
+alone of the shop's three. CSS and markup only; no words changed.
+
+- **A card, not a row.** The offer no longer keeps the shop rows' column for
+  numbers the whole way down. One head line: the name and level, the rarity
+  as a small tag after it, the price at the end. The effect under it at the
+  card's full width, so a three-line effect is two; it is never cut short.
+  The glyph tile sits at the top, not the middle.
+- **A foot inside the card,** under a hairline in the perk's hue: the note
+  (slots full, a keystone swapped out), then the track's credits, a line
+  each. `.perk-foot` wraps the two; it shows when either does or when
+  Reroll needs its corner.
+- **Reroll inside the card,** over the end of the foot's last line, which
+  keeps room for it; it hung under the card before. It is still the
+  button's sibling, as a button can't hold a button.
+- The row's text and number wrappers dissolve (`display: contents`) onto the
+  card's own grid, so the script and the offer's spoken name are unchanged.
+
+Measured, card and pill together, at 1440 and 390: a plain rare 77px to 60;
+an upgrade 77 to 78; a keystone that swaps one out 115 to 93; the worst case
+(Chain Reaction's three lines, slots full, Familiar, Reroll) 181 to 131.
+With that worst case in the open tab the face was 633px and is 587: an
+offer no longer stretches it in any case measured, though finding 1's fixed
+height is still unbuilt.
+
+Calls for review:
+
+1. **The rarity moved** from under the price to after the name, as a tag;
+   an upgrade's "Upgrade" with it.
+2. **An upgrade's card is 1px taller** than before: its struck-out value
+   takes the effect to two lines either way.
+3. **With Reroll and nothing else to say, the foot shows empty** but for the
+   pill, 31px, as the pill needs a place inside the card.
+4. **A note with no credits wraps beside the pill** on a narrow shop
+   column; with credits the note keeps the card's width.
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
 the maintainer asks.
@@ -3428,3 +3467,7 @@ the maintainer asks.
 - **2026-11-11.** The retired hint's room re-split on a wide face
   (§8.5.18): most of it over the energy number, which now sits clear below
   the perk shelf's pips, and none under the dial.
+- **2026-11-11.** Design review, finding 11 (§8.5.18): a perk's offer is a
+  card, its name, rarity and price on one line, the effect at full width,
+  and its note, credits and Reroll in a foot inside it. The worst case is
+  131px, from 181, and no longer stretches the face.
