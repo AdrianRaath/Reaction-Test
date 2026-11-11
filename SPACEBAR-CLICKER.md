@@ -710,14 +710,34 @@ the build plan are in §8.1.
   - The shelf sits beside the face in the markup, not inside it, so its
     buttons aren't nested in the face's `role="button"`. Tab goes from the
     reactor to the chips, first perk first, so from the corner leftward.
-- **The Perks panel**, a tab between Achievements and Isotopes:
-  - This run: "N of 5 slots" (6 with Sixth Slot), and a card per perk held
-    with its rarity and family, level and effect.
+- **The Perks panel**, a tab between Achievements and Isotopes (rebuilt
+  2026-11-11, §8.5.17). Each perk shows once, and only its tile carries its
+  hue: no rare or keystone glow here, though a keystone keeps its inner ring.
+  - This run: "N of 5 slots" (6 with Sixth Slot), and a card per perk held,
+    shaped like the isotope track's: tile, name and level on one line,
+    "Rare" or "Keystone" quietly at its end (a common says nothing), the
+    effect under them.
   - The codex, "N of 25 found": a board with a socket per perk, one row per
-    shop tab. Found perks are lit, dimmer if never held. Undiscovered ones are
-    empty sockets with their rarity's shape (a keystone's has its inner ring)
-    and no name. Then a card for each perk found, with every level's number,
-    the best held lit, and "Held up to level 2" or "Found, never held".
+    shop tab with its label and count ("9 of 12"), the sockets in family
+    bands: rhythm, press power, luck, surge, machines. Found perks are lit,
+    dimmer if never held, with a dot under those held this run. Undiscovered
+    ones are dashed sockets in their rarity's shape (a keystone's has a
+    dashed inner ring) with no name; their band gives away their family.
+  - Under the board, one reading card for whichever socket is pointed at,
+    else the one picked by a click, a tap or keyboard focus; a second click
+    or tap, or Escape, lets go. It gives the name, "Rare · Rhythm", the
+    effect at the level held this run (else the best held, else the first),
+    every level's number as a ladder with those held filled and the quoted
+    one in the hue, and "Held this run, level 3", "Held up to level 2" or
+    "Found, never held". An undiscovered perk reads "Undiscovered", its
+    rarity, and "Not found yet. It drops into the shop's Auto-tappers tab."
+    With none shown, the card says what the codex is: "Point at a perk to
+    read it. The codex keeps every perk you find, through every reset; only
+    the top-bar reset clears it."
+  - The board is one Tab stop. Arrow keys move along it, left and right
+    through every socket and up and down between the rows; Home and End go
+    to its ends. A clicked or tapped socket lets go of focus, so Space keeps
+    pressing the reactor.
 - **Coming back from time away**, the announcement names any offer still
   waiting: "Still on offer: Overtone II." Time away doesn't count against
   its window.
@@ -918,8 +938,14 @@ The visuals were built in three passes, all shipped 2026-10-22.
   carries the tooltip's words: "Overtone, level 2, rare rhythm perk. A new tier
   above Harmonic: 200 combo for x3.75". The tooltip itself is visual only,
   stays while hovered, and Escape dismisses it.
-- The codex board's sockets are images with names such as "Overtone, held up
-  to level 2" or "Undiscovered rare perk".
+- **The Perks panel.** This run's cards give each perk's rarity and family
+  in hidden words, "Glass Rhythm, keystone rhythm perk"; the visible "Rare"
+  or "Keystone" is hidden from screen readers. The codex board's rows are
+  groups named by their label and count. Its sockets are buttons whose names
+  carry the reading card's words: "Overtone, rare rhythm perk, held up to
+  level 2. A new tier above Harmonic: 200 combo for x3.5 / x3.75 / x4", or
+  "Undiscovered rare perk". The card's ladder speaks each step as "Level 1:
+  x3.5".
 - **The Isotopes tab** has three sections, each a heading. Its card's
   figures are a description list, like Stats, and so are Wiped and Kept.
 - **The isotope track.** In the Isotopes tab it is one ordered list labelled
@@ -1003,7 +1029,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  79 as of 2026-11-10, in about nine minutes.
+  81 as of 2026-11-11, in about ten minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
@@ -1018,7 +1044,9 @@ The visuals were built in three passes, all shipped 2026-10-22.
     Storm Front, a surge drop, Afterglow and Self-Replicator on a fake clock;
     reduced motion; the swap dialog on a phone. From step 5: the shelf, its
     pips and the flight to it; tooltips on hover, focus, Escape and a tap,
-    with no press; the Perks panel and codex, through a prestige; the drop,
+    with no press; the Perks panel and codex, through a prestige; the
+    codex's reading card by hover, click, keyboard and a tap, with no press,
+    and Space pressing after a click; the drop,
     expiry and away-dialog wording; the shelf clearing the readout and the
     isotope badge on a phone.
   - **Isotopes** (`spacebar-clicker-isotopes.e2e.ts`): the badge's name,
@@ -1590,7 +1618,9 @@ Made while building step 5, and approved with it on 2026-10-26.
 3. **A bought perk flies to the shelf**, in an arc from its offer tile, like
    isotopes fly on a reset.
 4. **The codex is a board of sockets** with cards for found perks only. Cards
-   for all 25 were tried first and read as a wall of "Undiscovered".
+   for all 25 were tried first and read as a wall of "Undiscovered". (The
+   cards gave way to one reading card under the board on 2026-11-11,
+   §8.5.17.)
    Undiscovered perks show their rarity's shape but not their name, so
    finding one is still a surprise.
 5. **The shelf sits beside the face in the markup**, positioned over it.
@@ -2095,8 +2125,8 @@ clock and an early first drop every run, are decided and built (§8.5.14).
 Finding 7 was measured again and parked (§8.5.15). For finding 8, five
 endgame achievements and two records are built (§8.5.16). Every finding has
 now been discussed. A UI polish pass began the same day (§8.5.17): the reset
-dialog, the perk shelf filling from the right, the isotope badge, and the
-Isotopes tab.
+dialog, the perk shelf filling from the right, the isotope badge, the
+Isotopes tab, and the Perks tab.
 
 #### 8.5.1 The review
 
@@ -2504,6 +2534,11 @@ drift):
   cards, and Wiped and Kept as one line each ("Energy, upgrades and
   auto-tappers, the reactor's state, and this run's perks and offers"). Its
   explanation still says 10% an isotope where Enrichment makes it 13%.
+- **The Perks tab** (§8.5.17): "Point at a perk to read it. The codex keeps
+  every perk you find, through every reset; only the top-bar reset clears
+  it.", "Held this run, level 3", "Undiscovered", "Not found yet. It drops
+  into the shop's Auto-tappers tab.", "Rare" and "Keystone" on this run's
+  cards, and each row's count ("9 of 12").
 - **This doc's §6**, once the page changes.
 
 #### 8.5.10 Finding 5: presses and surges fade, 2026-11-10
@@ -2927,6 +2962,43 @@ Calls for review:
 5. **A fork's "Next" runs down its side,** turned, as the side is narrow.
 6. **The words** go to the copy audit (§8.5.9).
 
+**5. The Perks tab, 2026-11-11.** The maintainer found it "very chaotic and
+overwhelming". Measured on a late save (13 isotopes, 6 of 6 perks, 22 of 25
+found): 1,567px at 1440 and 3,850px on a 390 phone; 632px early on (2
+held, 4 found). It grew with the collection, to 27 cards late in a career.
+Each held perk showed three times in the tab: a card, a socket and a codex
+card. Every card carried four accents: an uppercase "RARE · RHYTHM" in the
+hue, a glowing tile, hued numbers and a hued badge. The codex's numbers ran
+in slashes ("25% to 40% / 55% / 70%"). Nothing showed the board's family
+order, and an undiscovered rare looked like a common.
+
+Four suggestions went to the maintainer: each perk once; the board as the
+codex, with one reading card; quieter cards; a board that explains itself.
+A mockup on the late save was approved **2026-11-11** and built (§4.7,
+§5.4). On the late save it is now 599px at 1440 and 1,247px on a phone with
+a perk read; 482px early on, and 431px for a new player. 2 browser checks,
+81 in all; one updated.
+
+Calls for review:
+
+1. **No glow in this tab.** Rare and keystone tiles still glow on the shelf,
+   in the shop and in the dialogs.
+2. **The bands give away a family.** An undiscovered perk's socket sits in
+   its family's band, so "three machines perks left" can be read off the
+   board. The old board was in the same order, unmarked.
+3. **The dot has no legend;** the reading card says "Held this run".
+4. **The codex is read one perk at a time,** by pointer, tap or keyboard;
+   the 22 cards it replaces could be scanned at a glance. The fallbacks
+   offered were tooltips, or the cards behind a closed "Show all".
+5. **Undiscovered sockets answer too,** with their rarity and the shop tab
+   they drop into, so hover and the arrow keys cover every socket.
+6. **On a phone "This run" is most of the tab,** a card a row: it is what
+   the tab is read for.
+7. **The swap dialog keeps its cards** as they were.
+8. **A perk's number never breaks from its unit** ("5 s") anywhere on the
+   page now; Surge Lines' card split it.
+9. **The words** go to the copy audit (§8.5.9).
+
 ### 8.6 Unassigned ideas
 
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
@@ -3169,3 +3241,11 @@ the maintainer asks.
   is at the top until the first reset; Wiped and Kept as two lines. 880px
   late in a career at 1440, from 1,164. The reset dialog says "each adds
   10%" rather than "from +0%". 1 browser check, 79 in all.
+- **2026-11-11.** UI polish (§8.5.17): the Perks tab rebuilt. This run's
+  cards in the isotope track's shape, without the uppercase kind line; the
+  codex as its board alone, in family bands with a count per row and a dot
+  for each perk held this run, read one perk at a time in a card under it
+  by hover, click, tap or keyboard; no rare or keystone glow in the tab.
+  599px late in a career at 1440, from 1,567; 1,247px on a phone, from
+  3,850. Perk numbers no longer break from their unit. 2 browser checks, 81
+  in all.

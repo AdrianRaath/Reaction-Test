@@ -97,6 +97,7 @@ import {
   offerCredits,
   offerRemaining,
   perkDetail,
+  perkDetailAllLevels,
   perkLevel,
   perkTick,
   replicate,
@@ -277,11 +278,17 @@ const perksSlotsEl = el('sc-perks-slots');
 const perksEmptyEl = el('sc-perks-empty');
 const perksRunEl = el('sc-perks-run');
 const codexCountEl = el('sc-codex-count');
-const codexEl = el('sc-codex');
+const codexBoard = el('sc-codex-board');
 const codexRows: Record<ShopTab, HTMLElement> = {
   press: el('sc-codex-press'),
   auto: el('sc-codex-auto'),
 };
+const codexTabCounts: Record<ShopTab, HTMLElement> = {
+  press: el('sc-codex-press-count'),
+  auto: el('sc-codex-auto-count'),
+};
+const codexReadEmpty = el('sc-codex-read-empty');
+const codexReadPerk = el('sc-codex-read-perk');
 const surgeSummary = el('sc-surge-summary');
 const surgePresses = el('sc-surge-presses');
 const surgeRate = el('sc-surge-rate');
@@ -1086,29 +1093,15 @@ function perkKind(def: PerkDef): string {
   return `${PERK_RARITY_NAMES[def.rarity]} · ${PERK_FAMILY_NAMES[def.family]}`;
 }
 
+/** "rare rhythm perk": rarity and family, for a screen reader. */
+function perkKindSpoken(def: PerkDef): string {
+  return `${def.rarity} ${PERK_FAMILY_NAMES[def.family].toLowerCase()} perk`;
+}
+
 /** A held perk in full, for its shelf chip's accessible name. */
 function perkLabel(id: PerkId, level: number): string {
   const def = perk(id);
-  const kind = `${def.rarity} ${PERK_FAMILY_NAMES[def.family].toLowerCase()} perk`;
-  return `${def.name}, level ${level}, ${kind}. ${perkDetail(def, level)}`;
-}
-
-/**
- * Every level's number, the best one held lit in the perk's hue and the
- * rest muted: "for x3.5 / x3.75 / x4". For the codex.
- */
-function perkEffectAllLevels(def: PerkDef, best: number): Node[] {
-  const [before = '', after = ''] = def.detail.split('{v}');
-  const nodes: Node[] = [document.createTextNode(before)];
-  def.values.forEach((v, i) => {
-    if (i > 0) nodes.push(document.createTextNode(' / '));
-    const value = document.createElement('span');
-    value.className = i + 1 === best ? 'perk-value' : 'perk-level-value';
-    value.textContent = formatPerkValue(def.unit, v);
-    nodes.push(value);
-  });
-  nodes.push(document.createTextNode(after));
-  return nodes;
+  return `${def.name}, level ${level}, ${perkKindSpoken(def)}. ${perkDetail(def, level)}`;
 }
 
 /** One line of a perk card's text. */
@@ -1122,8 +1115,8 @@ function cardLine(className: string, content: string | Node[]): HTMLElement {
 
 /**
  * A perk as a card: its tile, its name with a level badge, then the lines
- * given. The swap dialog, this run's perks and the codex all use it; the
- * dialog's are buttons when the player is picking one to drop.
+ * given. The swap dialog uses it; its cards are buttons when the player is
+ * picking one to drop.
  */
 function perkCard(id: PerkId, level: number, lines: HTMLElement[], asButton = false): HTMLElement {
   const def = perk(id);
@@ -1565,7 +1558,7 @@ function flyToShelf(from: DOMRect, id: PerkId): void {
 /** What the Perks panel shows, as JSON of the perks held and the codex. */
 let perksPanelShown = '';
 
-/** The Perks panel: this run's perks in full, then the codex. */
+/** The Perks panel: this run's perks as cards, then the codex board and its reading card. */
 function renderPerksPanel(): void {
   const { owned, codex } = state.perks;
   const slots = modsOf(state).perkSlots;
@@ -1575,72 +1568,273 @@ function renderPerksPanel(): void {
 
   perksSlotsEl.textContent = `${owned.length} of ${slots}`;
   perksEmptyEl.hidden = owned.length > 0;
-  perksRunEl.replaceChildren(
-    ...owned.map((o) => {
-      const def = perk(o.id);
-      const item = document.createElement('li');
-      item.append(
-        perkCard(o.id, o.level, [
-          cardLine('perk-card-kind', perkKind(def)),
-          cardLine('perk-card-detail', perkEffect(def, o.level)),
-        ])
-      );
-      return item;
-    })
-  );
+  perksRunEl.replaceChildren(...owned.map((o) => runCard(o.id, o.level)));
 
-  const found = PERKS.filter((p) => codex[p.id] !== undefined);
-  codexCountEl.textContent = `${found.length} of ${PERKS.length}`;
+  const isFound = (p: PerkDef) => codex[p.id] !== undefined;
+  codexCountEl.textContent = `${PERKS.filter(isFound).length} of ${PERKS.length}`;
   for (const tab of SHOP_TABS) {
-    codexRows[tab].replaceChildren(
-      ...PERKS.filter((p) => p.tab === tab).map((def) => codexSocket(def, codex[def.id]))
-    );
+    const inTab = PERKS.filter((p) => p.tab === tab);
+    codexTabCounts[tab].textContent = `${inTab.filter(isFound).length} of ${inTab.length}`;
   }
-  codexEl.replaceChildren(
-    ...found.map((def) => {
-      const item = document.createElement('li');
-      item.append(codexCard(def, codex[def.id]!));
-      return item;
-    })
+  codexSockets.forEach(renderSocket);
+  renderCodexRead();
+}
+
+/** A perk held this run as a card: tile, name and level, a quiet rarity, then its effect. */
+function runCard(id: PerkId, level: number): HTMLLIElement {
+  const def = perk(id);
+  const item = document.createElement('li');
+  item.className = 'run-card';
+  item.dataset.family = def.family;
+  item.dataset.rarity = def.rarity;
+
+  const tile = document.createElement('span');
+  tile.className = 'perk-tile';
+  tile.append(perkGlyph(id));
+  const name = document.createElement('span');
+  name.className = 'run-card-name';
+  const badge = document.createElement('span');
+  badge.className = 'perk-level';
+  setLevelBadge(badge, level);
+  // Rarity and family in words for a screen reader; on screen, the hue and the rarity word.
+  const kind = document.createElement('span');
+  kind.className = 'visually-hidden';
+  kind.textContent = `, ${perkKindSpoken(def)}`;
+  name.append(def.name, ' ', badge, kind);
+  const head = document.createElement('div');
+  head.className = 'run-card-head';
+  head.append(tile, name);
+  if (def.rarity !== 'common') {
+    const rarity = document.createElement('span');
+    rarity.className = 'run-card-rarity';
+    rarity.setAttribute('aria-hidden', 'true');
+    rarity.textContent = PERK_RARITY_NAMES[def.rarity];
+    head.append(rarity);
+  }
+  item.append(head, cardLine('perk-card-detail', perkEffect(def, level)));
+  return item;
+}
+
+/**
+ * The codex board's sockets, built once in a fixed order: a row per shop tab,
+ * in family bands. Rendering only updates them, so keyboard focus survives a
+ * perk being found. A socket's tile stays empty until its perk is found, so
+ * an undiscovered one gives away only its rarity's shape and its band.
+ */
+interface CodexSocket {
+  def: PerkDef;
+  button: HTMLButtonElement;
+  /** What it shows, as "best:held this run". */
+  shown: string;
+}
+
+const codexSockets: CodexSocket[] = [];
+for (const tab of SHOP_TABS) {
+  for (const family of Object.keys(PERK_FAMILY_NAMES) as PerkFamily[]) {
+    const defs = PERKS.filter((p) => p.tab === tab && p.family === family);
+    if (!defs.length) continue;
+    const band = document.createElement('div');
+    band.className = 'codex-band';
+    for (const def of defs) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'codex-socket';
+      button.dataset.rarity = def.rarity;
+      button.tabIndex = -1;
+      const tile = document.createElement('span');
+      tile.className = 'perk-tile';
+      button.append(tile);
+      band.append(button);
+      codexSockets.push({ def, button, shown: '' });
+    }
+    codexRows[tab].append(band);
+  }
+}
+
+/** How far a found perk was held: "Held this run, level 3", "Held up to level 2", "Found, never held". */
+function codexStatus(best: number, now: number): string {
+  if (now > 0) return `Held this run, level ${now}`;
+  return best > 0 ? `Held up to level ${best}` : 'Found, never held';
+}
+
+/** A socket lit once its perk is found, dimmer if never held, with a dot if held this run. */
+function renderSocket(socket: CodexSocket): void {
+  const { def, button } = socket;
+  const best = state.perks.codex[def.id];
+  const now = perkLevel(state, def.id);
+  const key = `${best}:${now}`;
+  if (key === socket.shown) return;
+  socket.shown = key;
+
+  const found = best !== undefined;
+  button.classList.toggle('is-undiscovered', !found);
+  button.classList.toggle('is-unheld', best === 0);
+  button.classList.toggle('is-now', now > 0);
+  if (found) button.dataset.family = def.family;
+  else delete button.dataset.family;
+  button.firstElementChild!.replaceChildren(...(found ? [perkGlyph(def.id)] : []));
+  button.setAttribute(
+    'aria-label',
+    found
+      ? `${def.name}, ${perkKindSpoken(def)}, ${codexStatus(best, now).toLowerCase()}. ${perkDetailAllLevels(def)}`
+      : `Undiscovered ${def.rarity} perk`
   );
 }
 
 /**
- * A perk's socket on the codex board: lit once found, dimmer if never held.
- * Not found, it stays an empty socket in its rarity's shape (a keystone's has
- * its inner ring), so there is something to hunt without spoiling it.
+ * Which socket the reading card shows: the one under the mouse, else the one
+ * picked by a click, a tap or keyboard focus. None: what the codex is.
  */
-function codexSocket(def: PerkDef, best: number | undefined): HTMLLIElement {
-  const item = document.createElement('li');
-  item.className = 'codex-entry';
-  item.dataset.rarity = def.rarity;
-  const tile = document.createElement('span');
-  tile.className = 'perk-tile';
-  tile.setAttribute('role', 'img');
-  let label: string;
-  if (best === undefined) {
-    item.classList.add('is-undiscovered');
-    label = `Undiscovered ${def.rarity} perk`;
-  } else {
-    item.dataset.family = def.family;
-    item.classList.toggle('is-unheld', best === 0);
-    tile.append(perkGlyph(def.id));
-    label = `${def.name}, ${best > 0 ? `held up to level ${best}` : 'found, never held'}`;
-  }
-  tile.setAttribute('aria-label', label);
-  tile.title = label;
-  item.append(tile);
-  return item;
+let codexHover: number | null = null;
+let codexPicked: number | null = null;
+
+function renderCodexRead(): void {
+  const shown = codexHover ?? codexPicked;
+  // One Tab stop for the board: the picked socket, else the first.
+  const stop = codexPicked ?? 0;
+  codexSockets.forEach((s, i) => {
+    s.button.classList.toggle('is-shown', i === shown);
+    s.button.tabIndex = i === stop ? 0 : -1;
+  });
+  codexReadEmpty.hidden = shown !== null;
+  codexReadPerk.hidden = shown === null;
+  if (shown !== null) fillCodexRead(codexSockets[shown]!.def);
 }
 
-/** A found perk's codex card: every level's number with the best held lit, and how far it was held. */
-function codexCard(def: PerkDef, best: number): HTMLElement {
-  return perkCard(def.id, 0, [
-    cardLine('perk-card-kind', perkKind(def)),
-    cardLine('perk-card-detail', perkEffectAllLevels(def, best)),
-    cardLine('perk-card-status', best > 0 ? `Held up to level ${best}` : 'Found, never held'),
-  ]);
+/**
+ * The reading card for one perk: its tile, name, rarity and family, the
+ * effect at the level held this run (else the best held, else the first),
+ * every level's number with those held filled, and how far it was held. An
+ * undiscovered perk shows only its rarity and where it drops.
+ */
+function fillCodexRead(def: PerkDef): void {
+  const best = state.perks.codex[def.id];
+  const now = perkLevel(state, def.id);
+  const card = codexReadPerk;
+  const tile = document.createElement('span');
+  tile.className = 'perk-tile';
+  const text = document.createElement('div');
+  text.className = 'codex-read-text';
+  const title = (name: string, kind: string) => {
+    const line = document.createElement('p');
+    line.className = 'codex-read-name';
+    const kindEl = document.createElement('span');
+    kindEl.className = 'codex-read-kind';
+    kindEl.textContent = kind;
+    line.append(name, ' ', kindEl);
+    return line;
+  };
+
+  card.dataset.rarity = def.rarity;
+  card.classList.toggle('is-undiscovered', best === undefined);
+  if (best === undefined) {
+    delete card.dataset.family;
+    text.append(
+      title('Undiscovered', PERK_RARITY_NAMES[def.rarity]),
+      cardLine(
+        'perk-card-detail',
+        `Not found yet. It drops into the shop's ${TAB_NAME[def.tab]} tab.`
+      )
+    );
+    card.replaceChildren(tile, text);
+    return;
+  }
+
+  card.dataset.family = def.family;
+  tile.append(perkGlyph(def.id));
+  const quoted = now || Math.max(best, 1);
+  const ladder = document.createElement('ol');
+  ladder.className = 'codex-ladder';
+  def.values.forEach((v, k) => {
+    const step = document.createElement('li');
+    step.classList.toggle('is-held', k + 1 <= best);
+    step.classList.toggle('is-quoted', best > 0 && k + 1 === quoted);
+    const num = document.createElement('span');
+    num.className = 'codex-ladder-num';
+    num.setAttribute('aria-hidden', 'true');
+    num.textContent = ROMAN[k + 1]!;
+    const spoken = document.createElement('span');
+    spoken.className = 'visually-hidden';
+    spoken.textContent = `Level ${k + 1}: `;
+    step.append(num, spoken, formatPerkValue(def.unit, v));
+    ladder.append(step);
+  });
+  const status = document.createElement('span');
+  status.className = 'codex-read-status';
+  status.textContent = codexStatus(best, now);
+  const foot = document.createElement('div');
+  foot.className = 'codex-read-foot';
+  foot.append(ladder, status);
+  text.append(
+    title(def.name, perkKind(def)),
+    cardLine('perk-card-detail', perkEffect(def, quoted)),
+    foot
+  );
+  card.replaceChildren(tile, text);
 }
+
+/** Arrow keys along the board: left and right through every socket, up and down between rows. */
+function codexStep(i: number, key: string): number | null {
+  const last = codexSockets.length - 1;
+  const firstAuto = codexSockets.findIndex((s) => s.def.tab === 'auto');
+  const inPress = i < firstAuto;
+  switch (key) {
+    case 'ArrowRight':
+      return i < last ? i + 1 : null;
+    case 'ArrowLeft':
+      return i > 0 ? i - 1 : null;
+    case 'Home':
+      return 0;
+    case 'End':
+      return last;
+    case 'ArrowDown':
+      return inPress ? Math.min(firstAuto + i, last) : null;
+    case 'ArrowUp':
+      return inPress ? null : Math.min(i - firstAuto, firstAuto - 1);
+    default:
+      return null;
+  }
+}
+
+codexSockets.forEach((socket, i) => {
+  const { button } = socket;
+  button.addEventListener('pointerenter', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    codexHover = i;
+    renderCodexRead();
+  });
+  button.addEventListener('focus', () => {
+    if (!button.matches(':focus-visible')) return;
+    codexPicked = i;
+    renderCodexRead();
+  });
+  button.addEventListener('click', (e) => {
+    // From the keyboard (no pointer), focus has already picked it.
+    if (e.detail === 0) return;
+    // A click or tap picks it; a second one lets go.
+    codexPicked = codexPicked === i ? null : i;
+    renderCodexRead();
+    // Space is the game's input; a focused button would swallow it.
+    button.blur();
+  });
+  button.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && codexPicked !== null) {
+      codexPicked = null;
+      renderCodexRead();
+      return;
+    }
+    const next = codexStep(i, e.key);
+    if (next === null) return;
+    e.preventDefault();
+    codexSockets[next]!.button.focus();
+  });
+});
+
+codexBoard.addEventListener('pointerleave', (e) => {
+  if (e.pointerType !== 'mouse' || codexHover === null) return;
+  codexHover = null;
+  renderCodexRead();
+});
 
 function renderStats(): void {
   const play = { combo: combo.combo };

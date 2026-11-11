@@ -701,8 +701,9 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
           </ul>
         </div>
 
-        <!-- Perks in full: this run's, then the codex of every perk ever found.
-             The script fills both. -->
+        <!-- Perks in full (SPACEBAR-CLICKER.md §4.7, §8.5.17): this run's as
+             cards, then the codex of every perk ever found as a board, read one
+             perk at a time in the card under it. The script fills both. -->
         <div
           class="panel"
           id="sc-panel-perks"
@@ -720,7 +721,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
               No perks yet. They drop into the shop as you play, and once bought they last the rest
               of the run.
             </p>
-            <ul class="perk-cards" id="sc-perks-run"></ul>
+            <ul class="run-cards" id="sc-perks-run"></ul>
           </section>
           <section class="perks-section" aria-labelledby="sc-codex-title">
             <h3 class="perks-title" id="sc-codex-title">
@@ -728,20 +729,41 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
                 ><span class="readout" id="sc-codex-count">0 of {PERKS.length}</span> found</span
               >
             </h3>
-            <p class="panel-intro">
-              Every perk you have found, across every run. Resetting the experiment keeps it; only
-              the top-bar reset clears it.
-            </p>
-            <!-- The collection at a glance: a socket per perk, lit once found.
-                 An empty socket keeps its rarity's shape, so there is
-                 something to hunt. Then a card for each perk found. -->
-            <div class="codex-board">
-              <p class="codex-label" id="sc-codex-press-label">Upgrades</p>
-              <ul class="codex-row" id="sc-codex-press" aria-labelledby="sc-codex-press-label"></ul>
-              <p class="codex-label" id="sc-codex-auto-label">Auto-tappers</p>
-              <ul class="codex-row" id="sc-codex-auto" aria-labelledby="sc-codex-auto-label"></ul>
+            <!-- The collection at a glance: a row of sockets per shop tab, in
+                 family bands, lit once found. An empty socket keeps its
+                 rarity's shape, so there is something to hunt. One Tab stop;
+                 arrow keys move along it. -->
+            <div class="codex-board" id="sc-codex-board">
+              <p class="codex-label" id="sc-codex-press-label">
+                Upgrades <span class="codex-label-count readout" id="sc-codex-press-count"></span>
+              </p>
+              <div
+                class="codex-row"
+                id="sc-codex-press"
+                role="group"
+                aria-labelledby="sc-codex-press-label"
+              >
+              </div>
+              <p class="codex-label" id="sc-codex-auto-label">
+                Auto-tappers <span class="codex-label-count readout" id="sc-codex-auto-count"
+                ></span>
+              </p>
+              <div
+                class="codex-row"
+                id="sc-codex-auto"
+                role="group"
+                aria-labelledby="sc-codex-auto-label"
+              >
+              </div>
             </div>
-            <ul class="perk-cards" id="sc-codex"></ul>
+            <!-- Whichever socket is pointed at, focused or tapped, in full. -->
+            <div class="codex-read" id="sc-codex-read">
+              <p class="codex-read-empty" id="sc-codex-read-empty">
+                Point at a perk to read it. The codex keeps every perk you find, through every
+                reset; only the top-bar reset clears it.
+              </p>
+              <div class="codex-read-perk" id="sc-codex-read-perk" hidden></div>
+            </div>
           </section>
         </div>
 
@@ -3410,10 +3432,12 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     display: none;
   }
 
-  /* The perk's numbers carry its hue. An upgrade strikes the old one out. */
+  /* The perk's numbers carry its hue, and never break from their unit
+     ("5 s"). An upgrade strikes the old one out. */
   .game-section :global(.perk-value) {
     font-weight: 600;
     color: var(--perk);
+    white-space: nowrap;
   }
 
   .game-section :global(.perk-was) {
@@ -3737,8 +3761,14 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     color: var(--ink-muted);
   }
 
-  /* The Perks panel: this run's perks, then the codex. Cards as in the swap
-     dialog, on the achievements' grid. */
+  /* The Perks panel (SPACEBAR-CLICKER.md §8.5.17): this run's perks as cards
+     shaped like the isotope track's, then the codex as a board of sockets and
+     one card that reads whichever socket is shown. The panel is a container,
+     so its layout follows its own width. */
+  #sc-panel-perks {
+    container: perks-panel / inline-size;
+  }
+
   .perks-section + .perks-section {
     margin-block-start: var(--space-xl);
   }
@@ -3763,81 +3793,319 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     color: var(--ink-primary);
   }
 
-  .perk-cards {
+  /* One accent per perk here: its tile in the family hue, without the glow
+     a rare or keystone wears elsewhere. A keystone keeps its inner ring. */
+  #sc-panel-perks :global([data-family][data-rarity] .perk-tile) {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--perk) 45%, transparent);
+  }
+
+  /* This run: tile, name and level on one line, the rarity at its end, the
+     effect under them. */
+  .run-cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: var(--space-sm);
-    padding: 0;
-    list-style: none;
-  }
-
-  .panel .perk-cards :global(.perk-card) {
-    align-items: start;
-    height: 100%;
-  }
-
-  .game-section :global(.perk-card-kind) {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--perk);
-  }
-
-  .game-section :global(.perk-card-status) {
-    font-size: 0.75rem;
-    color: var(--ink-muted);
-  }
-
-  /* In the codex, every level's number shows; the best one held is lit. */
-  .game-section :global(.perk-level-value) {
-    color: var(--ink-muted);
-  }
-
-  /* The codex board: a row of sockets per shop tab, labels beside them. */
-  .codex-board {
-    display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
-    align-items: center;
-    gap: var(--space-sm) var(--space-md);
-    margin-block-end: var(--space-md);
-  }
-
-  .codex-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--ink-secondary);
-  }
-
-  .codex-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  /* Found but never held: lit, but dimmer than one that was held. */
-  .codex-row :global(.codex-entry.is-unheld) {
-    opacity: 0.55;
+  .run-cards :global(.run-card) {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--space-sm) var(--space-md) 10px var(--space-sm);
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
   }
 
-  /* Not found yet: an empty socket in its rarity's shape, nothing more. */
-  .codex-row :global(.codex-entry.is-undiscovered) {
+  .run-cards :global(.run-card-head) {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .run-cards :global(.perk-tile) {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+  }
+
+  .run-cards :global(.perk-tile svg) {
+    width: 18px;
+    height: 18px;
+  }
+
+  .run-cards :global([data-rarity='keystone'] .perk-tile::after) {
+    inset: 3px;
+    border-radius: 4px;
+  }
+
+  .run-cards :global(.run-card-name) {
+    min-width: 0;
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  /* A rare or keystone says so, quietly; a common says nothing. */
+  .run-cards :global(.run-card-rarity) {
+    margin-inline-start: auto;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .run-cards :global(.perk-card-detail) {
+    padding-inline-start: calc(28px + var(--space-sm));
+  }
+
+  /* The codex board: a row per shop tab, its label and count beside it, the
+     sockets in family bands. */
+  .codex-board {
+    display: grid;
+    grid-template-columns: 7rem minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-md);
+    margin-block-end: var(--space-md);
+  }
+
+  .codex-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-block-start: 9px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-secondary);
+  }
+
+  .codex-label-count {
+    font-size: 0.6875rem;
+    font-weight: 400;
+    color: var(--ink-muted);
+  }
+
+  .codex-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+  }
+
+  .codex-row :global(.codex-band) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* A socket: its tile, room under it for the held-this-run dot, and a ring
+     round it while the card reads it. Keyboard focus draws the ring in the
+     site's focus green, since focus is what the card then reads. */
+  .codex-row :global(.codex-socket) {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 0 9px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .codex-row :global(.codex-socket::before) {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    width: 44px;
+    height: 44px;
+    border: 2px solid var(--perk);
+    border-radius: 12px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .codex-row :global(.codex-socket.is-shown::before) {
+    opacity: 1;
+  }
+
+  .codex-row :global(.codex-socket:focus-visible) {
+    outline: none;
+  }
+
+  .codex-row :global(.codex-socket:focus-visible::before) {
+    border-color: var(--signal-green);
+    opacity: 1;
+  }
+
+  /* Held this run: a dot under the socket, as a dock marks what is open. */
+  .codex-row :global(.codex-socket.is-now::after) {
+    content: '';
+    position: absolute;
+    bottom: 1px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--perk);
+  }
+
+  /* Found but never held: lit, but dimmer than one that was held. */
+  .codex-row :global(.codex-socket.is-unheld .perk-tile) {
+    opacity: 0.45;
+  }
+
+  /* Not found yet: an empty socket in its rarity's shape, nothing more. The
+     reading card draws one the same way. */
+  .codex-row :global(.codex-socket.is-undiscovered),
+  .codex-read-perk:global(.is-undiscovered) {
     --perk: var(--ink-muted);
   }
 
-  .codex-row :global(.codex-entry.is-undiscovered .perk-tile) {
+  .codex-row :global(.codex-socket.is-undiscovered .perk-tile),
+  .codex-read-perk:global(.is-undiscovered) :global(.perk-tile) {
     background-color: transparent;
     box-shadow: none;
-    outline: 1px dashed var(--line);
+    outline: 1px dashed color-mix(in srgb, var(--ink-muted) 45%, transparent);
     outline-offset: -1px;
   }
 
-  @media (max-width: 768px) {
+  .codex-row :global(.codex-socket.is-undiscovered .perk-tile::after),
+  .codex-read-perk:global(.is-undiscovered) :global(.perk-tile::after) {
+    border-style: dashed;
+  }
+
+  /* The reading card: the shown perk in full, or, with none shown, what the
+     codex is. Its least height is about a perk's, so pointing along the
+     board barely moves what is under it. */
+  .codex-read {
+    display: flex;
+    min-height: 5.5rem;
+  }
+
+  .codex-read-empty {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    margin: 0;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-md);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--ink-secondary);
+  }
+
+  .codex-read-perk {
+    display: grid;
+    flex: 1;
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: start;
+    column-gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-sm);
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-md);
+    background-color: var(--panel-03);
+  }
+
+  .codex-read-perk :global(.codex-read-text) {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .codex-read-perk :global(.codex-read-name) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 var(--space-sm);
+    margin: 0;
+    font-size: var(--text-label-size);
+    font-weight: 600;
+    color: var(--ink-primary);
+  }
+
+  .codex-read-perk :global(.codex-read-kind) {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  /* Every level's number, those held filled, the one the effect quotes in
+     the perk's hue; then how far it was held. */
+  .codex-read-perk :global(.codex-read-foot) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px var(--space-md);
+    margin-block-start: 4px;
+  }
+
+  .codex-read-perk :global(.codex-ladder) {
+    display: flex;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .codex-read-perk :global(.codex-ladder li) {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 2px 8px;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  .codex-read-perk :global(.codex-ladder-num) {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .codex-read-perk :global(.codex-ladder .is-held) {
+    border-color: color-mix(in srgb, var(--perk) 45%, transparent);
+    background-color: color-mix(in srgb, var(--perk) 12%, transparent);
+    color: var(--ink-secondary);
+  }
+
+  .codex-read-perk :global(.codex-ladder .is-quoted) {
+    color: var(--perk);
+  }
+
+  .codex-read-perk :global(.codex-read-status) {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+  }
+
+  /* A narrow panel: each row's label above it, the effect under the tile. */
+  @container perks-panel (max-width: 560px) {
     .codex-board {
       grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+    }
+
+    .codex-label {
+      flex-direction: row;
+      align-items: baseline;
+      gap: var(--space-sm);
+      padding-block-start: var(--space-sm);
+    }
+
+    .codex-row {
+      gap: 6px 14px;
+    }
+
+    .run-cards :global(.perk-card-detail) {
+      padding-inline-start: 0;
     }
   }
 

@@ -464,18 +464,35 @@ test('the Perks panel lists this run and the codex, and prestige keeps only the 
 
   await expect(page.locator('#sc-perks-slots')).toHaveText('2 of 5');
   await expect(page.locator('#sc-perks-empty')).toBeHidden();
-  await expect(page.locator('#sc-perks-run .perk-card')).toHaveCount(2);
-  await expect(page.locator('#sc-perks-run')).toContainText('Keystone · Rhythm');
+  const runCards = page.locator('#sc-perks-run .run-card');
+  await expect(runCards).toHaveCount(2);
+  await expect(runCards.first().locator('.run-card-rarity'), 'a keystone says so').toHaveText(
+    'Keystone'
+  );
+  await expect(runCards.first(), 'and its family, to a screen reader').toContainText(
+    'keystone rhythm perk'
+  );
+  await expect(runCards.nth(1).locator('.run-card-rarity')).toHaveText('Rare');
 
   await expect(page.locator('#sc-codex-count')).toHaveText('3 of 25');
-  await expect(page.locator('.codex-entry')).toHaveCount(25);
-  await expect(page.locator('.codex-entry.is-undiscovered')).toHaveCount(22);
-  await expect(page.locator('.codex-entry.is-unheld'), 'Metronome: found, never held').toHaveCount(
+  await expect(page.locator('#sc-codex-press-count')).toHaveText('3 of 13');
+  await expect(page.locator('#sc-codex-auto-count')).toHaveText('0 of 12');
+  const sockets = page.locator('.codex-socket');
+  await expect(sockets).toHaveCount(25);
+  await expect(page.locator('.codex-socket.is-undiscovered')).toHaveCount(22);
+  await expect(page.locator('.codex-socket.is-unheld'), 'Metronome: found, never held').toHaveCount(
     1
   );
-  await expect(page.locator('#sc-codex .perk-card'), 'a card per perk found').toHaveCount(3);
-  await expect(page.locator('#sc-codex')).toContainText('Found, never held');
-  await expect(page.locator('#sc-codex')).toContainText('Held up to level 2');
+  await expect(page.locator('.codex-socket.is-now'), 'a dot for each held this run').toHaveCount(2);
+  await expect(
+    page.locator('#sc-codex-press .codex-band').first().locator('.codex-socket'),
+    'in family bands, rhythm first'
+  ).toHaveCount(5);
+  await expect(sockets.first()).toHaveAttribute(
+    'aria-label',
+    /^Metronome, common rhythm perk, found, never held\. /
+  );
+  await expect(page.locator('#sc-codex-read-empty'), 'nothing read yet').toBeVisible();
 
   // Reset the experiment: the run's perks go, the codex stays.
   await page.click('[data-tab="prestige"]');
@@ -486,6 +503,63 @@ test('the Perks panel lists this run and the codex, and prestige keeps only the 
   await expect(page.locator('#sc-perks-slots')).toHaveText('0 of 5');
   await expect(page.locator('#sc-perks-empty')).toBeVisible();
   await expect(page.locator('#sc-codex-count')).toHaveText('3 of 25');
+});
+
+test('the codex reads the perk pointed at, picked or focused, in one card', async ({ page }) => {
+  await seedSave(page, {
+    energy: 100,
+    runLifetime: 5000,
+    perks: {
+      ...noDrops,
+      owned: [{ id: 'overtone', level: 2 }],
+      codex: { overtone: 3, metronome: 0 },
+    },
+  });
+  await openGame(page);
+  await page.click('[data-tab="perks"]');
+  const sockets = page.locator('.codex-socket');
+  const read = page.locator('#sc-codex-read-perk');
+  const empty = page.locator('#sc-codex-read-empty');
+  const overtone = page.locator('.codex-socket[aria-label^="Overtone"]');
+  const metronome = page.locator('.codex-socket[aria-label^="Metronome"]');
+
+  // Hover reads it; leaving the board lets go.
+  await overtone.hover();
+  await expect(read).toBeVisible();
+  await expect(read.locator('.codex-read-name')).toHaveText(/^Overtone\s+Rare · Rhythm$/);
+  await expect(read.locator('.perk-card-detail'), 'at the level held now').toHaveText(
+    'A new tier above Harmonic: 200 combo for x3.75'
+  );
+  await expect(read.locator('.codex-ladder li.is-held'), 'every level ever held').toHaveCount(3);
+  await expect(read.locator('.codex-ladder li.is-quoted')).toContainText('x3.75');
+  await expect(read.locator('.codex-read-status')).toHaveText('Held this run, level 2');
+  await expect(overtone).toHaveClass(/is-shown/);
+  await page.mouse.move(2, 2);
+  await expect(empty).toBeVisible();
+
+  // A click picks it, and lets go of focus so Space still presses.
+  await metronome.click();
+  await page.mouse.move(2, 2);
+  await expect(read.locator('.codex-read-status')).toHaveText('Found, never held');
+  await expect(read.locator('.codex-ladder li.is-held')).toHaveCount(0);
+  await expect(metronome).not.toBeFocused();
+  const before = await energy(page);
+  await page.keyboard.press('Space');
+  await expect.poll(() => energy(page), 'Space presses the reactor').toBeGreaterThan(before);
+
+  // From the keyboard: one Tab stop, the picked socket; arrows move along the board.
+  await expect(page.locator('.codex-socket[tabindex="0"]')).toHaveCount(1);
+  await expect(metronome).toHaveAttribute('tabindex', '0');
+  await page.keyboard.press('Shift');
+  await metronome.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(sockets.nth(1)).toBeFocused();
+  await expect(read.locator('.codex-read-name')).toHaveText(/^Undiscovered\s+Common$/);
+  await expect(read).toContainText("Not found yet. It drops into the shop's Upgrades tab.");
+  await page.keyboard.press('ArrowDown');
+  await expect(sockets.nth(14), 'the same place in the Auto-tappers row').toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(empty, 'Escape lets go').toBeVisible();
 });
 
 test.describe('on a touchscreen', () => {
@@ -514,6 +588,31 @@ test.describe('on a touchscreen', () => {
     await page.locator('#sc-reactor').tap({ position: { x: 160, y: 300 } });
     await expect(tip, 'a tap on the reactor closes it').toBeHidden();
     await expect.poll(() => energy(page), 'and counts as a press').toBeGreaterThan(before);
+  });
+
+  test('a tap on a codex socket reads it and is never a press', async ({ page }) => {
+    await seedSave(page, {
+      energy: 100,
+      runLifetime: 5000,
+      perks: { ...noDrops, codex: { 'storm-front': 2 } },
+    });
+    await openGame(page);
+    await page.locator('[data-tab="perks"]').tap();
+    const storm = page.locator('.codex-socket[aria-label^="Storm Front"]');
+    const before = await energy(page);
+
+    await storm.tap();
+    await expect(page.locator('#sc-codex-read-perk .codex-read-status')).toHaveText(
+      'Held up to level 2'
+    );
+    await expect(storm).not.toBeFocused();
+    expect(await energy(page)).toBe(before);
+    await storm.tap();
+    await expect(page.locator('#sc-codex-read-empty'), 'a second tap lets go').toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      'no sideways scroll'
+    ).toBe(true);
   });
 });
 
