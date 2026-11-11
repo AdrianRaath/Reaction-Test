@@ -25,6 +25,7 @@ import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
   COMBO,
+  COMBO_TIERS,
   ISOTOPE_TRACK,
   MIN_PRESS_GAP_MS,
   PERK_FAMILY_NAMES,
@@ -654,6 +655,21 @@ const HINT_FAULT = isTouchInput
 const REACTOR_LABEL = reactor.getAttribute('aria-label') ?? '';
 const REACTOR_LABEL_FAULT = `Reactor, faulted. Press the spacebar, or tap here, ${RESTART_PRESSES} times on a steady beat to restart it.`;
 
+/** The combo that reaches the first tier, Steady. */
+const FIRST_TIER_MIN = Math.min(...COMBO_TIERS.filter((t) => t.multiplier > 1).map((t) => t.min));
+
+/**
+ * The standing hint has done its work once the player has held a combo, in
+ * any run: it goes, its line closes, and the face spreads the room it gives
+ * up (`is-roomy`, in the page's CSS). The run-down's and the fault's
+ * instructions always show, and take the line back while they do.
+ */
+function renderHint(): void {
+  const retired = power === 'full' && state.bestCombo >= FIRST_TIER_MIN;
+  hintEl.classList.toggle('is-retired', retired);
+  reactor.classList.toggle('is-roomy', retired);
+}
+
 /** The share of full output now: 1, falling while the reactor is left alone, 0 at a fault. */
 function powerShare(wall = Date.now()): number {
   return outputShare(untendedS(state, wall), modsOf(state).rundown);
@@ -682,6 +698,7 @@ function renderPower(wall = Date.now(), live = true): void {
     stateLabelEl.hidden = next !== 'full';
     if (next !== 'full') surgeLabel.hidden = true;
     hintEl.textContent = next === 'fault' ? HINT_FAULT : next === 'down' ? HINT_DOWN : HINT;
+    renderHint();
     reactor.setAttribute('aria-label', next === 'fault' ? REACTOR_LABEL_FAULT : REACTOR_LABEL);
     if (next === 'fault') {
       restart.reset();
@@ -795,7 +812,11 @@ function renderReadouts(): void {
     if (p >= 1) energyRoll = null;
     else shown -= energyRoll.amount * Math.pow(1 - p, 3);
   }
-  energyEl.textContent = formatEnergy(shown);
+  const energyText = formatEnergy(shown);
+  energyEl.textContent = energyText;
+  // Six characters, 10,000 to 99,999: the widest the number gets (the page's
+  // CSS steps it down a size under a sixth perk socket).
+  energyEl.classList.toggle('is-long', energyText.length >= 6);
   const play = playContext();
   // The rates the reactor runs at now: run down, less; faulted, nothing.
   epsEl.textContent = formatRate(energyPerSecond(state, play) * powerShare());
@@ -2256,6 +2277,7 @@ function renderAll(now = performance.now()): void {
   renderPanels();
   renderShelf();
   renderPerkShelf();
+  renderHint();
 }
 
 // --- Press feedback ---------------------------------------------------------------
@@ -2565,7 +2587,10 @@ function press(e?: Event): void {
   income.add(now, (value - surgePay(state, play, mods) * lucky) / pressBoost(play, mods));
   share.add(now, value, 0);
   state.totalPresses++;
-  if (counted > state.bestCombo) state.bestCombo = counted;
+  if (counted > state.bestCombo) {
+    state.bestCombo = counted;
+    renderHint();
+  }
   if (play.surging) {
     surge.presses++;
     surge.earned += value;
@@ -3917,6 +3942,7 @@ window.setInterval(() => {
 // --- Boot ---------------------------------------------------------------------------------------
 
 hintEl.textContent = HINT;
+renderHint();
 if (isTouchInput) reactor.classList.add('touch-key');
 
 // The markup ships as Dormant; the saved stage should apply on first paint

@@ -423,7 +423,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
         <!-- Shop (spec §6), rendered from the rulebook so the first paint is right. -->
         <aside class="shop" aria-labelledby="shop-heading">
-          <h2 class="shop-heading" id="shop-heading">Shop</h2>
+          <h2 class="section-title shop-heading" id="shop-heading">Shop</h2>
 
           <!-- Two tabs, styled like the site's setting buttons. A closed tab that
                gains something (a newly revealed auto-tapper, or an item newly
@@ -681,9 +681,11 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
           aria-labelledby="sc-tab-achievements"
           hidden
         >
-          <p class="panel-intro">
-            <span class="readout" id="sc-ach-count">0 of {ACHIEVEMENTS.length}</span> unlocked
-          </p>
+          <h3 class="section-title" id="sc-ach-title">
+            Achievements <span class="section-count"
+              ><span class="readout" id="sc-ach-count">0 of {ACHIEVEMENTS.length}</span> unlocked</span
+            >
+          </h3>
           <ul class="achievements">
             {
               ACHIEVEMENTS.map((a) => (
@@ -712,8 +714,8 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
           hidden
         >
           <section class="perks-section" aria-labelledby="sc-perks-run-title">
-            <h3 class="perks-title" id="sc-perks-run-title">
-              This run <span class="perks-count"
+            <h3 class="section-title" id="sc-perks-run-title">
+              This run <span class="section-count"
                 ><span class="readout" id="sc-perks-slots">0 of {PERK_SLOTS}</span> slots</span
               >
             </h3>
@@ -724,8 +726,8 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
             <ul class="run-cards" id="sc-perks-run"></ul>
           </section>
           <section class="perks-section" aria-labelledby="sc-codex-title">
-            <h3 class="perks-title" id="sc-codex-title">
-              Codex <span class="perks-count"
+            <h3 class="section-title" id="sc-codex-title">
+              Codex <span class="section-count"
                 ><span class="readout" id="sc-codex-count">0 of {PERKS.length}</span> found</span
               >
             </h3>
@@ -779,7 +781,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
                the button, then the isotope track, then what a reset wipes and
                keeps. The script writes the numbers. -->
           <section class="perks-section" aria-labelledby="sc-reset-title">
-            <h3 class="perks-title" id="sc-reset-title">Next reset</h3>
+            <h3 class="section-title" id="sc-reset-title">Next reset</h3>
             <!-- For a player who hasn't reset yet; the script hides it after. -->
             <p class="panel-intro" id="sc-reset-intro">
               Resetting the experiment starts the run over. Isotopes carry across: each one adds 10%
@@ -838,8 +840,8 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
                Held rungs are lit, the next two named with a blue rim, the
                rest dashed with only their number. The script builds them. -->
           <section class="perks-section track" aria-labelledby="sc-track-title">
-            <h3 class="perks-title" id="sc-track-title">
-              Isotope track <span class="perks-count"
+            <h3 class="section-title" id="sc-track-title">
+              Isotope track <span class="section-count"
                 ><span class="readout" id="sc-track-count">0 of {ISOTOPE_TRACK.length}</span> unlocked</span
               >
             </h3>
@@ -854,7 +856,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
                lines as in the reset dialog, which names them again before
                anything happens. -->
           <section class="perks-section" aria-labelledby="sc-reset-about-title">
-            <h3 class="perks-title" id="sc-reset-about-title">What a reset does</h3>
+            <h3 class="section-title" id="sc-reset-about-title">What a reset does</h3>
             <dl class="reset-terms prestige-terms">
               <div>
                 <dt>Wiped</dt>
@@ -1075,6 +1077,17 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     --perk-machines: #a3e635;
     --perk: var(--ink-primary);
 
+    /* One card (SPACEBAR-CLICKER.md §8.5.18): every surface that holds a
+       thing, a shop row, a stat, an achievement, a perk, a rung, is Panel 03
+       inside a Line Subtle hairline at Radius md. The Next reset card is the
+       one large card: Radius lg and wider padding. Small glyph tiles under
+       36px take Radius sm. */
+    --card-bg: var(--panel-03);
+    --card-line: var(--line-subtle);
+    --card-radius: var(--radius-md);
+    --card-pad: var(--space-sm) var(--space-md);
+    --tile-radius-sm: var(--radius-sm);
+
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1197,7 +1210,17 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   /* On first paint the saved stage applies without fading up from Dormant. */
   .reactor-face.is-booting,
-  .reactor-face.is-booting .combo-sync {
+  .reactor-face.is-booting
+    :is(
+      .combo-sync,
+      .energy-block,
+      .energy-rates,
+      .share,
+      .core-wrap,
+      .combo,
+      .test-hint,
+      .keycap
+    ) {
     transition: none;
   }
 
@@ -1300,11 +1323,13 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     text-align: center;
   }
 
+  /* The number sits on the core's axis (SPACEBAR-CLICKER.md §8.5.18): its
+     unit takes no width and hangs off its right, so the row is as wide as
+     the number alone. */
   .energy-row {
     display: flex;
     align-items: baseline;
     justify-content: center;
-    gap: var(--space-sm);
     line-height: 0.9;
   }
 
@@ -1315,8 +1340,23 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   }
 
   .energy-unit {
+    width: 0;
     font-size: var(--text-title-size);
     color: var(--ink-secondary);
+    text-indent: var(--space-sm);
+    white-space: nowrap;
+  }
+
+  /* Six characters, 10,000 to 99,999, under a sixth perk socket: centred,
+     the number's corner would meet the socket on a wide monospace face, so
+     it steps down a size until 100K shortens it. Narrower faces already set
+     the readout under the shelves. */
+  @container reactor-wrap (min-width: 550px) {
+    .reactor-wrap:has(.perk-slot:nth-child(6):not([hidden])) .energy-value.is-long {
+      font-size: 3rem;
+      /* The row keeps the height it has at 3.5rem, so the face holds still. */
+      line-height: 1.05;
+    }
   }
 
   .energy-rates {
@@ -1348,10 +1388,15 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   .share {
     --share: 1;
 
-    display: flex;
+    display: grid;
+    /* Equal sides, so the bar sits on the core's axis whatever the words
+       beside it; each side's text ends against the bar. */
+    grid-template-columns:
+      minmax(max-content, 1fr) minmax(80px, var(--share-bar, 168px))
+      minmax(max-content, 1fr);
     align-items: center;
     gap: var(--space-sm);
-    width: min(360px, 100%);
+    width: min(400px, 100%);
     margin: 4px auto 0;
     font-size: 0.75rem;
     line-height: 1rem;
@@ -1365,7 +1410,12 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   }
 
   .share-side {
+    text-align: end;
     white-space: nowrap;
+  }
+
+  .share-side-end {
+    text-align: start;
   }
 
   /* Room for 100%, so the bar keeps its length as the numbers change; each
@@ -1383,7 +1433,6 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   .share-bar {
     position: relative;
-    flex: 1;
     height: 3px;
     border-radius: var(--radius-full);
     background-color: color-mix(in srgb, var(--ink-muted) 28%, transparent);
@@ -2126,7 +2175,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     width: 26px;
     height: 26px;
     border: 1px dashed var(--line);
-    border-radius: 7px;
+    border-radius: var(--tile-radius-sm);
   }
 
   .perk-slot[data-empty] .perk-pips {
@@ -2142,7 +2191,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     height: 26px;
     padding: 0;
     border: 0;
-    border-radius: 7px;
+    border-radius: var(--tile-radius-sm);
     background-color: color-mix(in srgb, var(--perk) 16%, var(--panel-01));
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--perk) 55%, transparent);
     color: var(--perk);
@@ -2699,6 +2748,18 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     margin-block-end: var(--space-xs);
   }
 
+  /* A faulted reactor has no combo to show (SPACEBAR-CLICKER.md §8.5.18):
+     the row and its grace bar fade out, keeping their room, until the
+     restart. The scope stays, as it draws the restart's beat. */
+  .combo-row,
+  .combo-track {
+    transition: opacity 300ms var(--ease);
+  }
+
+  .reactor-face[data-power='fault'] :is(.combo-row, .combo-track) {
+    opacity: 0;
+  }
+
   .combo-count {
     font-size: 1.5rem;
     font-weight: 700;
@@ -2815,6 +2876,114 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     font-style: italic;
     color: var(--ink-muted);
     text-align: center;
+  }
+
+  /* --- The retired hint's room (SPACEBAR-CLICKER.md §8.5.18) ----------------
+
+     Once the player has held a combo the standing hint goes for good, and
+     its line with it; the run-down's and the fault's instructions bring it
+     back while they are needed. The height it gives up, its line and the
+     gap over it, is spread through the face above it, where the readouts
+     and the dial sat close together, so the face keeps its height. The line
+     closes and the room opens together, over 400ms, where the browser can
+     ease a height to nothing; elsewhere both happen at once. */
+  .reactor-face {
+    /* The hint's one line and the face's gap; two lines on a narrow face. */
+    --hint-room: calc(2.625rem + 0.625rem);
+    --room: 0px;
+
+    interpolate-size: allow-keywords;
+  }
+
+  @container reactor (min-width: 460px) {
+    .reactor-face > * {
+      --hint-room: calc(1.3125rem + 0.625rem);
+    }
+  }
+
+  .reactor-face.is-roomy > * {
+    --room: var(--hint-room);
+  }
+
+  /* Shares of the room, adding to the whole of it. On a narrow face the
+     readout already sits under the shelves, so the room is spread evenly.
+     On a wide one the number shares a band with the isotope badge and the
+     perk shelf: most of the room goes over it, setting it clear below the
+     shelf's pips, and none under the dial. */
+  .reactor-face > * {
+    --room-readout: 0.2;
+    --room-rates: 0.13;
+    --room-share: 0.13;
+    --room-dial: 0.22;
+    --room-combo: 0.19;
+    --room-key: 0.13;
+  }
+
+  @container reactor-wrap (min-width: 550px) {
+    .reactor-face > * {
+      --room-readout: 0.6;
+      --room-rates: 0.1;
+      --room-share: 0.1;
+      --room-dial: 0.2;
+      --room-combo: 0;
+      --room-key: 0;
+    }
+  }
+
+  .test-hint.is-retired {
+    height: 0;
+    margin-block-start: -0.625rem; /* the face's gap, which it gives up too */
+    overflow: hidden;
+    opacity: 0;
+  }
+
+  .energy-block {
+    margin-block-start: calc(var(--room) * var(--room-readout));
+  }
+
+  .reactor-face .energy-rates {
+    margin-block-start: calc(var(--space-sm) + var(--room) * var(--room-rates));
+  }
+
+  .reactor-face .share {
+    margin-block-start: calc(4px + var(--room) * var(--room-share));
+  }
+
+  .core-wrap {
+    margin-block-start: calc(var(--room) * var(--room-dial));
+  }
+
+  .combo {
+    margin-block-start: calc(var(--room) * var(--room-combo));
+  }
+
+  .keycap {
+    margin-block-start: calc(var(--room) * var(--room-key));
+  }
+
+  @supports (interpolate-size: allow-keywords) {
+    @media (prefers-reduced-motion: no-preference) {
+      .energy-block,
+      .energy-rates,
+      .core-wrap,
+      .combo,
+      .keycap {
+        transition: margin-block-start 400ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .share {
+        transition:
+          opacity 600ms var(--ease),
+          margin-block-start 400ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .test-hint {
+        transition:
+          height 400ms cubic-bezier(0.16, 1, 0.3, 1),
+          margin-block-start 400ms cubic-bezier(0.16, 1, 0.3, 1),
+          opacity 200ms var(--ease);
+      }
+    }
   }
 
   /* On a wide face the hint takes one line, which pays for the share row
@@ -3056,14 +3225,23 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   /* --- Toast ---------------------------------------------------------------- */
 
-  /* Notices sit over the hint line above the keycap: the hint is standing
-     instructions, so it is the one thing on the face a notice may cover. The
-     top corners belong to the isotope and perk shelves. */
+  /* A notice takes the keycap's place for as long as it shows
+     (SPACEBAR-CLICKER.md §8.5.18): the same foot of the face, at least the
+     key's width and height with its lip, so the key never shows around it.
+     The key is decoration, and the core still answers every press. A long
+     notice grows wider, then upward. The top corners belong to the isotope
+     and perk shelves. */
   .toast {
     position: absolute;
-    inset-block-end: calc(var(--face-pad) + 3.5rem);
+    inset-block-end: calc(var(--face-pad) - 2px);
     inset-inline-start: 50%;
     z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* The keycap's 70% is of the face's content; this is of its padding box. */
+    min-width: min(320px, calc(70% - 1.4 * var(--face-pad)));
+    min-height: 41px;
     max-width: calc(100% - 2 * var(--face-pad));
     translate: -50% 0;
     text-align: center;
@@ -3074,6 +3252,10 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     font-size: var(--text-label-size);
     font-weight: 500;
     color: var(--ink-primary);
+  }
+
+  .toast[hidden] {
+    display: none;
   }
 
   /* A perk drop's toast wears the perk's hue. */
@@ -3107,9 +3289,9 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     min-height: 0; /* lets the list scroll inside the pinned height */
   }
 
-  .shop-heading {
-    font-size: var(--text-title-size);
-    font-weight: var(--text-title-weight);
+  /* The shop's column sets its own gaps, so its title drops the margin. */
+  .section-title.shop-heading {
+    margin-block-end: 0;
   }
 
   /* The tabs themselves take the shared .tab look (setting-button parity);
@@ -3182,9 +3364,9 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     column-gap: 0.75rem;
     width: 100%;
     padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-sm);
-    border: 1px solid var(--line-subtle);
-    border-radius: var(--radius-md);
-    background-color: var(--panel-03);
+    border: 1px solid var(--card-line);
+    border-radius: var(--card-radius);
+    background-color: var(--card-bg);
     color: var(--ink-secondary);
     text-align: start;
     cursor: default;
@@ -3675,7 +3857,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--space-sm) var(--space-lg);
+    gap: var(--space-sm);
   }
 
   .stats > div {
@@ -3683,9 +3865,10 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-md);
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-    background-color: var(--panel-03);
+    padding: var(--card-pad);
+    border: 1px solid var(--card-line);
+    border-radius: var(--card-radius);
+    background-color: var(--card-bg);
   }
 
   .stats dt {
@@ -3715,9 +3898,10 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     display: flex;
     align-items: flex-start;
     gap: var(--space-sm);
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-    background-color: var(--panel-03);
+    padding: var(--card-pad);
+    border: 1px solid var(--card-line);
+    border-radius: var(--card-radius);
+    background-color: var(--card-bg);
   }
 
   .achievement-mark {
@@ -3763,7 +3947,11 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     margin-block-start: var(--space-xl);
   }
 
-  .perks-title {
+  /* One heading for every section of the game (SPACEBAR-CLICKER.md
+     §8.5.18): the shop's, and each section of the panels. A title, and
+     where there is something to count, the count in the readout face with
+     its word after it. */
+  .section-title {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
@@ -3773,13 +3961,13 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     font-weight: 600;
   }
 
-  .perks-count {
+  .section-count {
     font-size: var(--text-label-size);
     font-weight: 500;
     color: var(--ink-secondary);
   }
 
-  .perks-count .readout {
+  .section-count .readout {
     color: var(--ink-primary);
   }
 
@@ -3806,9 +3994,9 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     flex-direction: column;
     gap: 4px;
     padding: var(--space-sm) var(--space-md) 10px var(--space-sm);
-    border: 1px solid var(--line-subtle);
-    border-radius: var(--radius-md);
-    background-color: var(--panel-03);
+    border: 1px solid var(--card-line);
+    border-radius: var(--card-radius);
+    background-color: var(--card-bg);
   }
 
   .run-cards :global(.run-card-head) {
@@ -3821,7 +4009,7 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
   .run-cards :global(.perk-tile) {
     width: 28px;
     height: 28px;
-    border-radius: 7px;
+    border-radius: var(--tile-radius-sm);
   }
 
   .run-cards :global(.perk-tile svg) {
@@ -3997,9 +4185,9 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     align-items: start;
     column-gap: var(--space-md);
     padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-sm);
-    border: 1px solid var(--line-subtle);
-    border-radius: var(--radius-md);
-    background-color: var(--panel-03);
+    border: 1px solid var(--card-line);
+    border-radius: var(--card-radius);
+    background-color: var(--card-bg);
   }
 
   .codex-read-perk :global(.codex-read-text) {
@@ -4125,9 +4313,9 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     align-items: center;
     column-gap: var(--space-xl);
     padding: var(--space-md) var(--space-lg);
-    border: 1px solid var(--line-subtle);
+    border: 1px solid var(--card-line);
     border-radius: var(--radius-lg);
-    background-color: var(--panel-03);
+    background-color: var(--card-bg);
   }
 
   .reset-card:has(.btn[hidden]) {
@@ -4290,9 +4478,9 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     flex-direction: column;
     gap: 2px;
     padding: var(--space-sm) var(--space-md) 10px;
-    border: 1px solid var(--line-subtle);
-    border-radius: var(--radius-md);
-    background-color: var(--panel-03);
+    border: 1px solid var(--card-line);
+    border-radius: var(--card-radius);
+    background-color: var(--card-bg);
   }
 
   .track-grid :global(.track-card.is-next) {
@@ -5192,9 +5380,9 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     column-gap: 0.75rem;
     width: 100%;
     padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-sm);
-    border: 1px solid var(--line-subtle);
-    border-radius: var(--radius-md);
-    background-color: var(--panel-03);
+    border: 1px solid var(--card-line);
+    border-radius: var(--card-radius);
+    background-color: var(--card-bg);
     color: var(--ink-primary);
     text-align: start;
   }

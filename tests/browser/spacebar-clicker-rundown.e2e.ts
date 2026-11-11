@@ -63,6 +63,10 @@ test('back to a fault: nothing earns until ten presses on a beat restart it', as
   await expect(page.locator('#sc-eps')).toHaveText('0.0');
   await expect(page.locator('#sc-epp')).toHaveText('0');
   await expect(page.locator('#sc-combo-next')).toHaveText('after the restart');
+  // No combo to show in a fault: the row and its bar go, the scope stays.
+  await expect(page.locator('.combo-row')).toHaveCSS('opacity', '0');
+  await expect(page.locator('.combo-track')).toHaveCSS('opacity', '0');
+  await expect(page.locator('#sc-scope')).toBeVisible();
   await page.waitForTimeout(1200); // the return's energy counts in
   const held = await energy(page);
   await page.waitForTimeout(800);

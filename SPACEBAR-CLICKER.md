@@ -769,9 +769,10 @@ the build plan are in §8.1.
   `.panels`), rather than leave one wrapped alone.
 - **The reactor face**, top to bottom:
   - Energy readout, with per-second and per-press rates, and under them the
-    share bar (§4.2): "You 52%", the bar, "48% auto-tappers", 360px wide like
-    the combo meter. Its row is always laid out, so nothing moves when it
-    fades in.
+    share bar (§4.2): "You 52%", the bar, "48% auto-tappers". The number
+    and the bar sit on the core's axis (§8.5.18): "energy" hangs off the
+    number's right without widening its row, and the bar, 168px, has equal
+    sides. Its row is always laid out, so nothing moves when it fades in.
   - Isotope badge in the top-left, perk shelf in the top-right. Both sit
     beside the face in the markup, positioned over its corners. The badge's
     button is padded, and its 30px ring sits 16px in from the face's outer
@@ -787,6 +788,10 @@ the build plan are in §8.1.
     canvas.
   - The SPACE keycap and the hint line. Toasts sit over the hint line, which
     is standing instructions, since the top corners belong to the shelves.
+    Since 2026-11-11 (§8.5.18) a toast takes the keycap's place at the
+    face's foot, and the hint is retired once the player has held a Steady
+    combo: its line closes and the face spreads that room above, over the
+    readouts, the dial and the combo, keeping its height.
     They sat top-right until step 5. Where the face's content is 460px or
     wider (1440 and 1280 wide) the hint takes one line.
 - **Fitting 1440x900** (2026-11-10). The share bar and the auto-tappers' line
@@ -1032,7 +1037,7 @@ The visuals were built in three passes, all shipped 2026-10-22.
 - `npm run check` runs `astro check`. `npm run format:check` runs Prettier.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
-  81 as of 2026-11-11, in about ten minutes.
+  83 as of 2026-11-11, in about ten minutes.
   - **Coverage:** the page shell, the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
@@ -3015,6 +3020,148 @@ the arc at a surge's countdown and fade back after its results; the run-down
 fades them with the arc as before. Unlit ones stay grey. Two browser checks
 extended, 81 in all.
 
+#### 8.5.18 Design review, 2026-11-11
+
+The maintainer asked for a design review of the whole interface: some of it
+still felt "haphazard and all over the place". New, mid-run, late, run-down
+and fault saves were staged and shot at 1440x900, 1280x720, 820 and 390 wide.
+Twenty-one findings, to be worked through stage by stage, the structural
+ones first:
+
+1. The face's height follows the shop's: 572px new, 587 with
+   Synchronisation, 613 with a perk on offer in the open shop tab, and back
+   to 587 on the other tab. **Open.**
+2. Each surface had its own card. **Done, below.**
+3. Section headings followed no one pattern. **Done, below.**
+4. Each panel tab has its own column grid (four, four, three, twelve), and
+   the shop's tabs stretch where the panels' hug the left. **Open.**
+5. The three dialogs are three designs: width, alignment, buttons, and
+   "Reset All Data?" in title case. **Open.**
+6. The hint never retires, and toasts cover the middle of it. **Done,
+   below.**
+7. The energy number and the share bar sit about 25px left of the core's
+   axis. **Done, below.**
+8. The keyboard focus ring around the face is the loudest thing on screen.
+   **Open.**
+9. Seven rows of small text under the core; the combo row stays as dead
+   text in a fault. **Done, below.**
+10. Floating gains collide with the dial. **Open.**
+11. A perk's offer row is 2.5 times a shop row, with its notes and Reroll
+    hanging off it. **Open.**
+12. Late in a run most of the Upgrades tab is maxed rows at full height, in
+    two wordings. **Open.**
+13. Shop rows run from about 58 to 97px. **Open.**
+14. Stats is 13 equal tiles with no groups, and one label wraps. **Open.**
+15. A locked achievement's grey cross reads as failed; nothing shows
+    progress. **Open.**
+16. A new player's isotope track ends in ten small sockets on two ragged
+    rows. **Open.**
+17. A new player's Isotopes tab says "1000K to go" where the badge says
+    "1.00M to go". **Open.**
+18. The reset dialog's two section labels differ, a fifth chip is an
+    orphan, and on a phone the last switch is cut by the buttons. **Open.**
+19. In the swap dialog the incoming perk looks like the six to drop.
+    **Open.**
+20. On a phone the keycap and hint take about 90px, and the shop is a
+    scroll away from the reactor. **Open.**
+21. The 588px fit is held against a 900px viewport; a 1440x900 screen shows
+    about 790. **Open, the maintainer's call.**
+
+**Findings 2 and 3, built 2026-11-11.** CSS and markup only.
+
+- **One card.** Tokens on `.game-section`: `--card-bg` (Panel 03),
+  `--card-line` (Line Subtle), `--card-radius` (Radius md) and `--card-pad`.
+  Shop rows, perk cards, track cards and the codex's reading card already
+  matched and now read the tokens. Stat tiles and achievements were
+  borderless fills and gain the hairline; the Stats grid's column gap drops
+  from 24px to 8, as every other grid's. The Next reset card stays the one
+  large card, Radius lg with wider padding. Glyph tiles under 36px (the
+  shelf's chips and empty sockets, this run's cards) take Radius sm, 6px,
+  from a one-off 7px.
+- **One heading.** `.perks-title` and `.perks-count` became `.section-title`
+  and `.section-count`, and the shop's heading and the Achievements tab take
+  them: "Achievements 15 of 19 unlocked", as "Codex 22 of 25 found".
+
+Calls for review:
+
+1. **Stats has no heading yet.** "Stats" under a tab named Stats says
+   nothing; finding 14's groups will bring their own.
+2. **"Achievements" repeats its tab's name**, as the count needs a title to
+   sit beside. The word is one for the copy audit (§8.5.9).
+3. **The Stats tiles are wider** with the smaller gap, so "Energy per
+   second" no longer wraps at 1440; "Best surge, per second" still does.
+4. **No new browser check.** Borders and radii aren't asserted anywhere.
+
+**Findings 6, 7 and 9, built 2026-11-11** (§5.1, §5.3).
+
+- **6, the hint.** Once the player has held a Steady combo in any run
+  (`bestCombo` at the first tier's 10), the standing hint is retired
+  (`is-retired`, `renderHint`). The run-down's and the fault's instructions
+  still show. As first built the hint kept its line, for the toasts, and
+  faded under one; the maintainer found the empty line awkward, the face
+  cramped above it and bare below, and chose the first of three options the
+  same day:
+  - **A toast takes the keycap's place.** It sits at the face's foot, at
+    least the key's width and its height with the lip, so the key never
+    shows around it; a long one grows wider, then upward. The key is
+    decoration, and the core answers every press. No line is kept for it.
+  - **The hint's line closes** when it retires, over 400ms where the
+    browser can ease a height to nothing (`interpolate-size`), at once
+    elsewhere and under reduced motion.
+  - **Its room goes above** (`is-roomy` on the face, `--room`): the line
+    and its gap, 31px on a wide face and 52px on a narrow one. The face
+    keeps its height: 572px and 587 at 1440. The first split spread it
+    evenly, 6px of it over the number. With six perks the maintainer still
+    found the top tight: the number shared a band with the badge and the
+    perk shelf, its top level with the shelf's pips and "energy" under the
+    last chips. Of three options (a new split, the perk shelf as a rail
+    beside the dial, a badge without its lines) the maintainer chose the
+    split, built the same day:
+    - **A wide face** (550px of wrap and up): 60% over the readouts, 10%
+      under the number, 10% under the rates, 20% over the dial, none under
+      it. The number's box starts at 359px on the page at 1440, where the
+      shelf's pips end at 361, so its digits clear them.
+    - **A narrow face,** where the readout already sits under the shelves:
+      20% over the readouts, 13% each under the number and the rates, 22%
+      over the dial, 19% over the combo and 13% over the keycap.
+- **7, the axis.** The energy number sits on the core's axis: "energy"
+  takes no width and hangs off the number's right. The share bar is a grid
+  with equal sides, each side's text against the bar: the bar is 168px on
+  the axis, in a row up to 400px wide; it was about 197px and 25px left.
+- **9, the fault.** The combo's row and grace bar fade out in a fault and
+  come back with the restart, keeping their room. The scope stays: it draws
+  the restart's beat.
+
+Three browser checks: a toast covering the keycap, the hint retiring with
+the face's height held and the core lower, kept through a reload; the
+number and the bar within 1px of the core's centre; the fault's row and bar
+gone with the scope showing. 83 in all.
+
+Calls for review:
+
+1. **A toast hides the keycap's press for its 2.6 seconds,** as agreed. If
+   the keycap goes on phones (finding 20), toasts there need a new place;
+   the maintainer set that aside for now.
+2. **It retires on the best combo ever held,** so a full reset brings it
+   back, and a reset of the experiment doesn't. A new player keeps the hint
+   and the old spacing until their first Steady combo, as agreed.
+3. **The face moves once, at the tenth press of a first combo,** as the
+   line closes and the core settles 21px lower; and again whenever the
+   run-down or a fault brings an instruction back and a press sends it away.
+4. **The perk shelf as a rail beside the dial** is the structural answer
+   if the top still reads as busy; it would be mocked up first.
+5. **A six-character number under a sixth socket is 48px, not 56.**
+   Centred, 10,000 to 99,999 would end 2px from the sixth perk socket on
+   Windows and under it on a wider monospace face, as a Mac's. With six
+   sockets showing on a wide face the number steps down a size
+   (`is-long`) until 100K shortens it; its row keeps its height.
+6. **The share row is 400px wide, the combo meter 360,** so their outer
+   edges no longer line up; the bar and the number share the axis instead.
+7. **On a phone the bar sits 2px left of the axis,** as "100% auto" is
+   wider than "You 0%" and there isn't room for equal sides.
+8. **"energy" now runs under the perk shelf's last sockets** at 1440, as it
+   did before by less; it is below their pips.
+
 From the 2026-10-22 delight brainstorm, never assigned to a pass. Build only if
 the maintainer asks.
 
@@ -3266,3 +3413,18 @@ the maintainer asks.
 - **2026-11-11.** UI polish (§8.5.17): every lit light on the dial wears the
   dial's color, as the arc does, the stage's or a surge's gold, instead of
   the color of the stage it marks. Two browser checks extended.
+- **2026-11-11.** Design review of the whole interface (§8.5.18), 21
+  findings. The first two built: one card, so stat tiles and achievements
+  gain the hairline the shop rows, perk cards and track cards have, on
+  shared tokens, and small glyph tiles share one radius; one heading, so
+  the shop and the Achievements tab take the Perks and Isotopes tabs'
+  title with its count. CSS and markup only.
+- **2026-11-11.** Design review, findings 6, 7 and 9 (§8.5.18). A toast
+  takes the keycap's place; the hint retires once a Steady combo has been
+  held, its line closes, and the face spreads the room above it.
+  The energy number and the share bar sit on the core's axis. A fault's
+  combo row and grace bar fade out, the scope staying for the restart's
+  beat. 3 browser checks, 83 in all.
+- **2026-11-11.** The retired hint's room re-split on a wide face
+  (§8.5.18): most of it over the energy number, which now sits clear below
+  the perk shelf's pips, and none under the dial.

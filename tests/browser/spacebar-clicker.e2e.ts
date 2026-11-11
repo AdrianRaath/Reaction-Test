@@ -7,7 +7,7 @@
 import type { Page } from '@playwright/test';
 
 import { ISOTOPE_TRACK, PERKS } from '../../src/games/spacebar-clicker/config';
-import { editSave, energy, expect, openGame, pressSteady, test } from './fixtures';
+import { editSave, energy, expect, openGame, pressSteady, seedSave, test } from './fixtures';
 
 test('page shell: title, heading, no top-bar telemetry', async ({ page }) => {
   await page.goto('/spacebar-clicker');
@@ -17,6 +17,62 @@ test('page shell: title, heading, no top-bar telemetry', async ({ page }) => {
     page.getByRole('heading', { level: 1, name: 'Spacebar Clicker', exact: true })
   ).toBeVisible();
   await expect(page.locator('#topbar-stats')).toHaveCount(0);
+});
+
+test('a toast takes the keycap’s place, and the hint retires once a combo is held', async ({
+  page,
+}) => {
+  await openGame(page);
+  const hint = page.locator('#sc-hint');
+  const face = page.locator('#sc-reactor');
+  const toast = page.locator('#sc-toast');
+  await expect(hint).toBeVisible();
+  const faceHeight = (await face.boundingBox())!.height;
+  const coreTop = (await page.locator('.core-wrap').boundingBox())!.y;
+
+  // The first press earns an achievement. Its toast covers the key, lip and
+  // all, and leaves the hint alone.
+  await page.keyboard.press('Space');
+  await expect(toast).toBeVisible();
+  await page.waitForTimeout(400); // the toast settles in, and the key comes back up
+  const key = (await page.locator('#sc-keycap').boundingBox())!;
+  const note = (await toast.boundingBox())!;
+  expect(note.x).toBeLessThanOrEqual(key.x + 0.5);
+  expect(note.x + note.width).toBeGreaterThanOrEqual(key.x + key.width - 0.5);
+  expect(note.y).toBeLessThanOrEqual(key.y + 0.5);
+  expect(note.y + note.height).toBeGreaterThanOrEqual(key.y + key.height + 1.5);
+  await expect(hint).toHaveCSS('opacity', '1');
+  await expect(toast).toBeHidden({ timeout: 8000 });
+
+  // Steady, the first tier: the hint has done its work, and its line closes.
+  // The face keeps its height, and the room goes above: the core sits lower.
+  await pressSteady(page, 10, 300);
+  await expect(page.locator('#sc-combo-tier')).toHaveText('Steady');
+  await expect(hint).toHaveClass(/is-retired/);
+  await expect(face).toHaveClass(/is-roomy/);
+  await expect.poll(async () => (await hint.boundingBox())!.height).toBe(0);
+  await expect
+    .poll(async () => Math.abs((await face.boundingBox())!.height - faceHeight))
+    .toBeLessThan(1);
+  expect((await page.locator('.core-wrap').boundingBox())!.y).toBeGreaterThan(coreTop + 10);
+
+  // And it stays gone on the next visit.
+  await page.reload({ waitUntil: 'networkidle' });
+  await expect(hint).toHaveClass(/is-retired/);
+  expect(Math.abs((await face.boundingBox())!.height - faceHeight)).toBeLessThan(1);
+});
+
+test('the energy number and the share bar sit on the axis of the core', async ({ page }) => {
+  await seedSave(page, { energy: 32_454, runLifetime: 40_000, tappers: { assistant: 5 } });
+  await openGame(page);
+  await expect(page.locator('#sc-share')).toHaveClass(/is-shown/);
+  const centre = async (selector: string) => {
+    const box = (await page.locator(selector).boundingBox())!;
+    return box.x + box.width / 2;
+  };
+  const axis = await centre('.core-wrap');
+  expect(Math.abs((await centre('#sc-energy')) - axis)).toBeLessThanOrEqual(1);
+  expect(Math.abs((await centre('.share-bar')) - axis)).toBeLessThanOrEqual(1);
 });
 
 test('the page lists every perk and the drop odds, straight from the config', async ({ page }) => {
