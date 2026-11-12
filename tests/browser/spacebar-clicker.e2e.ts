@@ -122,9 +122,9 @@ test('the energy number and the share bar sit on the axis of the core', async ({
 
 test('the page lists every perk, straight from the config', async ({ page }) => {
   await page.goto('/spacebar-clicker');
-  // About is two paragraphs, apart; the pictures are How to play's.
+  // About is three paragraphs, apart; the pictures are How to play's.
   const lede = page.locator('#about .sc-lede p');
-  await expect(lede).toHaveCount(2);
+  await expect(lede).toHaveCount(3);
   const [first, second] = await lede.evaluateAll((ps) => ps.map((p) => p.getBoundingClientRect()));
   expect(second.top - first.bottom, 'a gap between the paragraphs').toBeGreaterThan(8);
 
@@ -183,10 +183,13 @@ test('the page draws the reactor states and the run-down from the config', async
   await expect(states.nth(1).locator('.sc-state-note')).toContainText('Robot Arm');
   await expect(states.nth(1).locator('.sc-state-bonus')).toHaveText('+5%');
 
-  // Every auto-tapper scales alike, so the column's heading says it once.
-  const tappers = page.locator('#shop .sc-shop > div').nth(1);
-  await expect(tappers.locator('.sc-shop-head')).toContainText('x1.2 per purchase');
+  // The shop shows prices and effects, and an upgrade's level cap, but no
+  // price multipliers (SPACEBAR-CLICKER.md §8.5.21).
+  const [upgrades, tappers] = [0, 1].map((i) => page.locator('#shop .sc-shop > div').nth(i));
+  await expect(upgrades.locator('.sc-shop-note').first()).toHaveText('20 levels');
+  await expect(tappers.locator('.sc-shop-head span')).toHaveText('press for you');
   await expect(tappers.locator('.sc-shop-note')).toHaveCount(0);
+  await expect(page.locator('#shop')).not.toContainText('per purchase');
 
   const stages = page.locator('#rundown .sc-run-stages > div');
   await expect(stages).toHaveCount(4);

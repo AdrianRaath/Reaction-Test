@@ -47,13 +47,17 @@ import PerkIcon from '../../components/games/PerkIcon.astro';
 import ShopIcon from '../../components/games/ShopIcon.astro';
 
 export const whole = (v) => v.toLocaleString('en-US');
+export const WORDS = 'zero one two three four five six seven eight nine ten eleven twelve'.split(
+  ' '
+);
+export const word = (n) => WORDS[n] ?? whole(n);
 export const pct = (v) => `${Math.round(v * 100)}%`;
 export const FAMILIES = [
   ['rhythm', 'For players who hold a beat. These widen the window and raise the combo.'],
-  ['press', 'Each press pays more, combo or no combo.'],
-  ['luck', 'Double Tap fires more often, and can fire again.'],
-  ['surge', 'Surges come more often and hit harder.'],
-  ['machines', 'Auto-tappers earn more and cost less.'],
+  ['press', 'For mashers. Each press pays more, combo or no combo.'],
+  ['luck', 'For players who like a gamble. Lucky presses come more often and can chain.'],
+  ['surge', 'For surge chasers. Surges come more often and hit harder.'],
+  ['machines', 'For players who leave the game running. Auto-tappers earn more and cost less.'],
 ];
 export const RARITY_ORDER = { common: 0, rare: 1, keystone: 2 };
 export const perksOf = (family) =>
@@ -75,7 +79,7 @@ export const stateNote = (s, i) => {
   const names = SHOP_ITEMS.filter(
     (item) => item.baseCost >= s.threshold && item.baseCost < next
   ).map((item) => item.name);
-  return `First prices in reach: ${list(names)}`;
+  return `Now in reach: ${list(names)}`;
 };
 export const LAMPS = REACTOR_STATES.slice(1).map((_, k, all) => {
   const angle = (k / all.length) * 2 * Math.PI - Math.PI / 2;
@@ -132,15 +136,18 @@ export const tierRange = (i) =>
     <h2>About this spacebar clicker game</h2>
     <div class="sc-lede">
 
-      Spacebar Clicker is a free clicker game you play on one key. Each press of the spacebar adds
-      energy to a lab reactor. You spend that energy on upgrades and on auto-tappers that press for
-      you, so it plays as an idle game too. At a million energy you can reset for isotopes, which
-      make each run after it faster.
+      Spacebar Clicker is a free clicker game you play on one key. Each press charges a lab
+      reactor, and the energy buys upgrades and auto-tappers that keep earning when you stop, so it
+      plays as an idle game too. At a million energy you can reset for isotopes, which make each
+      run after it faster.
 
-      A steady beat pays more per press than mashing does, and random perks change the rules of
-      each run. Your progress saves in this browser, with no account and no download. For a
-      straight count of presses per second, try the
-      <a href="/spacebar-speed-test">spacebar speed test</a>.
+      Perks let you shape each run around how you like to play. They drop at random, and you can
+      hold {word(PERK_SLOTS)}. Keep a steady beat and the right perks lift your combo past its usual top tier. If
+      you'd rather mash, trade the combo for harder presses. Leave the game running, and your
+      auto-tappers can carry the run.
+
+      Your progress saves in this browser, with no account and no download. For a straight count of
+      presses per second, try the <a href="/spacebar-speed-test">spacebar speed test</a>.
 
     </div>
 
@@ -154,10 +161,7 @@ export const trace = (xs, short, width) =>
 export const BEATS = [18, 41, 64, 87, 110, 133, 150, 173];
 export const EVEN = Array.from({ length: 13 }, (_, i) => 20 + i * 25);
 export const UNEVEN = [16, 30, 62, 74, 118, 131, 142, 190, 221, 232, 281, 296, 322];
-export const upgradeNote = (u) =>
-  u.max > 1 ? `x${u.scale} per level, ${u.max} levels` : 'one purchase';
-export const tapperScale =
-  new Set(AUTO_TAPPERS.map((t) => t.scale)).size === 1 ? AUTO_TAPPERS[0].scale : null;
+export const upgradeNote = (u) => (u.max > 1 ? `${u.max} levels` : 'one purchase');
 export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 0 0 1 8 1Z';
 
 <section id="how-to-play" class="info-section alt-bg sc-doc">
@@ -272,8 +276,8 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
   <div class="container">
     <h2>The combo: a steady beat pays up to 3x</h2>
 
-      The game times the gap between your presses. Each press on the beat adds one to your combo,
-      and the higher your combo, the more each press pays.
+      Find a rhythm and hold it. Each press on the beat adds to your combo, and the higher it
+      climbs, the more you earn per press.
 
     <div class="sc-ladder">
       {tiers.map((tier, i) => (
@@ -311,7 +315,7 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
         <div class="sc-step-body">
           <h3>Off the beat</h3>
 
-            Uneven gaps draw short spikes. The game forgives {COMBO.missesToBreak - 1} in a row, and
+            Uneven gaps draw short spikes. The game forgives {word(COMBO.missesToBreak - 1)} in a row, and
             the next one breaks the combo.
 
         </div>
@@ -321,13 +325,13 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
       <div>
         <span class="sc-fact-figure">{pct(COMBO.tolerance)}</span>
 
-          A press counts as on the beat if it lands within {pct(COMBO.tolerance)} of your recent
-          rhythm.
+          A press within {pct(COMBO.tolerance)} of your rhythm still counts, so small slips won't
+          cost you.
 
       </div>
       <div>
         <span class="sc-fact-figure">{COMBO.graceMs / 1000} s</span>
-        <p>A longer pause breaks the combo. The bar under the counter drains to show it.</p>
+        <p>Pause for longer and the combo breaks. The bar under the counter drains to warn you.</p>
       </div>
       <div>
         <span class="sc-fact-figure">
@@ -336,8 +340,8 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
           <small>presses</small>
         </span>
 
-          Your first {COMBO.freeStarts} presses after a break always count, since there's no beat to
-          measure yet.
+          After a break, your first {COMBO.freeStarts} presses always count, so you can find the
+          beat again.
 
       </div>
     </div>
@@ -352,8 +356,9 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
   <div class="container">
     <h2>Upgrades and auto-tappers</h2>
 
-      Upgrades make each press pay more. Auto-tappers press for you, so the reactor keeps earning
-      between your presses and after you stop. Each purchase raises that item's next price.
+      At the start, every point of energy comes from your own presses. Upgrades make each press pay
+      more. Auto-tappers take on more of the work as your run grows, and they keep earning after
+      you stop.
 
     <div class="sc-shop">
       <div>
@@ -378,7 +383,7 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
       <div>
         <div class="sc-shop-head">
           <h3>Auto-tappers</h3>
-          <span>{tapperScale ? `press for you, x${tapperScale} per purchase` : 'press for you'}</span>
+          <span>press for you</span>
         </div>
         <ul class="sc-shop-list">
           {AUTO_TAPPERS.map((t) => (
@@ -391,15 +396,13 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
               <span class="sc-shop-effect">
                 <span class="sc-shop-eps">+{t.eps}</span> energy per second. {t.detail}.
               </span>
-              {!tapperScale && <span class="sc-shop-note">x{t.scale} per purchase</span>}
             </li>
           ))}
         </ul>
       </div>
     </div>
 
-      A new auto-tapper appears once a run has earned half its price, and perks drop into the same
-      shop at random.
+      Bigger machines unlock as you earn, and perks turn up in the same shop at random.
 
   </div>
 </section>
@@ -408,15 +411,11 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
   <div class="container">
     <h2>Perks: {PERKS.length} random drops</h2>
 
-      Perks change how a run plays. They drop into the shop at random while you play and last until
-      you reset. Metronome widens your beat window, and Self-Replicator copies your best auto-tapper
-      for free.
-
-
-      Commons boost a number and rares change a rule. A keystone breaks one, with a downside. You
-      hold {PERK_SLOTS} at a time, and the Perks tab keeps a codex of each perk you find. The
-      <a href="#isotope-track">isotope track</a> can add a sixth slot or carry a perk through a
-      reset.
+      The {PERKS.length} perks come in {word(FAMILIES.length)} families, each suited to a way of
+      playing. Most drops are commons that nudge a number. Rarer ones change a rule, and a keystone
+      can set the course of a whole run, at a cost. The Perks tab keeps a codex of each one you
+      find, and the <a href="#isotope-track">isotope track</a> can add a sixth slot or carry a perk
+      through a reset.
 
     <div class="sc-filter" id="sc-perk-filter" hidden>
       <span class="sc-filter-label">Show</span>
@@ -476,8 +475,9 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
   <div class="container">
     <h2>Reactor states</h2>
 
-    The reactor changes state as you earn. Each new state adds 5% to everything you earn for the
-    rest of the run and brings bigger purchases within reach. A reset returns it to Dormant.
+    As your run grows, the reactor climbs through {word(REACTOR_STATES.length)} states, from a dim
+    green glow to a blue-white core. Each new state adds 5% to everything you earn for the rest of
+    the run and brings bigger purchases within reach. A reset returns it to Dormant.
 
     <div class="sc-states">
       {REACTOR_STATES.map((s, i) => (
@@ -568,7 +568,7 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
       </div>
     </div>
 
-    The Night Lab rung and the Night Shift perk both let the reactor run longer on its own.
+    The isotope track and the right perks let you stay away longer.
 
   </div>
 </section>
@@ -577,8 +577,9 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
   <div class="container">
     <h2>Prestige: reset for isotopes</h2>
 
-    Once a run reaches a million energy, you can reset it. Your energy, shop and perks start over,
-    and you keep your isotopes. Each one adds {pct(ISOTOPE_BONUS)} to everything you earn, for good.
+    Once a run reaches a million energy, you can reset it for isotopes and start again stronger.
+    You lose this run's energy, shop and perks, and each isotope adds {pct(ISOTOPE_BONUS)} to
+    everything you earn from then on.
 
     <div class="sc-pays">
       {PAYS.map((n) => (
@@ -601,8 +602,9 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
 
     <h3 id="isotope-track">The isotope track: {ISOTOPE_TRACK.length} rungs</h3>
 
-    Each isotope unlocks a rung that you keep. Every third rung is a choice of two, and you can
-    switch your pick at any reset.
+    Each isotope also unlocks a rung of the track for good, from a head start on each run to better
+    perk drops. Every third rung is a choice between two, and you can change your mind at any
+    reset.
 
     <div class="sc-track">
       {TRACK_ROWS.map((row) => (

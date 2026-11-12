@@ -1031,7 +1031,8 @@ with the game's own parts.
   "Auto-tappers earn while you're away", "Free saves in your browser"):
   four in a row, two and two where they don't fit, hidden on a phone.
 - **Under the game**, a jump strip, then these H2s:
-  1. About this spacebar clicker game (`#about`): two paragraphs.
+  1. About this spacebar clicker game (`#about`): three paragraphs, what
+     the game is, the builds its perks allow, and the save.
   2. How to play (`#how-to-play`): six cards.
   3. The combo: a steady beat pays up to 3x (`#combo`): tier ladder, two
      traces, three rules.
@@ -1077,7 +1078,16 @@ with the game's own parts.
   comments, so there are none. A space between an expression and an
   inline element (`{n} <small>`) is dropped; write it as `{' '}`. The FAQ
   is written twice, in the frontmatter and on the page; the page's copy
-  adds the links.
+  adds the links. A count of things in prose is a word, through `word()`
+  ("five families", "seven states", "you can hold five"); a game value
+  stays a figure (25%, 0.8 s, 5 presses, 30 minutes).
+- **Section openings say what playing feels like** (2026-11-12): each
+  section opens on the experience ("Find a rhythm and hold it", "At the
+  start, every point of energy comes from your own presses") and leaves
+  the reference data (perk lines, rungs, shop rows) to carry the numbers.
+  The perk families say who each suits ("For mashers.", "For players who
+  leave the game running."). The shop rows show a price, an effect and a
+  level cap, no price multipliers.
 - **Glow, mono and type on the page** (§8.5.21): one glow, the beat
   trace's; numbers mono and words sans; the size ladder at the top of
   `clicker-page.css`.
@@ -3817,6 +3827,58 @@ game, feedback only, keeping it optimised for "spacebar clicker". Shot at
     apostrophes, so it matches the page's text exactly. Two checks updated:
     the title, and the run-down stage that quoted the 75-minute cap. The
     page is 9,712px at 1440 (17,333 at 390).
+- **The subtitle, 2026-11-12, later.** The maintainer wanted the gameplay's
+  difference to come across at once, the reactor left out: a clicker game
+  set apart by its systems. Four options, each measured in the header (two
+  lines at 1440 and 820, as before); the maintainer chose: "A spacebar
+  clicker game where skill and strategy both pay. Keep a steady beat to
+  earn more, and build each run around the perks you catch." It overlaps
+  the first two chips on purpose, the subtitle summing up and the chips
+  giving the detail. Three lines on a phone, as before.
+- **About, 2026-11-12, later.** The maintainer found it bland, without the
+  personality of what perks allow: builds around different playstyles.
+  Two drafts, then three variants of the perks paragraph with no perk
+  named (the maintainer: describe the experience, not the perks). Built,
+  variant 1, between the opening and the save line, now three paragraphs:
+  "Perks let you shape each run around how you like to play. They drop at
+  random, and you can hold five. Keep a steady beat and the right perks
+  lift your combo past its usual top tier. If you'd rather mash, trade the
+  combo for harder presses. Leave the game running, and your auto-tappers
+  can carry the run." The opening merges its first two sentences ("Each
+  press charges a lab reactor, and the energy buys…"); the old line on a
+  steady beat paying more than mashing folds into the perks paragraph. The
+  check counts three paragraphs.
+- **The combo onwards, 2026-11-12, later.** The maintainer asked for the
+  same approach, gameplay experience over mechanics, on every section from
+  the combo down, with stop-slop. Feedback, then every suggestion approved
+  and built, after a last stop-slop pass (five small fixes: no repeated
+  "each press", no "a rung asks you", no unclear "it").
+  - **Combo**: opens "Find a rhythm and hold it…"; the three rule cards
+    read as play ("A press within 25% of your rhythm still counts, so
+    small slips won't cost you"; "Pause for longer and the combo breaks.
+    The bar under the counter drains to warn you"; "After a break, your
+    first 5 presses always count, so you can find the beat again").
+  - **Shop**: opens on the arc from pressing to machines ("At the start,
+    every point of energy comes from your own presses…"); closes "Bigger
+    machines unlock as you earn, and perks turn up in the same shop at
+    random." Row notes keep the level cap only ("20 levels", "one
+    purchase"); the auto-tappers' "x1.2 per purchase" is gone, and with it
+    `tapperScale`.
+  - **Perks**: the intro no longer repeats About (random drops, five
+    slots, playstyles); it leads into the list: five families, what the
+    rarities do, the codex and the track. Each family's line now says who
+    it suits.
+  - **Reactor states**: opens on the climb from a dim green glow to a
+    blue-white core; the notes read "Now in reach: …" (were "First prices
+    in reach: …").
+  - **Time away**: closes "The isotope track and the right perks let you
+    stay away longer," naming no perk or rung, as About doesn't.
+  - **Prestige**: opens on why you reset ("…reset it for isotopes and
+    start again stronger"); the track's intro on what it gives ("from a
+    head start on each run to better perk drops").
+  - Small counts in prose are words, through a new `word()` (§6). The
+    shop check now asserts the level cap and no "per purchase". The page
+    is 9,767px at 1440 (17,486 at 390).
 
 ### 8.7 Known gaps
 
@@ -4142,3 +4204,11 @@ game, feedback only, keeping it optimised for "spacebar clicker". Shot at
   (§8.5.21): a new title and meta description, the keyword in two H2s
   instead of six, section openings on what each system brings, formulas and
   repeats cut, six FAQ answers tightened.
+- **2026-11-12.** A new subtitle, on skill and strategy rather than the
+  reactor (§8.5.21).
+- **2026-11-12.** About rewritten around the builds perks allow for
+  rhythm players, mashers and idle players, no perk named (§8.5.21).
+- **2026-11-12.** Every section from the combo down opens on what playing
+  feels like (§8.5.21): rule cards, the shop, the perks' intro and family
+  lines, the reactor states, time away and prestige rewritten; price
+  multipliers off the shop rows; small counts in prose as words.
