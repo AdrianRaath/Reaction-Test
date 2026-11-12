@@ -163,10 +163,21 @@ test('the page lists every perk, straight from the config', async ({ page }) => 
   expect(faq).toContain('How do perks work?');
   expect(faq).toContain('What does the isotope track unlock?');
   expect(faq).toContain('What happens when I leave the game?');
+  expect(faq).toContain('What should I buy first?');
   expect(faq).not.toContain('no ads');
+  // The schema and the page carry the same questions, in the same order.
+  const asked = JSON.parse(faq ?? '{}').mainEntity.map((q: { name: string }) => q.name);
+  await expect(page.locator('#faq summary')).toHaveText(asked);
   await expect(page.locator('#faq summary').last()).toHaveText(
     'Does Spacebar Clicker have an end?'
   );
+});
+
+test('the spacebar speed test links to the clicker from its body copy', async ({ page }) => {
+  // The speed test catches "spacebar counter" searches; this link sends
+  // game-seekers on and names the page that owns "spacebar clicker".
+  await page.goto('/spacebar-speed-test');
+  await expect(page.locator('#what-is a[href="/spacebar-clicker"]')).toHaveText('spacebar clicker');
 });
 
 test('the page draws the reactor states and the run-down from the config', async ({ page }) => {

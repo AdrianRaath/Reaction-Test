@@ -1044,8 +1044,9 @@ with the game's own parts.
   7. When you stop pressing (`#rundown`): output against time away.
   8. Prestige: reset for isotopes (`#prestige`), with an H3, "The isotope
      track: 12 rungs" (`#isotope-track`).
-  9. Questions about this spacebar clicker (`#faq`): 12 questions. (A
-     tips section stood before it until 2026-11-12; §8.5.21.)
+  9. Questions about this spacebar clicker (`#faq`): 13 questions,
+     "What should I buy first?" added 2026-11-12 after a competitor check.
+     (A tips section stood before it until 2026-11-12; §8.5.21.)
 - **Everything with a number reads from `config.ts`** (and `economy.ts`
   for the payout and the reactor states' notes), so changing a number
   changes the page. The exceptions are the FAQ's answers, which the
@@ -3879,6 +3880,40 @@ game, feedback only, keeping it optimised for "spacebar clicker". Shot at
   - Small counts in prose are words, through a new `word()` (§6). The
     shop check now asserts the level cap and no "per purchase". The page
     is 9,767px at 1440 (17,486 at 390).
+- **Competitor check, 2026-11-12.** The maintainer asked whether the page
+  can rank against the pages already there for "spacebar clicker", and
+  whether it matches what searchers want. US results: Poki (Bruno Croci's
+  game, ~700 words) and Hooda Math lead on domain strength; autoclicker.org,
+  MT Auto Clicker, arealme and two GitHub Pages copies follow (300 to 1,300
+  words, the keyword 10 to 31 times, the same press-buy-repeat copy); below
+  them, spam. Most searchers want the idle game. A minority want a timed
+  test (Google suggests "test", "counter", "timer", "10 seconds"), and the
+  links to the speed test cover them. This page: ~2,350 words, the keyword
+  11 times, 12 questions, and the only page on the systems this game has.
+  The game starts 331px down on every desktop size measured. Four gaps;
+  the maintainer chose two, built after a stop-slop pass:
+  - **The speed test links here from its body.** Before, only the nav and
+    "More tools" did. Its first section's cross-link paragraph now adds "Or
+    put the key to work in the spacebar clicker, an idle game where you
+    earn more from a steady beat than from raw speed." No guide links here;
+    the CPS guide's only spacebar line is a benchmark for the speed test,
+    so a link from it would be off topic.
+  - **A thirteenth question, "What should I buy first?"**, after the
+    rhythm question. Poki, Hooda Math and MT Auto Clicker each answer one
+    like it. The answer: "Buy Finger Strength, then auto-tappers. In a new
+    game you earn everything by pressing, but over a whole run auto-tappers
+    bring in most of your energy. Add the Stabiliser once you can hold a
+    beat. With it, a broken combo drops one tier instead of starting over."
+    Checked against `sim.ts`, which buys the best gain per cost: Finger
+    Strength first for the steady, masher and idle players, then a Lab
+    Assistant and a Pneumatic Key ahead of Double Tap and the Stabiliser;
+    auto-tappers earn 72 to 93% of a first run.
+  - Left for now: the two-word spelling "space bar clicker" (unused; at
+    most one natural mention, if any) and the game panel's headings coming
+    ahead of About in the outline.
+  - Checks: the FAQ check now asserts the new question and that the
+    schema's questions match the page's summaries in order. A new check
+    holds the speed test's body link.
 
 ### 8.7 Known gaps
 
@@ -4212,3 +4247,6 @@ game, feedback only, keeping it optimised for "spacebar clicker". Shot at
   feels like (§8.5.21): rule cards, the shop, the perks' intro and family
   lines, the reactor states, time away and prestige rewritten; price
   multipliers off the shop rows; small counts in prose as words.
+- **2026-11-12.** A competitor check on "spacebar clicker" (§8.5.21): the
+  spacebar speed test now links here from its body copy, and the FAQ gains
+  "What should I buy first?" (13 questions).
