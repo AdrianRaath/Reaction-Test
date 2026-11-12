@@ -11,7 +11,7 @@ import { editSave, energy, expect, openGame, pressSteady, seedSave, test } from 
 
 test('page shell: title, heading, no top-bar telemetry', async ({ page }) => {
   await page.goto('/spacebar-clicker');
-  await expect(page).toHaveTitle('Spacebar Clicker - Free Online Spacebar Clicker Game');
+  await expect(page).toHaveTitle('Spacebar Clicker Game - Play Free Online');
   // By role: Astro's dev toolbar adds h1s of its own.
   await expect(
     page.getByRole('heading', { level: 1, name: 'Spacebar Clicker', exact: true })
@@ -191,7 +191,7 @@ test('the page draws the reactor states and the run-down from the config', async
   const stages = page.locator('#rundown .sc-run-stages > div');
   await expect(stages).toHaveCount(4);
   await expect(stages.nth(0)).toContainText('30 minutes');
-  await expect(stages.nth(1)).toContainText('75 minutes of full output');
+  await expect(stages.nth(1)).toContainText('One press brings it back.');
   await expect(stages.nth(2)).toContainText('at 2 hours');
   await expect(stages.nth(3)).toContainText('10 presses on a steady beat restart it.');
 

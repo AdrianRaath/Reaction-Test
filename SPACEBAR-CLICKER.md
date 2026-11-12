@@ -1002,45 +1002,58 @@ The visuals were built in three passes, all shipped 2026-10-22.
 Rebuilt 2026-11-11 (§8.5.20), from a spec sheet of tables into blocks drawn
 with the game's own parts.
 
-- **Title**: "Spacebar Clicker - Free Online Spacebar Clicker Game", with an
-  authored description and FAQ JSON-LD. "Idle" left the title, since a
-  reactor left alone runs down; the copy still says "idle game" where it
-  fits.
-- **House rules for the page's copy** (maintainer, 2026-11-11):
+- **Title**: "Spacebar Clicker Game - Play Free Online" (2026-11-12; it
+  was "Spacebar Clicker - Free Online Spacebar Clicker Game", the keyword
+  twice), with an authored description and FAQ JSON-LD. "Idle" left the
+  title, since a reactor left alone runs down; the copy still says "idle
+  game" where it fits.
+- **House rules for the page's copy** (maintainer, 2026-11-11, refined
+  2026-11-12):
   - No "no ads" claim anywhere; the site may carry ads later.
   - No times for how long a run, an isotope or the track takes; runs differ
     by player. Rule durations are fine: a surge's 5 seconds, 30 minutes of
     full output.
-  - Headings that name the game say "this Spacebar Clicker", since the game
-    is a variation on the type and the bare name reads as generic.
-  - The stop-slop skill on every draft, and "spacebar clicker" keywords in
-    the title, the subtitle and the H2s.
-- **The header**: H1 "Spacebar Clicker", a subtitle that names it a
-  spacebar clicker game, and chips counted from the config (hidden on a
-  phone).
+  - A heading that uses the keyword gives it an identifier, "this
+    spacebar clicker", never the bare term, which reads like any generic
+    spacebar clicker. Only a few headings carry it: five H2s saying "this
+    Spacebar Clicker" read formulaic, so two do now, the first and the
+    last.
+  - Copy reads as written by a person, specific to this game, and shows
+    what each system brings rather than how it is computed.
+  - The stop-slop skill on every draft. The keyword lives in the title,
+    the meta description, the H1, the subtitle, About's first sentence, two
+    H2s and the FAQ's questions. "Unblocked" queries are not a target.
+- **The header**: every tool page's header (the display title, a 1.125rem
+  subtitle in a 600px column; 2rem and body size on a phone): H1
+  "Spacebar Clicker", a subtitle that names it a spacebar clicker game,
+  and four chips, each a selling point a first-time visitor can read
+  ("Rhythm pays more than mashing", "Perks change how each run plays",
+  "Auto-tappers earn while you're away", "Free saves in your browser"):
+  four in a row, two and two where they don't fit, hidden on a phone.
 - **Under the game**, a jump strip, then these H2s:
-  1. About this Spacebar Clicker Game (`#about`): two paragraphs.
-  2. How to play this Spacebar Clicker (`#how-to-play`): six cards.
+  1. About this spacebar clicker game (`#about`): two paragraphs.
+  2. How to play (`#how-to-play`): six cards.
   3. The combo: a steady beat pays up to 3x (`#combo`): tier ladder, two
      traces, three rules.
-  4. Upgrades and auto-tappers in this Spacebar Clicker (`#shop`): rows
-     like the game's shop.
-  5. Perks in this Spacebar Clicker: 25 random drops (`#perks`): two
-     paragraphs on what perks bring, filter chips, and a row per perk by
-     family, built like the shop's rows.
+  4. Upgrades and auto-tappers (`#shop`): rows like the game's shop.
+  5. Perks: 25 random drops (`#perks`): two paragraphs on what perks
+     bring, filter chips, and a row per perk by family, built like the
+     shop's rows.
   6. Reactor states (`#reactor`): seven dials.
   7. When you stop pressing (`#rundown`): output against time away.
-  8. Reset for isotopes (`#prestige`), with an H3, "The isotope track: 12
-     rungs" (`#isotope-track`).
-  9. FAQ about this Spacebar Clicker (`#faq`): 12 questions. (A tips
-     section stood before it until 2026-11-12; §8.5.21.)
+  8. Prestige: reset for isotopes (`#prestige`), with an H3, "The isotope
+     track: 12 rungs" (`#isotope-track`).
+  9. Questions about this spacebar clicker (`#faq`): 12 questions. (A
+     tips section stood before it until 2026-11-12; §8.5.21.)
 - **Everything with a number reads from `config.ts`** (and `economy.ts`
   for the payout and the reactor states' notes), so changing a number
   changes the page. The exceptions are the FAQ's answers, which the
-  frontmatter holds as plain text for the JSON-LD: the combo tiers, the
-  33 ms floor, the drop odds in words, the run-down's 30 and 90 minutes,
-  the track's first rung and "all 25 perks". Recheck them when a rule
-  changes.
+  frontmatter holds as plain text for the JSON-LD: the combo's top
+  multiplier at 100, the 0.8 s pause and the 33 ms floor, the drop odds in
+  words (two in three commons, one in twenty keystones), the run-down's 30
+  and 90 minutes, the track's first rung and "all 25 perks". Recheck them
+  when a rule changes. The FAQ is written twice, in the frontmatter and on
+  the page, and the two match word for word, curly apostrophes included.
 - **No claim from the simulation is left on the page.** The last, "a
   steady first run to a million sees three to seven" drops, went with the
   perks' rebuild on 2026-11-12 (§8.5.21).
@@ -3740,6 +3753,70 @@ game, feedback only, keeping it optimised for "spacebar clicker". Shot at
   The FAQ drops `alt-bg`, so the sections still alternate (Reset for
   isotopes keeps it). The page is 9,824px at 1440. The jump strip's check
   counts eight links.
+- **The header, 2026-11-12.** The maintainer asked for the title and
+  subtitle at the other pages' sizes, and for fewer chips, each a selling
+  point a newcomer can read: "25 perks", "4 combo tiers", "7 reactor
+  states" and "12 isotope rungs" meant nothing before playing.
+  - **Built.** The header takes the values every other tool page shares:
+    padding `--space-xl` / `--space-md`, a 600px column, the display title
+    (3.5rem, from 2.5) with a `--space-md` gap, a 1.125rem subtitle (from
+    1rem), and 2rem and body size under 768px. Without its chips it is
+    185px at 1440, as the spacebar speed test's is. The subtitle is
+    unchanged and runs two lines.
+  - **The chips**, four from five, a bold word and its value: Rhythm pays
+    more than mashing; Perks change how each run plays; Auto-tappers earn
+    while you're away; Free saves in your browser (kept as it was). They
+    sit outside the 600px column, four to a row up to 940px; a container
+    query sets them two and two where four don't fit (below about 1,280px
+    wide), never three and one. Hidden on a phone, as before.
+    `COMBO_TIERS` left the page's imports.
+  - **Measured.** The header is 227px at 1440x900 (186 before), so the
+    reactor face ends at 928px, 28px past a 900px fold (888 before): the
+    keycap sits under it. No check guards the fold; the isotopes check
+    holds the face's height, which is unchanged at 572px.
+- **Calls for review, the header.**
+  1. **The face now ends past the 900px fold** at 1440x900, against the
+     working rule in §2. A real 1440x900 screen shows about 790px of page
+     under the browser's bars (design review finding 21), so the face was
+     already cut there. Ways back if wanted: chips below the game, at the
+     head of the content; or no chips.
+  2. **The chips repeat two of the subtitle's points**, rhythm and perks,
+     in plainer words. A shorter subtitle could leave those to the chips.
+  3. **Auto-tappers earn while you're away** is true up to the fault at
+     two hours, with full output for the first 30 minutes; the chip names
+     no time, per the house rules.
+- **The copy, 2026-11-12.** The maintainer asked for a stop-slop audit of
+  the whole page's copy for quality and SEO: rank for "spacebar clicker"
+  without cramming it, read as written by a person, specific to this game,
+  and show what it offers rather than how it is built.
+  - **The audit.** About 33/50 on stop-slop's rubric, lowest on density
+    and rhythm. The keyword's cramming sat in the headings (five H2s with
+    "this Spacebar Clicker") and three section openings that began "This
+    spacebar clicker…"; the title and meta description each said it twice.
+    Beyond that: formulas and limits still on the page (the shop's price
+    formula, the 75-minute cap, "Three things stretch this"), facts said up
+    to five times (+10% per isotope), lists of three, things doing what the
+    player does ("as a run earns"), tier names before they are explained,
+    and FAQ answers pointing at sections.
+  - **Decided.** Every line in the audit's draft, as written. The heading
+    rule kept its identifier but on two H2s only; no "unblocked" question.
+  - **Built.** Title "Spacebar Clicker Game - Play Free Online"; a meta
+    description in plain words; the subtitle's "isotopes that last" became
+    "bonuses that carry into later runs". H2s: "About this spacebar clicker
+    game", "How to play", "Upgrades and auto-tappers", "Perks: 25 random
+    drops", "Prestige: reset for isotopes", "Questions about this spacebar
+    clicker"; the combo, reactor and time-away headings unchanged. Section
+    openings rewritten for what each system brings; the shop's formula,
+    the 75-minute cap, the Glass Rhythm and Overtone details, "Each isotope
+    costs 3 times…" and "Three things stretch this" cut. Six FAQ answers
+    rewritten, the pointers to sections gone (and with them three anchor
+    links). "Spacebar clicker" appears 11 times in the page's text, from
+    17; "+10%" three times, from five.
+  - Unused values left the MDX (`glass`, `mostMin`, `nightShift`,
+    `ISOTOPE_SCALE`, `TRACK_EFFECT`). The FAQ's frontmatter takes curly
+    apostrophes, so it matches the page's text exactly. Two checks updated:
+    the title, and the run-down stage that quoted the 75-minute cap. The
+    page is 9,712px at 1440 (17,333 at 390).
 
 ### 8.7 Known gaps
 
@@ -4057,3 +4134,11 @@ game, feedback only, keeping it optimised for "spacebar clicker". Shot at
 - **2026-11-12.** The tips section cut (§8.5.21, finding 8): it repeated
   the sections above it. Eight links in the jump strip; the page is 9,824px
   at 1440.
+- **2026-11-12.** The header at every tool page's sizes (§8.5.21): the
+  display title and a 1.125rem subtitle. Four chips in place of five, each
+  a selling point in plain words instead of a count. The face now ends at
+  928px at 1440x900.
+- **2026-11-12.** The page's copy audited with stop-slop and rewritten
+  (§8.5.21): a new title and meta description, the keyword in two H2s
+  instead of six, section openings on what each system brings, formulas and
+  repeats cut, six FAQ answers tightened.

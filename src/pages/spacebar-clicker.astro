@@ -9,7 +9,6 @@ import ResetModal from '../components/tool/ResetModal.astro';
 import {
   ACHIEVEMENTS,
   AUTO_TAPPERS,
-  COMBO_TIERS,
   ISOTOPE_TRACK,
   PERK_SLOTS,
   PERKS,
@@ -29,16 +28,17 @@ import '../styles/clicker-page.css';
 // keeps its own save and its own HUD. See src/scripts/spacebar-clicker.ts.
 
 // Authored for the primary keyword "spacebar clicker". No "| ReflexLab" suffix.
-const TITLE = 'Spacebar Clicker - Free Online Spacebar Clicker Game';
+const TITLE = 'Spacebar Clicker Game - Play Free Online';
 const DESCRIPTION =
-  'Play Spacebar Clicker, a free spacebar clicker game. Charge the reactor, hold a steady beat for up to 3x, catch 25 perks and reset for isotopes. Saves in your browser.';
+  'A free spacebar clicker game for your browser. A steady beat pays up to 3x, and random perks change each run. No download, and it saves as you play.';
 
-// The header's chips: what the game holds, counted from its config.
-const HERO_FACTS = [
-  [PERKS.length, 'perks'],
-  [COMBO_TIERS.filter((t) => t.multiplier > 1).length, 'combo tiers'],
-  [REACTOR_STATES.length, 'reactor states'],
-  [ISOTOPE_TRACK.length, 'isotope rungs'],
+// The header's chips: what sets this game apart, each in words a first-time
+// visitor can read without knowing the game (SPACEBAR-CLICKER.md §8.5.21).
+const HERO_POINTS = [
+  ['Rhythm', 'pays more than mashing'],
+  ['Perks', 'change how each run plays'],
+  ['Auto-tappers', 'earn while you’re away'],
+  ['Free', 'saves in your browser'],
 ];
 
 const entry = await getEntry('tools', 'spacebar-clicker');
@@ -139,20 +139,19 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     <div class="hero-content">
       <h1 class="hero-title">Spacebar Clicker</h1>
       <p class="hero-subtitle">
-        A spacebar clicker game with a reactor to charge. Hold a steady beat for up to 3x, catch
-        perks that change the run, and reset for isotopes that last.
+        A spacebar clicker game with a lab reactor to charge. Hold a steady beat for up to 3x, then
+        reset for bonuses that carry into later runs.
       </p>
-      <ul class="hero-facts">
-        {
-          HERO_FACTS.map(([count, label]) => (
-            <li>
-              <span class="readout">{count}</span> {label}
-            </li>
-          ))
-        }
-        <li><span class="hero-fact-word">Free</span> saves in your browser</li>
-      </ul>
     </div>
+    <ul class="hero-facts">
+      {
+        HERO_POINTS.map(([lead, rest]) => (
+          <li>
+            <span class="hero-fact-word">{lead}</span> {rest}
+          </li>
+        ))
+      }
+    </ul>
   </section>
 
   <!-- ========== GAME ========== -->
@@ -1073,40 +1072,40 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
 
   /* --- Hero ----------------------------------------------------------------- */
 
-  /* Short on purpose: at 1440x900 the header and the reactor face share one
-     screen, so the title is smaller than the display size and the chips sit
-     on one line. */
+  /* The header every tool page has: the display title and a 1.125rem
+     subtitle in a 600px column (SPACEBAR-CLICKER.md §8.5.21). */
   .hero-section {
-    padding: var(--space-lg) 0 var(--space-md);
+    container-type: inline-size;
+    padding: var(--space-xl) 0 var(--space-md);
     text-align: center;
   }
 
   .hero-content {
-    max-width: 940px;
+    max-width: 600px;
     margin-inline: auto;
   }
 
   .hero-title {
-    margin-block-end: var(--space-sm);
-    font-size: 2.5rem;
+    margin-block-end: var(--space-md);
+    font-size: var(--text-display-size);
     font-weight: var(--text-display-weight);
     line-height: var(--text-display-lh);
     letter-spacing: var(--text-display-ls);
   }
 
   .hero-subtitle {
-    max-width: 600px;
-    margin-inline: auto;
+    font-size: 1.125rem;
     color: var(--ink-secondary);
   }
 
-  /* What the game holds, counted from its config. */
+  /* What sets the game apart, in a row wider than the subtitle's column. */
   .hero-facts {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: var(--space-sm);
-    margin-block-start: 0.75rem;
+    max-width: 940px;
+    margin: 0.75rem auto 0;
     padding: 0;
     list-style: none;
     font-size: 0.8125rem;
@@ -1120,7 +1119,13 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     background-color: var(--panel-02);
   }
 
-  .hero-facts .readout,
+  /* Too narrow for the four in a row: two and two, never three and one. */
+  @container (max-width: 930px) {
+    .hero-facts {
+      max-width: 480px;
+    }
+  }
+
   .hero-fact-word {
     margin-inline-end: 2px;
     font-weight: 600;
@@ -5952,8 +5957,12 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
       font-size: 2rem;
     }
 
-    /* On a phone the chips would take three rows above the game; the
-       section under it gives the same counts. */
+    .hero-subtitle {
+      font-size: var(--text-body-size);
+    }
+
+    /* On a phone the chips would take rows above the game; the sections
+       under it say the same. */
     .hero-facts {
       display: none;
     }
