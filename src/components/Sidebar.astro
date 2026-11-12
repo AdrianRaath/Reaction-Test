@@ -50,6 +50,12 @@ const isCurrent = (href: string) => path === (href.replace(/\/+$/, '') || '/');
             >
               <Icon name={tool.icon} width={18} height={18} aria-hidden="true" />
               <span>{tool.navLabel}</span>
+              {tool.isNew && (
+                <span class="nav-new-tag">
+                  <span aria-hidden="true">New</span>
+                  <span class="visually-hidden">, new</span>
+                </span>
+              )}
             </a>
           </li>
         ))
@@ -190,6 +196,23 @@ const isCurrent = (href: string) => path === (href.replace(/\/+$/, '') || '/');
     width: 2px;
     border-radius: var(--radius-full);
     background-color: var(--signal-green);
+  }
+
+  /* The game shop's amber "New" pill (DESIGN.md, Shop-Signal Exception) on a
+     newly launched tool, set by `isNew` in the registry. At the row's end so
+     it never shifts the label; no pop-in, since it would replay on every
+     page. */
+  .nav-new-tag {
+    flex: none;
+    margin-inline-start: auto;
+    padding: 2px 7px;
+    border-radius: var(--radius-full);
+    background-color: var(--caution-amber);
+    color: var(--chassis-black);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: 0.02em;
   }
 
   .scrim {

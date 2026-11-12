@@ -18,6 +18,9 @@ test('page shell: title, heading, no top-bar telemetry', async ({ page }) => {
   ).toBeVisible();
   // No rig readout: the page passes the top bar its own (next check).
   await expect(page.locator('#topbar-stats')).toHaveCount(0);
+  // Newly launched: the sidebar tags it with the shop's amber "New".
+  await expect(page.locator('#sidebar a[href="/spacebar-clicker"] .nav-new-tag')).toBeVisible();
+  await expect(page.locator('#sidebar .nav-new-tag')).toHaveCount(1);
 });
 
 test('the top bar reads isotopes, lifetime energy and the best combo', async ({ page }) => {

@@ -31,6 +31,12 @@ export interface Tool {
    * scored runs, so it carries its own readout and sets this false.
    */
   telemetry?: boolean;
+  /**
+   * A newly launched tool: the sidebar shows an amber "New" tag beside it,
+   * the game shop's tag (DESIGN.md, Shop-Signal Exception). Remove the flag
+   * once the tool has settled in.
+   */
+  isNew?: boolean;
 }
 
 export interface NavLink {
@@ -82,6 +88,7 @@ export const tools: Tool[] = [
     icon: 'ph:atom',
     blurb: 'Press space to charge a reactor. Buy upgrades, hold a rhythm, and let it run idle.',
     telemetry: false,
+    isNew: true,
   },
   {
     href: '/memory-test',
