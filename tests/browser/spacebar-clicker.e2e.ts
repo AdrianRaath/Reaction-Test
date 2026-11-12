@@ -120,19 +120,21 @@ test('the energy number and the share bar sit on the axis of the core', async ({
   expect(Math.abs((await centre('.share-bar')) - axis)).toBeLessThanOrEqual(1);
 });
 
-test('the page lists every perk and the drop odds, straight from the config', async ({ page }) => {
+test('the page lists every perk, straight from the config', async ({ page }) => {
   await page.goto('/spacebar-clicker');
-  const bars = page.locator('#perks .sc-odds-bar');
-  await expect(bars).toHaveCount(2);
-  await expect(bars.first()).toContainText('65%');
-  await expect(bars.last().locator('[data-rarity="keystone"]')).toHaveText('10%');
-  const cards = page.locator('#perks .sc-perk');
-  await expect(cards).toHaveCount(PERKS.length);
-  await expect(cards.first().locator('h4')).toHaveText('Metronome');
-  await expect(cards.first().locator('.sc-perk-effect')).toHaveText(
+  // About is two paragraphs, apart; the pictures are How to play's.
+  const lede = page.locator('#about .sc-lede p');
+  await expect(lede).toHaveCount(2);
+  const [first, second] = await lede.evaluateAll((ps) => ps.map((p) => p.getBoundingClientRect()));
+  expect(second.top - first.bottom, 'a gap between the paragraphs').toBeGreaterThan(8);
+
+  const rows = page.locator('#perks .sc-perk');
+  await expect(rows).toHaveCount(PERKS.length);
+  await expect(rows.first().locator('h4')).toHaveText('Metronome');
+  await expect(rows.first().locator('.sc-perk-rarity')).toHaveText('Common');
+  await expect(rows.first().locator('.sc-perk-effect')).toHaveText(
     'Rhythm tolerance widens from 25% to 40% / 55% / 70%'
   );
-  await expect(cards.first().locator('.sc-perk-where')).toHaveText('Drops in Upgrades');
 
   // The chips filter by family and by rarity, and a chip pressed again lets go.
   const shown = page.locator('#perks .sc-perk:visible');
@@ -179,6 +181,12 @@ test('the page draws the reactor states and the run-down from the config', async
   await expect(states.nth(4).locator('.sc-state-note')).toHaveText('A reset opens, for 1 isotope');
   await expect(states.nth(5).locator('.sc-state-note')).toHaveText('A reset pays 3 isotopes');
   await expect(states.nth(1).locator('.sc-state-note')).toContainText('Robot Arm');
+  await expect(states.nth(1).locator('.sc-state-bonus')).toHaveText('+5%');
+
+  // Every auto-tapper scales alike, so the column's heading says it once.
+  const tappers = page.locator('#shop .sc-shop > div').nth(1);
+  await expect(tappers.locator('.sc-shop-head')).toContainText('x1.2 per purchase');
+  await expect(tappers.locator('.sc-shop-note')).toHaveCount(0);
 
   const stages = page.locator('#rundown .sc-run-stages > div');
   await expect(stages).toHaveCount(4);
@@ -193,7 +201,7 @@ test('the page draws the reactor states and the run-down from the config', async
     .evaluateAll((links) =>
       links.map((a) => document.querySelector(a.getAttribute('href')!) !== null)
     );
-  expect(targets.length).toBe(9);
+  expect(targets.length).toBe(8);
   expect(targets.every(Boolean)).toBe(true);
 });
 
@@ -203,7 +211,10 @@ test('the page lists the isotope track, straight from the config', async ({ page
   await expect(rungs).toHaveCount(ISOTOPE_TRACK.length);
   await expect(rungs.first().locator('h4')).toHaveText('Warm Start');
   await expect(rungs.nth(2).locator('h4')).toHaveText('Sixth Slot or Prodigy');
-  await expect(rungs.nth(2)).toContainText('Pick one, and switch at any reset');
+  // The intro says a fork switches at any reset; the card says it to a screen
+  // reader only.
+  await expect(rungs.nth(2)).toContainText('At 3 isotopes, pick one.');
+  await expect(rungs.nth(2).locator('.visually-hidden')).toHaveCount(1);
   await expect(rungs.last()).toContainText('Enrichment. Each isotope adds 13% to all gains');
   // Three rungs to a row, each row ending in its fork.
   await expect(page.locator('#prestige .sc-track-row')).toHaveCount(ISOTOPE_TRACK.length / 3);

@@ -77,48 +77,16 @@
   color: var(--ink-primary);
 }
 
-/* --- About: what sets the game apart --------------------------------------- */
+/* --- About: two paragraphs; How to play below carries the pictures ---------
+   `.sc-lede` holds both, so the first keeps its margin; they take the body
+   size, as every other section's opening does. */
 
-.info-section .sc-lede p {
-  font-size: 1.0625rem;
-}
-
-.sc-diff {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-block-start: var(--space-lg);
-}
-
-.sc-diff > div {
-  padding: var(--space-md);
-  border: 1px solid var(--line-subtle);
-  border-radius: var(--radius-md);
-  background-color: var(--panel-03);
-}
-
-/* A panel's figure, in the hue of what it counts: a rhythm perk's violet for
-   the combo, a luck perk's fuchsia for the drops, the isotopes' blue, and the
-   reactor's green (DESIGN.md, the Perk-Family and Reactor-Ramp Exceptions). */
-.sc-diff-figure {
-  display: block;
-  margin-block-end: 10px;
-  font-family: var(--font-mono);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--hue, var(--ink-primary));
-}
-
-.sc-diff h3 {
-  margin-block-end: 6px;
-  font-size: 1rem;
-}
-
-.info-section .sc-diff p {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
+/* --- Type on this page ------------------------------------------------------
+   One ladder: 0.75rem for the smallest notes and labels, 0.8125 for a row's
+   second line, 0.875 for a card's text, 0.9375 for every block's title,
+   1.125 for a group's heading, and 1.25 and 1.75 for figures. The jump
+   strip's label is 0.6875, as the guides' "On this page" is. Numbers are
+   mono, words never (DESIGN.md, the Monospace-Numerals Rule). */
 
 /* --- How to play: six steps, each under a small drawing from the game ------ */
 
@@ -171,7 +139,7 @@
 
 .sc-step-body h3 {
   margin-block-end: 6px;
-  font-size: 1rem;
+  font-size: 0.9375rem;
 }
 
 .info-section .sc-step-body p {
@@ -249,14 +217,13 @@
 .sc-art-surge {
   display: flex;
   align-items: baseline;
-  font-family: var(--font-mono);
 }
 
 .sc-art-surge b {
+  font-family: var(--font-mono);
   font-size: 1.75rem;
   font-weight: 700;
   color: var(--gold);
-  text-shadow: 0 0 14px color-mix(in srgb, var(--gold) 45%, transparent);
 }
 
 .sc-art-surge small {
@@ -308,9 +275,6 @@
     color-mix(in srgb, var(--ramp-blue) 30%, var(--panel-01)) 0,
     var(--panel-01) 72%
   );
-  box-shadow:
-    0 0 12px color-mix(in srgb, var(--ramp-blue) 50%, transparent),
-    inset 0 0 8px color-mix(in srgb, var(--ramp-blue) 30%, transparent);
   font-family: var(--font-mono);
   font-weight: 700;
   color: var(--ramp-white);
@@ -338,7 +302,7 @@
 
 .sc-ladder-mult {
   font-family: var(--font-mono);
-  font-size: 1.375rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--ink-primary);
 }
@@ -372,7 +336,6 @@
 }
 
 .sc-ladder-range {
-  font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--ink-muted);
 }
@@ -435,6 +398,13 @@
   color: var(--ink-primary);
 }
 
+/* "5 presses": the number mono, the word not. */
+.sc-fact-figure small {
+  font-family: var(--font-sans);
+  font-size: inherit;
+  font-weight: 600;
+}
+
 .info-section .sc-facts p {
   margin: 0;
   font-size: 0.875rem;
@@ -458,7 +428,7 @@
 }
 
 .sc-shop-head h3 {
-  font-size: 1.0625rem;
+  font-size: 1.125rem;
 }
 
 .sc-shop-head span {
@@ -518,8 +488,7 @@
 }
 
 .sc-shop-note {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   text-align: end;
   white-space: nowrap;
   color: var(--ink-muted);
@@ -531,10 +500,11 @@
   color: var(--ramp-green);
 }
 
-/* --- Perks: the odds, the filter, and a card per perk by family ------------ */
+/* --- Perks: the filter, and a row per perk by family ----------------------- */
 
-/* A perk's card, its family's heading and its filter chip take the family's
-   hue (DESIGN.md, the Perk-Family Exception, widened to this content). */
+/* A perk's glyph tile, its family's heading and its filter chip take the
+   family's hue (DESIGN.md, the Perk-Family Exception, widened to this
+   content). */
 .sc-doc [data-family='rhythm'] {
   --perk: var(--perk-rhythm);
 }
@@ -549,108 +519,6 @@
 }
 .sc-doc [data-family='machines'] {
   --perk: var(--perk-machines);
-}
-
-.sc-odds {
-  display: grid;
-  gap: 10px;
-  margin-block: var(--space-lg);
-  padding: var(--space-md);
-  border: 1px solid var(--line-subtle);
-  border-radius: var(--radius-md);
-  background-color: var(--panel-03);
-}
-
-.sc-odds-row {
-  display: grid;
-  grid-template-columns: 8.5rem minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  font-size: 0.8125rem;
-  color: var(--ink-secondary);
-}
-
-.sc-odds-bar {
-  display: flex;
-  gap: 2px;
-  overflow: hidden;
-  height: 28px;
-  border-radius: 6px;
-}
-
-/* Rarity is a step of grey, light for rare: a neutral scale, so no hue is
-   spent on it and the families keep theirs. */
-.sc-odds-bar span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.25rem;
-  padding-inline: 6px;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.sc-odds-bar [data-rarity='common'] {
-  justify-content: flex-start;
-  background-color: #2e2e33;
-  color: var(--ink-primary);
-}
-
-.sc-odds-bar [data-rarity='rare'] {
-  justify-content: flex-start;
-  background-color: #63636d;
-  color: #fff;
-}
-
-.sc-odds-bar [data-rarity='keystone'] {
-  background-color: var(--ink-primary);
-  color: var(--chassis-black, #0a0a0b);
-}
-
-.sc-odds-tiers {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-block-start: 6px;
-  padding-block-start: 12px;
-  border-block-start: 1px solid var(--line-subtle);
-}
-
-.sc-odds-tiers h3 {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-block-end: 4px;
-  font-size: 0.875rem;
-}
-
-.sc-odds-tiers h3::before {
-  content: '';
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  background-color: #63636d;
-}
-
-.sc-odds-tiers [data-rarity='common'] h3::before {
-  border: 1px solid #55555e;
-  background-color: #2e2e33;
-}
-
-.sc-odds-tiers [data-rarity='keystone'] h3::before {
-  background-color: var(--ink-primary);
-}
-
-.info-section .sc-odds-tiers p {
-  margin: 0;
-  font-size: 0.8125rem;
-  line-height: 1.45;
-}
-
-.sc-odds-tiers .readout {
-  color: var(--ink-primary);
 }
 
 .sc-filter {
@@ -734,12 +602,10 @@
   align-items: baseline;
   gap: 4px 12px;
   margin-block-end: 10px;
-  padding-block-end: var(--space-sm);
-  border-block-end: 1px solid color-mix(in srgb, var(--perk) 35%, var(--line));
 }
 
 .sc-family-head h3 {
-  font-size: 1.0625rem;
+  font-size: 1.125rem;
   color: var(--perk);
 }
 
@@ -748,26 +614,26 @@
   color: var(--ink-secondary);
 }
 
-.sc-family-head small {
-  margin-inline-start: auto;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  white-space: nowrap;
-  color: var(--ink-muted);
-}
-
+/* Two columns of rows, built like the shop's above: perks drop into that
+   shop, so they take its shape. */
 .sc-perks {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
+/* Packed at the top, so a row beside a taller one keeps its name and effect
+   together and the two names share a line. */
 .sc-perk {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr) auto;
   align-content: start;
-  gap: 4px 10px;
-  padding: 12px;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 10px 14px 10px 10px;
   border: 1px solid var(--line-subtle);
   border-radius: var(--radius-md);
   background-color: var(--panel-03);
@@ -777,16 +643,15 @@
   display: none;
 }
 
-/* A keystone's card is rimmed and faintly tinted in its family's hue, as its
-   offer is in the shop. */
+/* A keystone's one mark beyond its word: a rim in its family's hue. */
 .sc-perk[data-rarity='keystone'] {
   border-color: color-mix(in srgb, var(--perk) 45%, var(--line));
-  background-color: color-mix(in srgb, var(--perk) 5%, var(--panel-03));
 }
 
 .sc-perk-tile {
   display: grid;
   grid-row: span 2;
+  align-self: start;
   place-items: center;
   width: 36px;
   height: 36px;
@@ -797,47 +662,29 @@
 }
 
 .sc-perk h4 {
-  align-self: end;
   font-size: 0.9375rem;
+  font-weight: 600;
 }
 
 .sc-perk-rarity {
-  align-self: end;
-  font-size: 0.6875rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.8125rem;
+  text-align: end;
   color: var(--ink-muted);
 }
 
-.sc-perk[data-rarity='rare'] .sc-perk-rarity {
-  color: var(--ink-primary);
-}
-
-.sc-perk[data-rarity='keystone'] .sc-perk-rarity {
-  padding: 1px 6px;
-  border-radius: 4px;
-  background-color: var(--perk);
-  font-weight: 700;
-  color: var(--chassis-black, #0a0a0b);
-}
-
-.sc-perk-where {
-  grid-column: 2 / -1;
-  font-size: 0.75rem;
-  color: var(--ink-muted);
+.sc-perk:not([data-rarity='common']) .sc-perk-rarity {
+  color: var(--ink-secondary);
 }
 
 .sc-perk-effect {
-  grid-column: 1 / -1;
-  margin-block-start: 6px;
+  grid-column: 2 / -1;
   font-size: 0.8125rem;
-  line-height: 1.5;
+  line-height: 1.4;
   color: var(--ink-secondary);
 }
 
 .sc-perk-levels {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
   white-space: nowrap;
   color: var(--ink-primary);
 }
@@ -853,8 +700,10 @@
 
 /* A state's colour is the reactor's own for it (DESIGN.md, the Reactor-Ramp
    Exception): green through Stable, then teal, cyan and blue, and a
-   Blue-White heart at Supercritical. --k, from the markup, is how brightly
-   the core burns. */
+   Blue-White heart at Supercritical. --k, from the markup, is how full of
+   that colour the core is. No glow: on a page nothing is live, so the
+   Glow-Is-A-Signal Rule leaves the dials flat, and the lamps and the heart
+   carry the climb. */
 .sc-state {
   --c: var(--ramp-green);
 
@@ -899,7 +748,6 @@
   fill: color-mix(in srgb, var(--c) calc(var(--k) * 1%), var(--panel-01));
   stroke: var(--c);
   stroke-width: 1.5;
-  filter: drop-shadow(0 0 calc(var(--k) * 0.12px) var(--c));
 }
 
 .sc-state-heart {
@@ -916,7 +764,6 @@
 
 .sc-state-lamp.is-lit {
   fill: var(--c);
-  filter: drop-shadow(0 0 2px var(--c));
 }
 
 .sc-state h3 {
@@ -975,9 +822,13 @@
 }
 
 .sc-run-art text {
-  font-family: var(--font-mono);
   font-size: 11px;
   fill: var(--ink-muted);
+}
+
+/* The chart's two times are values, so mono; its words are not. */
+.sc-run-art .sc-run-num {
+  font-family: var(--font-mono);
 }
 
 .sc-run-axis {
@@ -996,10 +847,6 @@
   stroke: var(--ramp-green);
   stroke-width: 2;
   stroke-linecap: round;
-}
-
-.sc-run-live {
-  filter: drop-shadow(0 0 3px var(--ramp-green));
 }
 
 .sc-run-fall {
@@ -1042,7 +889,6 @@
 .sc-run-when {
   display: block;
   margin-block-end: 6px;
-  font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--ink-muted);
 }
@@ -1051,16 +897,6 @@
   margin: 0;
   font-size: 0.8125rem;
   line-height: 1.5;
-}
-
-/* --- Tips: the site's line icons in place of emoji ------------------------- */
-
-.sc-doc .tip-card-icon {
-  color: var(--ink-primary);
-}
-
-.sc-doc .tip-card p {
-  margin: 0;
 }
 
 /* --- Isotopes: what a reset pays, and the track three rungs to a row -------- */
@@ -1092,12 +928,6 @@
   color: var(--ink-primary);
 }
 
-.sc-pays-at small {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: var(--ink-muted);
-}
-
 .sc-pays-dots {
   display: flex;
   gap: 5px;
@@ -1111,7 +941,6 @@
   border: 1.5px solid var(--ramp-blue);
   border-radius: var(--radius-full);
   background: radial-gradient(circle, var(--ramp-white) 0 18%, var(--panel-01) 30%);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--ramp-blue) 50%, transparent);
 }
 
 .sc-pays-get {
@@ -1168,9 +997,6 @@
     color-mix(in srgb, var(--ramp-blue) 30%, var(--panel-01)) 0,
     var(--panel-01) 72%
   );
-  box-shadow:
-    0 0 10px color-mix(in srgb, var(--ramp-blue) 45%, transparent),
-    inset 0 0 8px color-mix(in srgb, var(--ramp-blue) 30%, transparent);
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   color: var(--ramp-white);
@@ -1195,11 +1021,15 @@
   line-height: 1.45;
 }
 
-.sc-rung-pick {
-  font-size: 0.6875rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ramp-blue);
+/* A fork's gem sits beside its name alone; the options run full width under
+   both. The track's intro says a fork can be switched at any reset, so the
+   cards don't repeat it. */
+.sc-rung.is-fork .sc-gem {
+  grid-row: auto;
+}
+
+.sc-rung.is-fork h4 {
+  align-self: center;
 }
 
 .sc-rung-options {
@@ -1258,10 +1088,7 @@
     border-block-start: 1px solid var(--line-subtle);
   }
 
-  .sc-perks {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
+  .sc-perks,
   .sc-shop {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1269,15 +1096,10 @@
   .sc-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .sc-diff {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 480px) {
-  .sc-steps,
-  .sc-diff {
+  .sc-steps {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -1297,15 +1119,8 @@
 
   .sc-traces,
   .sc-facts,
-  .sc-perks,
-  .sc-odds-tiers,
   .sc-track-row {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .sc-odds-row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
   }
 
   .sc-filter-sep {

@@ -1019,20 +1019,21 @@ with the game's own parts.
   spacebar clicker game, and chips counted from the config (hidden on a
   phone).
 - **Under the game**, a jump strip, then these H2s:
-  1. About this Spacebar Clicker Game (`#about`): four panels.
+  1. About this Spacebar Clicker Game (`#about`): two paragraphs.
   2. How to play this Spacebar Clicker (`#how-to-play`): six cards.
   3. The combo: a steady beat pays up to 3x (`#combo`): tier ladder, two
      traces, three rules.
   4. Upgrades and auto-tappers in this Spacebar Clicker (`#shop`): rows
      like the game's shop.
-  5. Perks in this Spacebar Clicker: 25 random drops (`#perks`): odds
-     bars, filter chips, a card per perk by family.
+  5. Perks in this Spacebar Clicker: 25 random drops (`#perks`): two
+     paragraphs on what perks bring, filter chips, and a row per perk by
+     family, built like the shop's rows.
   6. Reactor states (`#reactor`): seven dials.
   7. When you stop pressing (`#rundown`): output against time away.
   8. Reset for isotopes (`#prestige`), with an H3, "The isotope track: 12
      rungs" (`#isotope-track`).
-  9. Tips for this Spacebar Clicker (`#tips`): six cards.
-  10. FAQ about this Spacebar Clicker (`#faq`): 12 questions.
+  9. FAQ about this Spacebar Clicker (`#faq`): 12 questions. (A tips
+     section stood before it until 2026-11-12; §8.5.21.)
 - **Everything with a number reads from `config.ts`** (and `economy.ts`
   for the payout and the reactor states' notes), so changing a number
   changes the page. The exceptions are the FAQ's answers, which the
@@ -1040,9 +1041,13 @@ with the game's own parts.
   33 ms floor, the drop odds in words, the run-down's 30 and 90 minutes,
   the track's first rung and "all 25 perks". Recheck them when a rule
   changes.
-- **One claim from the simulation is left**: "a steady first run to a
-  million sees three to seven" drops (10th to 90th percentile, buying what
-  drops; §4.12). Recheck it when the pace or the drops change.
+- **No claim from the simulation is left on the page.** The last, "a
+  steady first run to a million sees three to seven" drops, went with the
+  perks' rebuild on 2026-11-12 (§8.5.21).
+- **Explain what a system brings, not how it is computed** (maintainer,
+  2026-11-12): the page is not a thesis on the mechanics. The drop odds
+  stay in words in the FAQ's perks answer; prices and level costs are left
+  to the game.
 - **Kept off the page on purpose:** the 10-minute ceiling on the wait for a
   drop. Published, it would be the visible pity the maintainer ruled out
   (§8.1.2). And every time-to-finish figure, as above.
@@ -1056,8 +1061,13 @@ with the game's own parts.
 - **Writing in the MDX.** Outside a `.map()`, prose is bare text between
   blank lines; a `<p>` or an SVG `<text>` with words on their own line
   gets a paragraph inside it and breaks. Prettier mangles `{/* */}`
-  comments, so there are none. The FAQ is written twice, in the
-  frontmatter and on the page; the page's copy adds the links.
+  comments, so there are none. A space between an expression and an
+  inline element (`{n} <small>`) is dropped; write it as `{' '}`. The FAQ
+  is written twice, in the frontmatter and on the page; the page's copy
+  adds the links.
+- **Glow, mono and type on the page** (§8.5.21): one glow, the beat
+  trace's; numbers mono and words sans; the size ladder at the top of
+  `clicker-page.css`.
 - When a mechanic changes, update the copy that describes it.
 
 ## 7. Testing
@@ -3590,6 +3600,147 @@ clicker" keywords. Ideas, then mockups, then a build in three passes.
   5. **The jump strip** doesn't follow the scroll or mark the current
      section; it is a plain row of links.
 
+#### 8.5.21 The page audit, 2026-11-12
+
+The maintainer found the rebuilt page better but "a bit overdesigned and
+chaotic in areas", and asked for a design audit of the content below the
+game, feedback only, keeping it optimised for "spacebar clicker". Shot at
+1440x900 and 390 wide, beside the spacebar speed test and the CPS test.
+
+- **The diagnosis.** Three habits run through the page: each section
+  invents its own block (about 17 designs in ten sections, against about
+  four on a sibling page); colour, glow and monospace used as decoration
+  as well as meaning; and the same facts told three or four times (the
+  combo's x3 eight times). The page was 11,255px at 1440 and 21,689px at
+  390, the perks 2,218 and 4,836 of it.
+- **Kept as they are:** the run-down chart, the shop rows, the combo's
+  traces and ladder, the header chips and the jump strip. The grid-panel
+  diagrams are the page's signature; the rest should be plainer.
+- **The findings.**
+  1. About and How to play say the same thing back to back. **Done,
+     below.**
+  2. The perks overexplain: four paragraphs and the odds before the list,
+     and 25 cards each with "Drops in …" and an uppercase rarity. **Done,
+     below.**
+  3. Four hues in the first block under the game, before any is
+     explained; How to play adds four more. **Left as it is** (maintainer,
+     2026-11-12).
+  4. About seven glows at rest (the trace, the gold x10, isotope cores,
+     rung gems, the reactor dials, the run-down line, the payout dots),
+     against DESIGN.md's Glow-Is-A-Signal Rule. Suggested: keep the
+     trace's, which the maintainer asked for. **Done, below.**
+  5. Words set in mono ("energy in a run", "x1.2 per purchase", "0 to 9
+     combo", the chart's labels), against the Monospace-Numerals Rule.
+     **Done, below.**
+  6. Uppercase labels and per-card repeats: "PICK ONE, AND SWITCH AT ANY
+     RESET" on each fork, "x1.2 per purchase" on each auto-tapper,
+     "energy in a run" on each payout. **Done, below.**
+  7. 17 font sizes in `clicker-page.css`, six between 11 and 14px.
+     **Done, below.**
+  8. Nearly everything sits in a card; the combo stacks three card styles.
+     **The tips section cut; nothing else** (maintainer, 2026-11-12, below).
+  - Section notes, all **open**: How to play's drawings at six scales; the
+    ladder's gradients; the reactor states two to a row on a phone with
+    Supercritical alone (1,258px); the run-down chart about 75px tall on a
+    phone with labels too small to read; empty lower halves on the track's
+    rungs at 1440.
+  - SEO, **open**: the content holds 11 H2s, 40 H3s and 37 H4s, nearly
+    every card title a heading; suggested, card titles as bold text. Five
+    H2s in a row say "this Spacebar Clicker"; the H2s without the keyword
+    could take a natural variant ("prestige" is a clicker search term).
+- **Decided, 2026-11-12.** Findings 1 and 2. On the perks, the
+  maintainer's direction: introduce what perks are and how they fit the
+  game, and drop the odds table; the content is not a thesis on the
+  mechanics but should show what each system brings (now a rule in §6).
+- **Built.**
+  - **About**: the four panels are cut, and the two paragraphs stay.
+    The second now says what sets the game apart ("a steady beat pays
+    more per press than mashing does, and random perks change the rules
+    of each run") in place of "Four things set this game apart". The two
+    paragraphs share one `.sc-lede`, so the first keeps its margin: before,
+    each was the last child of its own block and `content.css` zeroed the
+    gap between them.
+  - **Perks**: two short paragraphs, on what perks bring (Metronome and
+    Self-Replicator as examples), what the three rarities mean, the five
+    slots, the codex and the isotope track. Gone: the odds bars and the
+    rarity legend, prices in seconds of income, level pricing, the swap
+    rule, the surge bonus drop and "three to seven" drops a run. The list
+    is rows built like the shop's, two columns at 1440 and one under
+    900px: glyph tile, name, the rarity as a plain word where the shop
+    has the price, and the effect with its levels in mono. A keystone's
+    one mark beyond its word is a rim in its family's hue (the tint and
+    filled badge are gone). Family headings lose their coloured rule and
+    count; the filter chips keep the counts. "Drops in …" is gone.
+  - Measured: About 519 to 330px at 1440 (1,199 to 561 at 390); perks
+    2,218 to 1,698px (4,836 to 3,207); the page 11,255 to 10,546px
+    (21,689 to 19,422).
+  - The check "the page lists every perk" reads the rows' rarity and
+    effect, and that About's two paragraphs sit apart.
+- **Calls for review.**
+  1. **The About keeps one line of difference** (rhythm and perks), so
+     "spacebar clicker" stays in it; How to play below gives the rest.
+  2. **Families of 3 and 9 end on a half row.** Two columns read as one
+     list, so the empty cell reads as the list's end.
+  3. **"Common" shows on every common**, in muted grey, a step below
+     rare and keystone, as the game's labels do.
+  4. **The levels footnote stays** ("Where a perk lists three values, they
+     are levels I, II and III"), since the intro no longer covers levels.
+  5. **The FAQ's perks answer is untouched**, so the odds survive there in
+     words, as does the JSON-LD.
+- **Decided, 2026-11-12, later.** Findings 4 to 7; finding 3 stays as it
+  is.
+- **Built, findings 4 to 7.** CSS and a few lines of markup; no copy
+  rewritten beyond the cuts below.
+  - **4, glow.** The beat trace keeps its glow, in How to play and on the
+    combo's "On the beat" (one drawing). Gone: the gold x10's, the How to
+    play isotope core's, the reactor dials' cores and lamps, the run-down's
+    live line, the payout dots' and the rung gems'. The cores and gems keep
+    their fills, so they still read as cores; the reactor dials show the
+    climb in fill, lamps and heart.
+  - **5, mono.** Words left mono: the surge drawing's "for 5 seconds",
+    the ladder's ranges, the shop's scaling notes, the run-down's stage
+    times, and the chart's words ("full output", "last press", "you
+    return"). Its two times, "30 min" and "2 h", stay mono as values. The
+    combo's "5 presses" is the number in mono and the word in sans. What
+    stays mono is all numbers, and the keycap in How to play, drawn as the
+    game's.
+  - **6, labels and repeats.** The forks' "Pick one, and switch at any
+    reset" is gone (the track's intro says it); a screen reader still hears
+    "At 3 isotopes, pick one." "x1.2 per purchase" leaves the five
+    auto-tapper rows for the column's heading, computed from the config, so
+    rows get their notes back if the scales ever differ. "energy in a run"
+    leaves the payout strip. The reactor cards' "+5% to all gains" is
+    "+5%", the lede having said it. "On this page" in the jump strip stays
+    uppercase: it is the guides' "On this page" label, the same size and
+    case.
+  - **7, type.** One ladder, noted at the top of `clicker-page.css`: 0.75,
+    0.8125, 0.875, 0.9375 (every block's title, How to play's cards
+    included, from 1rem), 1.125 (the shop's and the perk families'
+    headings, from 1.0625), 1.25 (the ladder's multipliers, from 1.375)
+    and 1.75; 0.6875 only for the jump strip's label. About's paragraphs
+    take the body size like every other section's opening (they were
+    1.0625). Eight sizes, from 17 at the audit; the run-down chart's two
+    SVG sizes are in its own units.
+  - Measured at 1440: the page 10,466px (19,288 at 390). Three browser
+    checks gained lines: the forks' hidden line, a reactor card's "+5%",
+    and the auto-tappers' heading with no row notes.
+- **Calls for review, findings 4 to 7.**
+  1. **The payout strip reads "1M", dots, "pays 1 isotope"**, with the
+     lede above saying a run that has earned a million can reset.
+  2. **About's paragraphs are body size now**, a little smaller than the
+     lede they were.
+  3. **The ladder's ranges keep "combo"** ("10 to 24 combo"), now in sans;
+     without it a bare range under a tier's name could read as presses.
+- **Finding 8, decided and built, 2026-11-12.** The maintainer cut "Tips
+  for this Spacebar Clicker" as filler that repeated the page (the surge,
+  the half hour and the perks were all said above it), and asked for no
+  other change under finding 8: the combo's cards stay. Gone with it: the
+  `TIPS` table, the jump strip's Tips link (eight links now), its two CSS
+  rules, and the MDX's `Icon` and `SURGE` imports, used by nothing else.
+  The FAQ drops `alt-bg`, so the sections still alternate (Reset for
+  isotopes keeps it). The page is 9,824px at 1440. The jump strip's check
+  counts eight links.
+
 ### 8.7 Known gaps
 
 - Not playtested, and not checked on real touch devices, Firefox or Safari.
@@ -3894,3 +4045,15 @@ clicker" keywords. Ideas, then mockups, then a build in three passes.
   dials, a new "When you stop pressing" section with a chart of output
   against time away, tips with the site's icons, and a 12-question FAQ. No
   time-to-finish figure is left on the page.
+- **2026-11-12.** A design audit of the page (§8.5.21), then findings 1
+  and 2: About's four panels cut, leaving two paragraphs with a gap
+  between them at last; the perks introduced by what they bring, the odds
+  bars gone, and the 25 perks as rows like the shop's. The page is 10,546px
+  at 1440, from 11,255.
+- **2026-11-12.** The audit's findings 4 to 7 (§8.5.21): one glow left on
+  the page, the beat trace's; words out of mono; the forks' caps line, the
+  auto-tappers' repeated scaling and "energy in a run" cut; eight type
+  sizes, from 17.
+- **2026-11-12.** The tips section cut (§8.5.21, finding 8): it repeated
+  the sections above it. Eight links in the jump strip; the page is 9,824px
+  at 1440.

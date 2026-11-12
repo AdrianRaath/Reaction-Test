@@ -33,22 +33,18 @@ import {
   ISOTOPE_BONUS,
   ISOTOPE_SCALE,
   ISOTOPE_TRACK,
-  PERK_DROPS,
   PERK_FAMILY_NAMES,
   PERK_RARITY_NAMES,
   PERK_SLOTS,
-  PERK_UPGRADE_SCALE,
   PERKS,
   PRESS_UPGRADES,
   REACTOR_STATES,
   RESTART_PRESSES,
   RUNDOWN,
-  SURGE,
   TRACK_EFFECT,
 } from '../../games/spacebar-clicker/config';
 import { formatPerkValue } from '../../games/spacebar-clicker/perks';
 import { isotopeThreshold, prestigeGain } from '../../games/spacebar-clicker/economy';
-import { Icon } from 'astro-icon/components';
 import PerkIcon from '../../components/games/PerkIcon.astro';
 import ShopIcon from '../../components/games/ShopIcon.astro';
 
@@ -66,18 +62,8 @@ export const perksOf = (family) =>
   PERKS.filter((p) => p.family === family).sort(
     (a, b) => RARITY_ORDER[a.rarity] - RARITY_ORDER[b.rarity]
   );
-export const TAB_NAMES = { press: 'Upgrades', auto: 'Auto-tappers' };
 export const levels = (p) => p.values.map((v) => formatPerkValue(p.unit, v)).join(' / ');
-export const ODDS = [
-  ['Ordinary drop', PERK_DROPS.odds],
-  [`Surge drop, 1 in ${Math.round(1 / PERK_DROPS.surgeChance)}`, PERK_DROPS.surgeOdds],
-];
 export const RARITIES = ['common', 'rare', 'keystone'];
-export const TIER_TEXT = {
-  common: 'Boosts a number.',
-  rare: 'Changes a rule.',
-  keystone: 'Breaks a rule, with a downside.',
-};
 export const tiers = [...COMBO_TIERS].reverse();
 export const PAYS = [1, 2, 3, 4];
 export const SHOP_ITEMS = [...PRESS_UPGRADES, ...AUTO_TAPPERS];
@@ -106,44 +92,10 @@ export const restartMarks = Array.from(
   (_, i) => `M${526 + i * 9} 120V${112 - i * (90 / (RESTART_PRESSES - 1))}`
 ).join('');
 export const nightShift = PERKS.find((p) => p.id === 'night-shift').values;
-export const TIPS = [
-  [
-    'ph:metronome',
-    'Find a beat you can hold',
-    'Harmonic triples your presses. Pick a pace that feels easy, four or five presses a second, and keep it. A sprint breaks the combo and costs more than it earns.',
-  ],
-  [
-    'ph:calculator',
-    'Buy by payback',
-    'Divide an item\u2019s price by the energy per second it adds. The smallest answer pays for itself soonest. Early on that is Finger Strength and Lab Assistants, and later the bigger auto-tappers.',
-  ],
-  [
-    'ph:lightning',
-    'Save up for the surge',
-    `A surge pays ${SURGE.multiplier} times per press for ${SURGE.durationS} seconds, and each press also pays ${SURGE.paysS} seconds of your auto-tappers\u2019 output. Stop buying when the countdown starts, mash, then spend the windfall.`,
-  ],
-  [
-    'ph:moon',
-    'Check in within the half hour',
-    `Auto-tappers hold full output for ${RUNDOWN.fullS / 60} minutes after your last press or purchase. Buy them before you step away, and one press on your return starts the clock again.`,
-  ],
-  [
-    'ph:dice-five',
-    'Take the perks that fit',
-    'Buy the perks that suit how you play: rhythm perks if you hold a beat, machine perks if you leave the game running. A second copy of a perk you hold raises its level.',
-  ],
-  [
-    'ph:hand',
-    'Rest your hand',
-    'Long sessions are hard on one thumb. Switch fingers, lean on the auto-tappers, and stop if anything hurts. The reactor will be there tomorrow.',
-  ],
-];
 export const millions = (v) => `${v / 1_000_000}M`;
 export const TRACK_ROWS = [0, 3, 6, 9].map((i) => ISOTOPE_TRACK.slice(i, i + 3));
 export const tierRange = (i) =>
   i === tiers.length - 1 ? `${tiers[i].min}+` : `${tiers[i].min} to ${tiers[i + 1].min - 1}`;
-
-export const topTier = Math.max(...COMBO_TIERS.map((t) => t.multiplier));
 
 <nav class="sc-jump" aria-label="On this page">
   <div class="container">
@@ -173,9 +125,6 @@ export const topTier = Math.max(...COMBO_TIERS.map((t) => t.multiplier));
         <a href="#prestige">Isotopes</a>
       </li>
       <li>
-        <a href="#tips">Tips</a>
-      </li>
-      <li>
         <a href="#faq">FAQ</a>
       </li>
     </ul>
@@ -186,48 +135,16 @@ export const topTier = Math.max(...COMBO_TIERS.map((t) => t.multiplier));
   <div class="container">
     <h2>About this Spacebar Clicker Game</h2>
     <div class="sc-lede">
+
       Spacebar Clicker is a free clicker game you play on one key. Each press of the spacebar adds
       energy to a lab reactor. You spend the energy on upgrades and on auto-tappers that press for
       you, so it plays as an idle game too. At a million energy you reset the run for isotopes.
-    </div>
-    <div class="sc-lede">
-      Your progress saves in this browser, with no account and no download. For a straight count of
-      presses per second, use the <a href="/spacebar-speed-test">spacebar speed test</a>. Four
-      things set this game apart from other spacebar clicker games.
-    </div>
-    <div class="sc-diff">
-      <div style="--hue: var(--perk-rhythm)">
-        <span class="sc-diff-figure">x{topTier}</span>
-        <h3>Rhythm beats mashing</h3>
 
-          The game times the gap between your presses. Keep the gaps even and each press pays up to
-          three times as much.
+      In this spacebar clicker, a steady beat pays more per press than mashing does, and random
+      perks change the rules of each run. Your progress saves in this browser, with no account and
+      no download. For a straight count of presses per second, use the
+      <a href="/spacebar-speed-test">spacebar speed test</a>.
 
-      </div>
-      <div style="--hue: var(--perk-luck)">
-        <span class="sc-diff-figure">{PERKS.length}</span>
-        <h3>Perks change the run</h3>
-
-          Perks drop into the shop at random. Each one bends a rule until you reset, and you hold
-          {PERK_SLOTS} at a time.
-
-      </div>
-      <div style="--hue: var(--ramp-blue)">
-        <span class="sc-diff-figure">+10%</span>
-        <h3>Resets add rules</h3>
-
-          Each isotope adds 10% to all you earn, for good, and unlocks one rung of a
-          {ISOTOPE_TRACK.length}-rung track.
-
-      </div>
-      <div style="--hue: var(--ramp-green)">
-        <span class="sc-diff-figure">{RUNDOWN.fullS / 60} min</span>
-        <h3>The reactor needs you</h3>
-
-          Auto-tappers run at full output for {RUNDOWN.fullS / 60} minutes after your last press.
-          Then the reactor runs down, and {RESTART_PRESSES} presses on a beat restart it.
-
-      </div>
     </div>
 
   </div>
@@ -243,6 +160,8 @@ export const UNEVEN = [16, 30, 62, 74, 118, 131, 142, 190, 221, 232, 281, 296, 3
 export const glass = PERKS.find((p) => p.id === 'glass-rhythm').values;
 export const upgradeNote = (u) =>
   u.max > 1 ? `x${u.scale} per level, ${u.max} levels` : 'one purchase';
+export const tapperScale =
+  new Set(AUTO_TAPPERS.map((t) => t.scale)).size === 1 ? AUTO_TAPPERS[0].scale : null;
 export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28V8A7 7 0 0 1 8 1Z';
 
 <section id="how-to-play" class="info-section alt-bg sc-doc">
@@ -416,7 +335,11 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
         <p>A longer pause breaks the combo. The bar under the counter drains to show it.</p>
       </div>
       <div>
-        <span class="sc-fact-figure">{COMBO.freeStarts} presses</span>
+        <span class="sc-fact-figure">
+          {COMBO.freeStarts}
+          {' '}
+          <small>presses</small>
+        </span>
         <p>The first {COMBO.freeStarts} presses after a break count, so a combo can start.</p>
       </div>
     </div>
@@ -460,7 +383,7 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
       <div>
         <div class="sc-shop-head">
           <h3>Auto-tappers</h3>
-          <span>press for you</span>
+          <span>{tapperScale ? `press for you, x${tapperScale} per purchase` : 'press for you'}</span>
         </div>
         <ul class="sc-shop-list">
           {AUTO_TAPPERS.map((t) => (
@@ -473,7 +396,7 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
               <span class="sc-shop-effect">
                 <span class="sc-shop-eps">+{t.eps}</span> energy per second. {t.detail}.
               </span>
-              <span class="sc-shop-note">x{t.scale} per purchase</span>
+              {!tapperScale && <span class="sc-shop-note">x{t.scale} per purchase</span>}
             </li>
           ))}
         </ul>
@@ -490,50 +413,15 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
   <div class="container">
     <h2>Perks in this Spacebar Clicker: {PERKS.length} random drops</h2>
 
-      Perks drop into the shop while you play. Each one bends a rule for the rest of the run, and a
-      ring around it drains as you earn. Buy it before the ring empties or the offer leaves.
+      Perks change how a run plays. They drop into the shop at random while you play and last until
+      you reset. Metronome widens your beat window, and Self-Replicator copies your best auto-tapper
+      for free.
 
 
-      You can't time a drop. They come only while you play, at uneven gaps, and a steady first run
-      to a million sees three to seven. One surge in {Math.round(1 / PERK_DROPS.surgeChance)} ends
-      with a bonus drop on better odds.
-
-    <div class="sc-odds">
-      {ODDS.map(([label, odds]) => (
-        <div class="sc-odds-row">
-          <span class="sc-odds-label">{label}</span>
-          <div class="sc-odds-bar">
-            {RARITIES.map((r) => (
-              <span data-rarity={r} style={`flex: ${Math.round(odds[r] * 100)}`}>
-                {odds[r] >= 0.2 ? `${PERK_RARITY_NAMES[r]} ` : ''}
-                {pct(odds[r])}
-              </span>
-            ))}
-          </div>
-        </div>
-      ))}
-      <div class="sc-odds-tiers">
-        {RARITIES.map((r) => (
-          <div data-rarity={r}>
-            <h3>{PERK_RARITY_NAMES[r]}</h3>
-            <p>
-              {TIER_TEXT[r]} Costs <span class="readout">{PERK_DROPS.priceS[r]} s</span> of your
-              income.
-            </p>
-          </div>
-        ))}
-      </div>
-    </div>
-
-      The game prices a perk in seconds of your income at the moment it drops, so a perk costs the
-      same share early in a run as late. You hold {PERK_SLOTS} perks and one keystone. A perk you
-      hold can drop again as level II, then III, at {PERK_UPGRADE_SCALE} times the price for each
-      level you hold. With every slot full, you choose one to let go.
-
-
-      Perks end with the run. The Perks tab keeps a codex of each one you have found, and the
-      <a href="#isotope-track">isotope track</a> can add a sixth slot, a second keystone, or carry
-      one perk through a reset.
+      Commons boost a number and rares change a rule. A keystone breaks one, with a downside. You
+      hold {PERK_SLOTS} at a time, and the Perks tab keeps a codex of each perk you find. The
+      <a href="#isotope-track">isotope track</a> can add a sixth slot or carry a perk through a
+      reset.
 
     <div class="sc-filter" id="sc-perk-filter" hidden>
       <span class="sc-filter-label">Show</span>
@@ -563,25 +451,23 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
         <div class="sc-family-head">
           <h3>{PERK_FAMILY_NAMES[id]} perks</h3>
           <span>{blurb}</span>
-          <small>{perksOf(id).length} perks</small>
         </div>
-        <div class="sc-perks">
+        <ul class="sc-perks">
           {perksOf(id).map((p) => (
-            <article class="sc-perk" data-rarity={p.rarity}>
+            <li class="sc-perk" data-rarity={p.rarity}>
               <span class="sc-perk-tile" aria-hidden="true">
                 <PerkIcon id={p.id} />
               </span>
               <h4>{p.name}</h4>
               <span class="sc-perk-rarity">{PERK_RARITY_NAMES[p.rarity]}</span>
-              <span class="sc-perk-where">Drops in {TAB_NAMES[p.tab]}</span>
               <span class="sc-perk-effect">
                 {p.detail.split('{v}')[0]}
                 <span class="sc-perk-levels">{levels(p)}</span>
                 {p.detail.split('{v}')[1]}
               </span>
-            </article>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
     ))}
     <div class="sc-fine">
@@ -611,7 +497,7 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
           </svg>
           <h3>{s.name}</h3>
           <span class="sc-state-at">{whole(s.threshold)}</span>
-          <span class="sc-state-bonus">+{i * 5}% to all gains</span>
+          <span class="sc-state-bonus">+{i * 5}%</span>
           <span class="sc-state-note">{stateNote(s, i)}</span>
         </div>
       ))}
@@ -649,8 +535,8 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
           <path class="sc-run-live" d="M616 30H640" />
           <text class="sc-run-wide" x="0" y="16">{'full output'}</text>
           <text class="sc-run-wide" x="0" y="142">{'last press'}</text>
-          <text x="100" y="142" text-anchor="middle">{`${fullMin} min`}</text>
-          <text x="400" y="142" text-anchor="middle">{`${faultH} h`}</text>
+          <text class="sc-run-num" x="100" y="142" text-anchor="middle">{`${fullMin} min`}</text>
+          <text class="sc-run-num" x="400" y="142" text-anchor="middle">{`${faultH} h`}</text>
           <text x="580" y="142" text-anchor="middle">{'you return'}</text>
         </svg>
       </div>
@@ -706,9 +592,7 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
     <div class="sc-pays">
       {PAYS.map((n) => (
         <div>
-          <span class="sc-pays-at">
-            {millions(isotopeThreshold(n))} <small>energy in a run</small>
-          </span>
+          <span class="sc-pays-at">{millions(isotopeThreshold(n))}</span>
           <span class="sc-pays-dots" aria-hidden="true">
             {Array.from({ length: n }, () => (
               <i />
@@ -743,12 +627,9 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
                   <b>{step.isotopes}</b>
                 </span>
                 <h4>{step.rungs.map((r) => r.name).join(' or ')}</h4>
-                <span class="sc-rung-pick">
-                  <span class="visually-hidden">At {step.isotopes} isotopes. </span>Pick one, and
-                  switch at any reset
-                </span>
                 <div class="sc-rung-options">
                   <p>
+                    <span class="visually-hidden">At {step.isotopes} isotopes, pick one. </span>
                     <b>{step.rungs[0].name}.</b> {step.rungs[0].detail}.
                   </p>
                   <span>or</span>
@@ -783,24 +664,7 @@ export const RING = 'M18 1H28A7 7 0 0 1 35 8V28A7 7 0 0 1 28 35H8A7 7 0 0 1 1 28
   </div>
 </section>
 
-<section id="tips" class="info-section sc-doc">
-  <div class="container">
-    <h2>Tips for this Spacebar Clicker</h2>
-    <div class="tips-grid section-content">
-      {TIPS.map(([icon, title, text]) => (
-        <div class="tip-card">
-          <span class="tip-card-icon" aria-hidden="true">
-            <Icon name={icon} width={24} height={24} />
-          </span>
-          <h3>{title}</h3>
-          <p>{text}</p>
-        </div>
-      ))}
-    </div>
-  </div>
-</section>
-
-<section id="faq" class="info-section alt-bg">
+<section id="faq" class="info-section">
   <div class="container">
     <h2>FAQ about this Spacebar Clicker</h2>
     <div class="faq-list section-content">
