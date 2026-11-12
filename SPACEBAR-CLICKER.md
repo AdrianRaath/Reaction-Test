@@ -779,6 +779,23 @@ the build plan are in §8.1.
 
 ### 5.1 Layout
 
+- **The top bar's readout** (2026-11-12). Each tool page shows Best · Avg ·
+  Rank in the top bar, from the telemetry rig, which this page doesn't
+  run. The page passes its own strip instead, in the same place and styles:
+  "Isotopes" with a 14px core (the Isotopes tab's lit ring around a dark
+  centre, its ring filling toward the next isotope by `isotopeFill` as the
+  face's badge does, its heart lit once one is held), "Lifetime" (energy
+  earned all time, which only climbs, unlike the face's balance), and "Best
+  combo" in Signal Green, the tools' licence for a personal best. A new
+  save shows a dimmed 0 and dashes. The count follows the badge, holding
+  through a reset's bead flight (`badgeHold`), and its ring starts empty at
+  once on a new count. `renderTopbar` runs from `renderStats` on the panel
+  tick. Hidden under 1100px, as on the tools. Wiring: TopBar takes a
+  `pageStats` prop and a `stats` slot; BaseLayout forwards a page's
+  `topbar-stats` slot to it; the strip's `.tb-*` styles are global under
+  `.topbar-stats` so a page's markup wears them. The maintainer chose the
+  three stats: isotopes and lifetime energy their own call, best combo from
+  three options (reactor state and energy per second the others).
 - The reactor face sits on the left and the shop on the right, pinned to the
   face's height. A tabbed panel below holds Stats, Achievements, Perks and
   Isotopes. The tabs sit in one row; where the panels are under 440px wide,
@@ -1102,7 +1119,9 @@ with the game's own parts.
   `npm run build` should be clean.
 - `npm run test:browser` runs the Playwright checks in `tests/browser/`,
   86 as of 2026-11-11, in about ten minutes.
-  - **Coverage:** the page shell, the perks section, the isotope track table
+  - **Coverage:** the page shell, the top bar's readout (empty, a staged
+    save, the ring part filled, hidden under 1100px, cleared by the full
+    reset), the perks section, the isotope track table
     and FAQ rendering from the config, presses and the combo, buying, the
     shop tabs and "New" tag, save and reload, time away with no dialog, prestige, the
     full reset, the panel tabs in one row and two by two on a phone, the
@@ -4250,3 +4269,7 @@ game, feedback only, keeping it optimised for "spacebar clicker". Shot at
 - **2026-11-12.** A competitor check on "spacebar clicker" (§8.5.21): the
   spacebar speed test now links here from its body copy, and the FAQ gains
   "What should I buy first?" (13 questions).
+- **2026-11-12.** A readout in the top bar, where the tools show Best · Avg
+  · Rank (§5.1): isotopes with a small core whose ring fills toward the
+  next, lifetime energy, and the best combo in green. TopBar gains a
+  `pageStats` prop and a `stats` slot for it.

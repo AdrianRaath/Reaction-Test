@@ -399,6 +399,16 @@ const statEls = {
   played: el('sc-stat-played'),
 };
 
+// The top bar's readout (SPACEBAR-CLICKER.md §6): isotopes, with a small core
+// whose ring fills toward the next; energy earned all time; the best combo.
+const topbarEls = {
+  core: document.getElementById('sc-tb-iso') as SVGSVGElement | null,
+  ring: document.getElementById('sc-tb-iso-ring') as SVGCircleElement | null,
+  isotopes: el('sc-tb-isotopes'),
+  lifetime: el('sc-tb-lifetime'),
+  bestCombo: el('sc-tb-best-combo'),
+};
+
 const achCount = el('sc-ach-count');
 const prestigeTab = el('sc-tab-prestige');
 const resetIntro = el('sc-reset-intro');
@@ -1908,6 +1918,46 @@ function renderStats(): void {
     : '0';
   statEls.prestiges.textContent = String(state.prestiges);
   statEls.played.textContent = formatDuration(state.playedS);
+  renderTopbar();
+}
+
+/** A top-bar value, dimmed while there is nothing to show yet. */
+function setTopbarValue(node: HTMLElement, text: string, empty: boolean): void {
+  setText(node, text);
+  node.classList.toggle('is-empty', empty);
+}
+
+/** The isotopes the top bar last drew, so a reset's new count can empty its ring at once. */
+let topbarHeld: number | null = null;
+
+/**
+ * The top bar's readout. Isotopes follow the face's badge, holding the old
+ * count while a reset's beads fly to it; the ring fills as the badge's does
+ * and, on a new count, starts empty at once rather than winding back.
+ * Lifetime energy and the best combo are dimmed dashes until the first press.
+ */
+function renderTopbar(): void {
+  const held = badgeHold ?? state.isotopes;
+  setTopbarValue(topbarEls.isotopes, held.toLocaleString('en-US'), held === 0);
+  topbarEls.core?.classList.toggle('has-isotopes', held > 0);
+  const ring = topbarEls.ring;
+  if (ring) {
+    const offset = (100 * (1 - isotopeFill(state.runLifetime))).toFixed(2);
+    if (topbarHeld !== null && held !== topbarHeld) {
+      ring.style.transition = 'none';
+      ring.style.strokeDashoffset = offset;
+      void ring.getBoundingClientRect();
+      ring.style.transition = '';
+    } else {
+      ring.style.strokeDashoffset = offset;
+    }
+  }
+  topbarHeld = held;
+
+  const lifetime = state.totalLifetime;
+  setTopbarValue(topbarEls.lifetime, lifetime > 0 ? formatEnergy(lifetime) : '—', lifetime <= 0);
+  const best = state.bestCombo;
+  setTopbarValue(topbarEls.bestCombo, best > 0 ? best.toLocaleString('en-US') : '—', best === 0);
 }
 
 /** A count toward a badge: whole, or to one place for a surge's presses per second. */

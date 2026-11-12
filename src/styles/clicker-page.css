@@ -6,10 +6,11 @@
    scoped styles don't reach. Imported by spacebar-clicker.astro only.
    ========================================================================== */
 
-:where(.game-section, .sc-doc) {
+:where(.game-section, .sc-doc, .sc-tb-iso) {
   /* The Reactor-Ramp (DESIGN.md), here rather than on the face because
      isotopes wear Blue-White on Cherenkov Blue off the face too: the shelf
-     beside it, the Isotopes tab and the page's content. */
+     beside it, the Isotopes tab, the top bar's readout and the page's
+     content. */
   --ramp-green: #22c55e;
   --ramp-teal: #2dd4bf;
   --ramp-cyan: #22d3ee;
@@ -31,6 +32,43 @@
   --perk-luck: #e879f9;
   --perk-surge: var(--gold);
   --perk-machines: #a3e635;
+}
+
+/* --- Top bar: the isotope core -------------------------------------------- */
+
+/* The top bar's readout (SPACEBAR-CLICKER.md §6) draws an isotope as the
+   Isotopes tab does, a lit ring around a dark centre, at the size of the
+   strip's text. The ring fills toward the next isotope like the face's
+   badge; the heart lights once one is held. No glow: the bar is chrome. */
+.sc-tb-iso {
+  align-self: center;
+  flex-shrink: 0;
+  overflow: visible;
+  transform: rotate(-90deg);
+}
+
+.sc-tb-iso circle {
+  fill: none;
+  stroke-width: 1.75;
+}
+
+.sc-tb-iso .sc-tb-iso-track {
+  stroke: color-mix(in srgb, var(--ramp-blue) 22%, transparent);
+}
+
+.sc-tb-iso .sc-tb-iso-fill {
+  stroke: var(--ramp-blue);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 500ms linear;
+}
+
+.sc-tb-iso .sc-tb-iso-heart {
+  fill: color-mix(in srgb, var(--ramp-blue) 18%, transparent);
+  stroke: none;
+}
+
+.sc-tb-iso.has-isotopes .sc-tb-iso-heart {
+  fill: var(--ramp-white);
 }
 
 /* --- Jump strip ------------------------------------------------------------ */

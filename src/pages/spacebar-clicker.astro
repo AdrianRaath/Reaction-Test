@@ -24,8 +24,9 @@ import '../styles/instrument.css';
 import '../styles/clicker-page.css';
 
 // A game page, not a tool page: it is in the registry (sidebar, cross-links,
-// sitemap) with `telemetry: false`, so no rig and no top-bar readout. The game
-// keeps its own save and its own HUD. See src/scripts/spacebar-clicker.ts.
+// sitemap) with `telemetry: false`, so no rig. The game keeps its own save and
+// its own HUD, and passes the top bar its own readout (isotopes, lifetime
+// energy, best combo), filled by src/scripts/spacebar-clicker.ts.
 
 // Authored for the primary keyword "spacebar clicker". No "| ReflexLab" suffix.
 const TITLE = 'Spacebar Clicker Game - Play Free Online';
@@ -133,6 +134,49 @@ const MAX_SLOTS = Math.max(PERK_SLOTS, TRACK_EFFECT.sixthSlotSlots);
     <Icon name="ph:trash" width={18} height={18} aria-hidden="true" />
     <span>Reset</span>
   </button>
+
+  <!-- The top bar's readout, in the strip every tool page has (Best · Avg ·
+       Rank there): the career a player keeps through resets. Isotopes with a
+       small core whose ring fills toward the next, as the face's badge does;
+       energy earned all time, which only climbs, unlike the face's balance;
+       and the best combo, a personal best in Signal Green like the tools'
+       Best. Dimmed dashes until there is something to show. -->
+  <Fragment slot="topbar-stats">
+    <span class="tb-stat">
+      <span class="tb-label">Isotopes</span>
+      <svg
+        class="sc-tb-iso"
+        id="sc-tb-iso"
+        viewBox="0 0 16 16"
+        width="14"
+        height="14"
+        aria-hidden="true"
+      >
+        <circle class="sc-tb-iso-track" cx="8" cy="8" r="6.5"></circle>
+        <circle
+          class="sc-tb-iso-fill"
+          id="sc-tb-iso-ring"
+          cx="8"
+          cy="8"
+          r="6.5"
+          pathLength="100"
+          stroke-dasharray="100"
+          stroke-dashoffset="100"></circle>
+        <circle class="sc-tb-iso-heart" cx="8" cy="8" r="2.5"></circle>
+      </svg>
+      <span class="tb-value readout is-empty" id="sc-tb-isotopes">0</span>
+    </span>
+    <span class="tb-sep" aria-hidden="true">·</span>
+    <span class="tb-stat">
+      <span class="tb-label">Lifetime</span>
+      <span class="tb-value readout is-empty" id="sc-tb-lifetime">—</span>
+    </span>
+    <span class="tb-sep" aria-hidden="true">·</span>
+    <span class="tb-stat">
+      <span class="tb-label">Best combo</span>
+      <span class="tb-value tb-best readout is-empty" id="sc-tb-best-combo">—</span>
+    </span>
+  </Fragment>
 
   <!-- ========== HERO ========== -->
   <section class="hero-section">

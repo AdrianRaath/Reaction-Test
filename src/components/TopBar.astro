@@ -16,9 +16,15 @@ interface Props {
    * dash rather than the strip disappearing.
    */
   showStats?: boolean;
+  /**
+   * A page outside the rig passes its own readout in the `stats` slot: the
+   * same strip, in the same place, filled by the page's script (Spacebar
+   * Clicker, 2026-11-12). Ignored where `showStats` draws the rig's.
+   */
+  pageStats?: boolean;
 }
 
-const { label, showStats = false } = Astro.props;
+const { label, showStats = false, pageStats = false } = Astro.props;
 ---
 
 <header class="topbar">
@@ -61,6 +67,14 @@ const { label, showStats = false } = Astro.props;
             —
           </span>
         </span>
+      </div>
+    )
+  }
+
+  {
+    !showStats && pageStats && (
+      <div class="topbar-stats">
+        <slot name="stats" />
       </div>
     )
   }
@@ -123,18 +137,20 @@ const { label, showStats = false } = Astro.props;
     gap: var(--space-sm);
   }
 
-  .tb-stat {
+  /* The strip's parts are global under it, so a page's own readout in the
+     `stats` slot wears them too. */
+  .topbar-stats :global(.tb-stat) {
     display: inline-flex;
     align-items: baseline;
     gap: var(--space-xs);
   }
 
-  .tb-label {
+  .topbar-stats :global(.tb-label) {
     font-size: 0.75rem;
     color: var(--ink-muted);
   }
 
-  .tb-value {
+  .topbar-stats :global(.tb-value) {
     font-size: var(--text-label-size);
     font-weight: 600;
     color: var(--ink-primary);
@@ -142,11 +158,11 @@ const { label, showStats = false } = Astro.props;
 
   /* Signal Green on the personal best is sanctioned by the One Signal Rule —
      "your best" is one of its three licensed meanings. */
-  .tb-best {
+  .topbar-stats :global(.tb-best) {
     color: var(--signal-green);
   }
 
-  .tb-sep {
+  .topbar-stats :global(.tb-sep) {
     color: var(--ink-disabled);
   }
 
@@ -185,7 +201,7 @@ const { label, showStats = false } = Astro.props;
 
   /* Before the first run every value is a dash — dim, so the strip reads as
      "nothing yet" rather than a broken readout. */
-  .tb-value.is-empty,
+  .topbar-stats :global(.tb-value.is-empty),
   .tb-tier.is-empty {
     color: var(--ink-disabled);
   }

@@ -16,7 +16,44 @@ test('page shell: title, heading, no top-bar telemetry', async ({ page }) => {
   await expect(
     page.getByRole('heading', { level: 1, name: 'Spacebar Clicker', exact: true })
   ).toBeVisible();
+  // No rig readout: the page passes the top bar its own (next check).
   await expect(page.locator('#topbar-stats')).toHaveCount(0);
+});
+
+test('the top bar reads isotopes, lifetime energy and the best combo', async ({ page }) => {
+  await openGame(page);
+  const isotopes = page.locator('#sc-tb-isotopes');
+  const lifetime = page.locator('#sc-tb-lifetime');
+  const bestCombo = page.locator('#sc-tb-best-combo');
+  // A new save: a dimmed zero and dashes, as the tools' readout before a run.
+  await expect(isotopes).toHaveText('0');
+  await expect(isotopes).toHaveClass(/is-empty/);
+  await expect(lifetime).toHaveText('—');
+  await expect(bestCombo).toHaveText('—');
+
+  await editSave(page, (s) => {
+    s.isotopes = 3;
+    s.totalLifetime = 4_820_000;
+    s.runLifetime = 2_400_000;
+    s.bestCombo = 214;
+    s.lastSeen = Date.now();
+  });
+  await expect(isotopes).toHaveText('3');
+  await expect(isotopes).not.toHaveClass(/is-empty/);
+  await expect(page.locator('#sc-tb-iso')).toHaveClass(/has-isotopes/);
+  await expect(lifetime).toHaveText('4.82M');
+  await expect(bestCombo).toHaveText('214');
+  await expect(bestCombo).toHaveClass(/tb-best/);
+  // The ring is part of the way to the next isotope.
+  const offset = await page
+    .locator('#sc-tb-iso-ring')
+    .evaluate((c) => parseFloat((c as SVGCircleElement).style.strokeDashoffset));
+  expect(offset).toBeGreaterThan(0);
+  expect(offset).toBeLessThan(100);
+
+  // Like the tools' readout, it gives way below 1100px.
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await expect(page.locator('.topbar-stats')).toBeHidden();
 });
 
 test('a toast takes the keycap’s place, and the hint retires once a combo is held', async ({
@@ -409,6 +446,8 @@ test('the top-bar reset erases everything, isotopes included', async ({ page }) 
   await page.click('[data-tab="stats"]');
   await expect(page.locator('#sc-stat-isotopes')).toHaveText('0');
   await expect(page.locator('#sc-stat-presses')).toHaveText('0');
+  await expect(page.locator('#sc-tb-isotopes')).toHaveText('0');
+  await expect(page.locator('#sc-tb-isotopes')).toHaveClass(/is-empty/);
 });
 
 test('Space on a focused control does not press the reactor', async ({ page }) => {

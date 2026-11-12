@@ -50,6 +50,8 @@ const {
 // game page is in the registry (sidebar, cross-links, sitemap) but opts out.
 const tool = getTool(path);
 const showStats = Boolean(tool) && tool?.telemetry !== false;
+// A page outside the rig can pass its own readout instead (TopBar's `pageStats`).
+const pageStats = Astro.slots.has('topbar-stats');
 
 const site = Astro.site ?? new URL('https://reflexlab.co');
 const canonical = new URL(path, site).href;
@@ -107,8 +109,9 @@ const ogImageUrl = new URL(ogImage, site).href;
       <Sidebar currentPath={path} />
 
       <div class="app-main">
-        <TopBar label={topbarLabel} showStats={showStats}>
+        <TopBar label={topbarLabel} showStats={showStats} pageStats={pageStats}>
           <slot name="controls" />
+          <slot name="topbar-stats" slot="stats" />
         </TopBar>
 
         <main id="main-content" tabindex="-1">
