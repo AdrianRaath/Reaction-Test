@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
       # Give Vercel a moment to finish deploying, so the key file and
       # updated pages are live before the engines come looking.
       - run: sleep 60

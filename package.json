@@ -5,7 +5,7 @@
   "type": "module",
   "description": "ReflexLab — browser-based performance tests (reaction, clicking, and more).",
   "engines": {
-    "node": ">=22"
+    "node": "26.x"
   },
   "scripts": {
     "dev": "astro dev",
