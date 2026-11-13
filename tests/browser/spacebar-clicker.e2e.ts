@@ -213,11 +213,18 @@ test('the page lists every perk, straight from the config', async ({ page }) => 
   );
 });
 
-test('the spacebar speed test links to the clicker from its body copy', async ({ page }) => {
-  // The speed test catches "spacebar counter" searches; this link sends
-  // game-seekers on and names the page that owns "spacebar clicker".
-  await page.goto('/spacebar-speed-test');
-  await expect(page.locator('#what-is a[href="/spacebar-clicker"]')).toHaveText('spacebar clicker');
+test('the spacebar speed test and CPS test link to the clicker from their body copy', async ({
+  page,
+}) => {
+  // The speed test catches "spacebar counter" searches and the CPS test names
+  // clicker games; these links send game-seekers on and name the page that
+  // owns "spacebar clicker".
+  for (const path of ['/spacebar-speed-test', '/cps']) {
+    await page.goto(path);
+    await expect(page.locator('#what-is a[href="/spacebar-clicker"]')).toHaveText(
+      'spacebar clicker'
+    );
+  }
 });
 
 test('the page draws the reactor states and the run-down from the config', async ({ page }) => {

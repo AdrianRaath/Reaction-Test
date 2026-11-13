@@ -86,7 +86,8 @@ export const tools: Tool[] = [
     name: 'Spacebar Clicker',
     navLabel: 'Spacebar Clicker',
     icon: 'ph:atom',
-    blurb: 'Press space to charge a reactor. Buy upgrades, hold a rhythm, and let it run idle.',
+    blurb:
+      'An idle game on one key. Hold a steady beat to earn more, and build each run around random perks.',
     telemetry: false,
     isNew: true,
   },

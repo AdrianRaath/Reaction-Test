@@ -4277,3 +4277,12 @@ game, feedback only, keeping it optimised for "spacebar clicker". Shot at
   amber pill, to draw attention at launch. Set by `isNew: true` on the
   registry entry in `src/data/tools.ts`; remove that line to retire it.
   DESIGN.md's Shop-Signal Exception extended to cover it.
+- **2026-11-13.** Internal links reviewed before the merge. The game had
+  the sidebar, footer, "More tools" cards and About's list, and one link
+  in body copy (the speed test). Added a second: the CPS test's
+  cross-link paragraph, "For an idle game you play on one key, try the
+  spacebar clicker." The registry blurb, shown on the cards and About,
+  now matches the page's messaging: "An idle game on one key. Hold a
+  steady beat to earn more, and build each run around random perks." (was
+  "Press space to charge a reactor…"). Guides left alone: none cover
+  spacebar or idle games.
