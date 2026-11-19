@@ -1,0 +1,80 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import '../styles/article.css';
+
+const TITLE = 'Contact | ReflexLab';
+const DESCRIPTION =
+  'Contact ReflexLab at hello@reflexlab.co. Report a bug, flag a score that looks wrong, suggest a test, send a correction to a guide, or ask about privacy.';
+
+const EMAIL = 'hello@reflexlab.co';
+---
+
+<BaseLayout title={TITLE} description={DESCRIPTION} path="/contact" topbarLabel="Contact">
+  <article class="article-container">
+    <header class="article-header">
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span class="breadcrumbs-separator">/</span>
+        <span class="breadcrumbs-current">Contact</span>
+      </nav>
+      <h1 class="article-title">Contact ReflexLab</h1>
+      <p class="article-subtitle">One inbox for bugs, corrections, ideas, and privacy questions.</p>
+    </header>
+
+    <div class="article-content">
+      <p class="article-intro">
+        Email <a href={`mailto:${EMAIL}`}>{EMAIL}</a>. ReflexLab has no contact form and no support
+        desk, so that address is the way to reach us.
+      </p>
+
+      <section class="article-section">
+        <h2>What to Write About</h2>
+        <ul class="article-list">
+          <li>
+            <strong>A bug.</strong> A test that freezes, a timer that misfires, a page that breaks on
+            your device.
+          </li>
+          <li>
+            <strong>A score that looks wrong.</strong> A reaction time faster than you believe, or a click
+            count that missed presses.
+          </li>
+          <li>
+            <strong>A correction to a guide.</strong> Name the claim and the source that contradicts it,
+            and we will check it against the studies the guide cites.
+          </li>
+          <li>
+            <strong>An idea.</strong> A test you want built, or a question you want a guide to answer.
+          </li>
+          <li>
+            <strong>Privacy.</strong> Questions about the <a href="/privacy">privacy policy</a>, or
+            a request to delete an email you sent us.
+          </li>
+          <li>
+            <strong>Business and press.</strong> Partnerships, licensing, and media questions.
+          </li>
+        </ul>
+      </section>
+
+      <section class="article-section">
+        <h2>Reporting a Bug</h2>
+        <p>Include four details so we can reproduce the problem:</p>
+        <ul class="article-list">
+          <li>The test you were on, and the settings you had chosen</li>
+          <li>Your browser and its version</li>
+          <li>Your device, and whether you used a mouse, a keyboard, or a touchscreen</li>
+          <li>What you expected to happen, and what happened instead</li>
+        </ul>
+        <p>A screenshot helps when the problem is visual.</p>
+      </section>
+
+      <section class="article-section">
+        <h2>Lost Scores</h2>
+        <p>
+          We cannot restore a personal best or a run history. Your scores live in your browser's
+          localStorage and no server holds a copy, so clearing site data or switching browsers
+          removes them for good. The <a href="/privacy">privacy policy</a> lists what each test stores.
+        </p>
+      </section>
+    </div>
+  </article>
+</BaseLayout>

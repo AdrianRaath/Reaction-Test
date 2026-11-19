@@ -10,7 +10,7 @@ Gamers, athletes, and curious individuals who want to measure and improve their 
 
 ## Product Purpose
 
-ReflexLab is a free, accurate reaction-time test. It measures visual reaction speed in milliseconds, tracks results over a session and across visits (personal best, history, trend, achieved ranks), and helps people improve. Everything is stored locally in the browser — nothing is sent to a server. Success looks like: a user completes a test within seconds of landing, trusts the number, is compelled to run "just one more," and returns to beat their best. The guides deepen engagement and earn organic search traffic.
+ReflexLab is a free, accurate reaction-time test. It measures visual reaction speed in milliseconds, tracks results over a session and across visits (personal best, history, trend, achieved ranks), and helps people improve. Results are stored locally in the browser and never sent to a server; analytics and advertising are the only third parties (see the privacy policy). Success looks like: a user completes a test within seconds of landing, trusts the number, is compelled to run "just one more," and returns to beat their best. The guides deepen engagement and earn organic search traffic.
 
 ## Brand Personality
 
@@ -27,7 +27,7 @@ ReflexLab is a free, accurate reaction-time test. It measures visual reaction sp
 1. **The number is the product.** The measured time and its ranking are the payoff. Make measurement feel instant, honest, and precise — timer integrity and a fast, unambiguous result beat any decoration around it.
 2. **Controlled intensity.** Competitive, kinetic energy *without* the RGB circus. Restraint — one disciplined accent, deliberate motion — is exactly what separates ReflexLab from the ad-quiz and gamer-skin crowd.
 3. **Reward the loop.** Ranks, personal bests, session history, and the trend graph exist to make "one more try" irresistible. Every result should show where the user stands and give them a reason to go again.
-4. **Respect the player.** No ads, no dark patterns, private by default (localStorage, nothing leaves the device). Frictionless in, honest throughout — trust is a core feature, not a footnote.
+4. **Respect the player.** No dark patterns, and scores are private by default (localStorage; no result leaves the device). Ads sit outside the measurement: never inside or beside the test surface, never interrupting a run. Never claim "no ads" in copy. Frictionless in, honest throughout — trust is a core feature, not a footnote.
 5. **Fast to react.** Minimize everything between landing and the first test. The interface must never sit between the user and their reflex; clarity and speed win over completeness on the primary surface.
 
 ## Accessibility & Inclusion

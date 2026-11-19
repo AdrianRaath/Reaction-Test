@@ -13,6 +13,8 @@ const DESCRIPTION =
 // description — preserved as-is (§7).
 const OG_DESCRIPTION =
   'Learn about ReflexLab - free reflex and performance tests built to help you measure, practice, and improve your speed over time.';
+
+const EMAIL = 'hello@reflexlab.co';
 ---
 
 <BaseLayout
@@ -97,14 +99,27 @@ const OG_DESCRIPTION =
       </section>
 
       <section class="article-section">
-        <h2>Private by Default</h2>
+        <h2>Your Scores Stay in Your Browser</h2>
         <p>
           No account, no email, no sign-in. Your results sit in your browser's localStorage and go
           nowhere else. Your scores will not follow you to another browser or another device, and
           clearing site data erases them.
         </p>
         <p>
-          The <a href="/privacy">privacy policy</a> covers what gets stored and what analytics see.
+          The <a href="/privacy">privacy policy</a> covers what gets stored, and how analytics and advertising
+          use cookies.
+        </p>
+      </section>
+
+      <section class="article-section">
+        <h2>Independently Run</h2>
+        <p>
+          ReflexLab is an independent site. We build the tests, set the rank tables, and write the
+          guides ourselves, and each guide lists the studies behind its numbers.
+        </p>
+        <p>
+          Email <a href={`mailto:${EMAIL}`}>{EMAIL}</a> about a bug, a score that looks wrong, or a claim
+          that needs a correction. The <a href="/contact">contact page</a> lists what to include.
         </p>
       </section>
 

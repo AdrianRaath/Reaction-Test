@@ -73,6 +73,10 @@
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://reflexlab.co/contact</loc>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://reflexlab.co/privacy</loc>
     <priority>0.3</priority>
   </url>

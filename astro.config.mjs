@@ -15,7 +15,7 @@ import icon from 'astro-icon';
  * the routes: every build rewrites it.
  *
  * Priorities reproduce the live sitemap's scheme: home 1.0, tools 0.9,
- * guides index 0.8, guide articles 0.7, about 0.5, privacy 0.3.
+ * guides index 0.8, guide articles 0.7, about and contact 0.5, privacy 0.3.
  */
 function sitemap() {
   return {
@@ -27,7 +27,7 @@ function sitemap() {
           if (path === '/') return '1.0';
           if (path === '/guides') return '0.8';
           if (path.startsWith('/guides/')) return '0.7';
-          if (path === '/about') return '0.5';
+          if (path === '/about' || path === '/contact') return '0.5';
           if (path === '/privacy') return '0.3';
           return '0.9'; // depth-1 tool pages
         };

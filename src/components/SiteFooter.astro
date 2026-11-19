@@ -9,8 +9,11 @@ const links = [
   ...tools.map((t) => ({ href: t.href, label: t.name.replace(' Time Test', ' Test') })),
   { href: '/guides', label: 'Guides' },
   { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
   { href: '/privacy', label: 'Privacy' },
 ];
+
+const EMAIL = 'hello@reflexlab.co';
 ---
 
 <footer class="site-footer">
@@ -20,6 +23,9 @@ const links = [
   </nav>
   <p class="footer-note">
     Free reaction time and click speed tests. Your results stay in your browser.
+  </p>
+  <p class="footer-note">
+    Contact: <a href={`mailto:${EMAIL}`}>{EMAIL}</a>
   </p>
 </footer>
 
@@ -59,5 +65,14 @@ const links = [
   .footer-note {
     font-size: 0.75rem;
     color: var(--ink-muted);
+  }
+
+  .footer-note a {
+    color: var(--ink-secondary);
+    text-decoration: none;
+  }
+
+  .footer-note a:hover {
+    color: var(--ink-primary);
   }
 </style>

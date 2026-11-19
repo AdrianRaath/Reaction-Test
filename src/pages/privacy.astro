@@ -4,12 +4,14 @@ import '../styles/article.css';
 
 const TITLE = 'Privacy Policy | ReflexLab';
 const DESCRIPTION =
-  'Privacy policy for ReflexLab. Your test results stay in your browser and never reach a server. What gets stored, what analytics collect, and how to delete it.';
+  'Privacy policy for ReflexLab. Your test results stay in your browser. What gets stored, how analytics and advertising use cookies, and how to opt out.';
 
 // Bump this by hand whenever the policy text changes, and only then. Deriving
 // it from the build date would stamp a fresh revision date on every deploy,
 // which is exactly the claim a "last updated" line must not make falsely.
-const LAST_UPDATED = '21 August 2026';
+const LAST_UPDATED = '19 November 2026';
+
+const EMAIL = 'hello@reflexlab.co';
 ---
 
 <BaseLayout title={TITLE} description={DESCRIPTION} path="/privacy" topbarLabel="Privacy">
@@ -28,8 +30,9 @@ const LAST_UPDATED = '21 August 2026';
     <div class="article-content">
       <p class="article-intro">
         Your scores stay on your device. ReflexLab has no accounts, no sign-ups, and no server that
-        receives your results. Two things do involve a third party: Google Analytics measures
-        traffic, and our host logs the requests it serves. Both are described below.
+        receives your results. Three outside services do handle data when you visit: Google
+        Analytics measures traffic, Google AdSense serves ads, and our host logs the requests it
+        serves. Each one is described below.
       </p>
 
       <section class="article-section">
@@ -58,7 +61,7 @@ const LAST_UPDATED = '21 August 2026';
         <h2>No Accounts or Sign-Ups</h2>
         <p>
           ReflexLab never asks you to create an account, give an email address, or sign in. Open a
-          test and take it. We hold no personal information about you because we never collect any.
+          test and take it. We hold no personal information about you unless you email us.
         </p>
       </section>
 
@@ -79,9 +82,10 @@ const LAST_UPDATED = '21 August 2026';
       <section class="article-section">
         <h2>Cookies</h2>
         <p>
-          ReflexLab sets no cookies of its own. Your scores and settings live in localStorage, which
-          is separate from cookies and never travels with a network request. Google Analytics does
-          set cookies, described next.
+          ReflexLab's own code sets no cookies. Your scores and settings live in localStorage, which
+          is separate from cookies and never travels with a network request. Google Analytics and
+          Google AdSense do set cookies. The next two sections cover what those cookies do and how
+          to turn them off.
         </p>
       </section>
 
@@ -94,13 +98,66 @@ const LAST_UPDATED = '21 August 2026';
           in localStorage and are never read by the analytics script.
         </p>
         <p>
-          The script loads from <code>googletagmanager.com</code> and sets cookies that tell a repeat
-          visit from a new one. These cookies carry no personally identifiable information. To opt out,
-          install Google's browser add-on, block the domain with an extension, or turn off cookies for
-          this site.
+          The script loads from <code>googletagmanager.com</code> and sets cookies that hold a random
+          identifier, so Analytics can tell a repeat visit from a new one. The cookies do not hold your
+          name, your email address, or your scores. To opt out, install{' '}
+          <a
+            href="https://tools.google.com/dlpage/gaoptout"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Google's opt-out add-on</a
+          >, block the domain with an extension, or turn off cookies for this site.
+        </p>
+      </section>
+
+      <section class="article-section">
+        <h2>Advertising</h2>
+        <p>
+          ReflexLab uses Google AdSense for advertising. Third-party vendors, including Google, use
+          cookies to serve ads based on your earlier visits to this site and to other websites.
+          Google's advertising cookies let Google and its partners serve ads to you based on those
+          visits.
         </p>
         <p>
-          For more information, see{' '}
+          To serve and measure ads, these vendors collect your IP address, a cookie identifier, your
+          device and browser details, and the pages where you saw an ad. ReflexLab sends none of
+          your scores or settings to them.
+        </p>
+        <p>You can turn personalised advertising off:</p>
+        <ul class="article-list">
+          <li>
+            For Google, use{' '}
+            <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer">
+              Ads Settings</a
+            >.
+          </li>
+          <li>
+            For other vendors, use{' '}
+            <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener noreferrer">
+              aboutads.info/choices</a
+            >.
+          </li>
+        </ul>
+        <p>
+          Opting out stops the personalisation. You will still see ads, chosen from the page you are
+          on instead of your browsing history.
+        </p>
+        <p>
+          Google works with other ad technology providers, which may serve or measure ads on this
+          site. Google publishes{' '}
+          <a
+            href="https://support.google.com/adsense/answer/9012903"
+            target="_blank"
+            rel="noopener noreferrer">the list of those providers</a
+          >, with a link to each provider's privacy policy and the opt-out it offers. For Google's
+          own handling of this data, read{' '}
+          <a
+            href="https://policies.google.com/technologies/partner-sites"
+            target="_blank"
+            rel="noopener noreferrer"
+            >How Google uses information from sites or apps that use our services</a
+          >{' '}and{' '}
           <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">
             Google's Privacy Policy</a
           >.
@@ -127,8 +184,38 @@ const LAST_UPDATED = '21 August 2026';
       <section class="article-section">
         <h2>What We Do Not Do</h2>
         <p>
-          We do not ask for your name or email address, sell or share your data, or track you across
-          other websites. Nothing you do inside a test reaches us.
+          We do not ask for your name, run accounts, or keep a profile of you. Nothing you do inside
+          a test reaches us. The only personal information ReflexLab itself receives is what you put
+          in an email to us.
+        </p>
+      </section>
+
+      <section class="article-section">
+        <h2>Children</h2>
+        <p>
+          ReflexLab is a general-audience site and is not directed at children under 13. We do not
+          knowingly collect personal information from children. If you believe a child has provided
+          us with personal information, write to <a href={`mailto:${EMAIL}`}>{EMAIL}</a> and we will delete
+          it.
+        </p>
+      </section>
+
+      <section class="article-section">
+        <h2>Your Rights</h2>
+        <p>
+          Depending on where you live, privacy law may give you the right to see, correct, or delete
+          personal information held about you. ReflexLab holds none beyond the emails you have sent
+          us, and we delete those on request. Google holds the analytics and advertising data, and
+          the opt-out links above control it.
+        </p>
+      </section>
+
+      <section class="article-section">
+        <h2>Contact</h2>
+        <p>
+          ReflexLab runs reflexlab.co and answers for this policy. Send privacy questions and
+          requests to <a href={`mailto:${EMAIL}`}>{EMAIL}</a>. When you email us, we receive your
+          address and your message, and we use them only to reply.
         </p>
       </section>
 

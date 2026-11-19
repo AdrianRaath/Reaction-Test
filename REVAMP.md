@@ -304,6 +304,12 @@ writing into them: ads that sit **outside** the measurement, versus the
 competitor pattern of ads that crowd it. The test surface itself staying clean
 is what keeps the original positioning honest.
 
+**Status, 2026-11-19.** Preparation for an AdSense application has started:
+the privacy policy describes advertising, a contact page exists, and
+`PRODUCT.md` and `DESIGN.md` now carry the "ads sit outside the measurement"
+wording. `ads.txt`, the AdSense snippet and consent defaults on the Analytics
+tag come last, just before applying. Placement is manual and follows approval.
+
 ## 5. Content is the binding constraint
 
 `index.html` is 920 lines because of the What Is / How It Works / Good Score /
@@ -510,8 +516,9 @@ weeks. Any URL that genuinely must change later gets a 301, never a 302.
   `main`, so work on this branch will not submit anything. Keep the build
   emitting `sitemap.xml` at the same path and `scripts/submit-indexnow.mjs`
   needs no change.
-- **No ads, no dark patterns, private by default** — until §4.1 ships and that
-  position is revised deliberately.
+- **No dark patterns, scores private by default** — until §4.1 ships and that
+  position is revised deliberately. The "no ads" half of this constraint was
+  retired on 2026-11-19 (§4.2): ads may run, outside the measurement only.
 - **The reaction test stays at `/`.** Not a routing detail — a traffic
   decision. See §3.4.
 - **The existing URLs are a contract.** Same addresses, same trailing-slash

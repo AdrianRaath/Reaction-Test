@@ -28,7 +28,7 @@ only in chat.
   spacebar speed test was retitled "Spacebar Speed Test - Free Online Spacebar
   Counter" so the two pages don't split the keyword.
 - **Our edge over the SERP.** The rhythm combo, which no competitor has. The
-  full shop and reactor tables published on the page. No ads, and honest copy:
+  full shop and reactor tables published on the page. Honest copy:
   the "unblocked" query gets one plain FAQ answer, no proxy or VPN advice.
 - **Status (2026-10-27).** Built on `dev` with perk phase 1, the isotope UX
   pass and phase 2, the isotope track, not yet merged to `main`. Unit-tested
