@@ -7,6 +7,47 @@ import '../styles/tokens.css';
 import '../styles/base.css';
 
 const GA_ID = 'G-XWQNL6HFLK';
+const ADSENSE_CLIENT = 'ca-pub-4775531297880921';
+
+// Where Google's consent message runs: the EEA (EU 27 plus Iceland,
+// Liechtenstein, Norway), the UK and Switzerland. Visitors from these places
+// start with every consent type denied, and the message (AdSense, Privacy &
+// messaging) grants them on a "Consent" answer. Everywhere else has no default,
+// so the tags behave as they did before consent mode.
+const CONSENT_REGIONS = [
+  'AT',
+  'BE',
+  'BG',
+  'HR',
+  'CY',
+  'CZ',
+  'DK',
+  'EE',
+  'FI',
+  'FR',
+  'DE',
+  'GR',
+  'HU',
+  'IE',
+  'IT',
+  'LV',
+  'LT',
+  'LU',
+  'MT',
+  'NL',
+  'PL',
+  'PT',
+  'RO',
+  'SK',
+  'SI',
+  'ES',
+  'SE',
+  'IS',
+  'LI',
+  'NO',
+  'GB',
+  'CH',
+];
 
 interface Props {
   /**
@@ -89,14 +130,35 @@ const ogImageUrl = new URL(ogImage, site).href;
          placed after <meta charset> — the legacy files load it above the
          charset declaration, which must land in the first 1024 bytes. -->
     <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
-    <script is:inline define:vars={{ GA_ID }}>
+    <script is:inline define:vars={{ GA_ID, CONSENT_REGIONS }}>
       window.dataLayer = window.dataLayer || [];
       function gtag() {
         dataLayer.push(arguments);
       }
+      // Consent defaults must be queued before 'config', or Analytics sets its
+      // cookie before the consent message has an answer. `wait_for_update`
+      // gives the message 500 ms to restore a returning visitor's choice.
+      gtag('consent', 'default', {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        analytics_storage: 'denied',
+        region: CONSENT_REGIONS,
+        wait_for_update: 500,
+      });
       gtag('js', new Date());
       gtag('config', GA_ID);
     </script>
+
+    <!-- Google AdSense. Verifies the site and delivers Google's consent
+         message; it places no ads by itself while Auto ads is off for this
+         site in AdSense. Ad units are placed by hand (REVAMP.md §4.2). -->
+    <meta name="google-adsense-account" content={ADSENSE_CLIENT} />
+    <script
+      is:inline
+      async
+      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+      crossorigin="anonymous"></script>
   </head>
 
   <body>

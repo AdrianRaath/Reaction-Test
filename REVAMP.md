@@ -307,8 +307,14 @@ is what keeps the original positioning honest.
 **Status, 2026-11-19.** Preparation for an AdSense application has started:
 the privacy policy describes advertising, a contact page exists, and
 `PRODUCT.md` and `DESIGN.md` now carry the "ads sit outside the measurement"
-wording. `ads.txt`, the AdSense snippet and consent defaults on the Analytics
-tag come last, just before applying. Placement is manual and follows approval.
+wording. Placement is manual and follows approval.
+
+**Status, 2026-11-20.** Application started. Added: `public/ads.txt`, the AdSense script and
+account meta tag (`BaseLayout.astro`), consent mode defaults on the Analytics
+tag (denied in the EEA, UK and Switzerland until Google's consent message
+answers). No custom link reopens the message (maintainer's call: leave
+Google's defaults alone). The script places no ads while Auto ads
+is off for the site; no ad units exist yet.
 
 ## 5. Content is the binding constraint
 
